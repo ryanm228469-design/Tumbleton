@@ -200,6 +200,11 @@ kbd{font:700 12px/1 var(--f-body);min-width:22px;padding:4px 6px 3px;border-radi
 .cross::after{content:"";position:absolute;left:50%;top:50%;width:2px;height:2px;margin:-1px 0 0 -1px;background:var(--paper);border-radius:50%}
 .cross.hit{border-color:#e5484d;transform:scale(1.35)}
 .cross.aim{transform:scale(.6)}
+.cross.veh{width:30px;height:30px;margin:-15px 0 0 -15px;border-width:2px;background:linear-gradient(var(--paper),var(--paper)) center/2px 10px no-repeat,linear-gradient(var(--paper),var(--paper)) center/10px 2px no-repeat}
+.cross.veh::before{content:"";position:absolute;left:50%;top:50%;width:46px;height:2px;margin:-1px 0 0 -23px;background:linear-gradient(90deg,var(--paper) 0 9px,transparent 9px 37px,var(--paper) 37px);filter:drop-shadow(0 0 1px rgba(0,0,0,.8))}
+.cross.veh::after{width:2px;height:46px;margin:-23px 0 0 -1px;background:linear-gradient(var(--paper) 0 9px,transparent 9px 37px,var(--paper) 37px);border-radius:0;filter:drop-shadow(0 0 1px rgba(0,0,0,.8))}
+.cross.veh.hit{border-color:#e5484d;transform:scale(1.15)}
+.cross.veh.cool{opacity:.4}
 .cross.aim.hit{transform:scale(.85)}
 .shop-sec{grid-column:1/-1;font:400 14px var(--f-display);color:var(--muted);letter-spacing:.04em;margin-top:4px}
 .item .stats{font:600 12px var(--f-body);letter-spacing:.06em;color:#e3e5ea}
@@ -4087,8 +4092,9 @@ function updateHUD(){
     else if(activeHeli){ const a=heliAm(activeHeli); nm='HELICOPTER'; at=a.arm>0?'RE-ARMING…':'GUN '+(a.gT>0?'RELOADING':a.g+' / '+a.gr)+' · RKT '+(a.rT>0?'RELOADING':a.r+' / '+a.rr); low=(a.g+a.gr===0)||(a.r+a.rr===0); }
     else { nm=WEAPONS[state.weapon].name.toUpperCase(); const A=AMMO[state.weapon]; if(A){ const a=ammoOf(state.weapon); at=player.reloadT>0?'RELOADING…':a.mag+' / '+a.res; low=a.mag===0; } }
     const k=nm+'|'+at+'|'+low; if(k!==lastWeapHud){ lastWeapHud=k; wnameEl.textContent=nm; wammoEl.textContent=at; wammoEl.hidden=!at; wammoEl.classList.toggle('low',low); } }
-  const cv=wv&&!state.paused&&(fp||WEAPONS[state.weapon].ranged)&&player.mode==='walk'||(!state.paused&&!!activeHeli); if(crossEl.hidden===cv) crossEl.hidden=!cv;
-  crossEl.classList.toggle('hit',state.hitT>0); crossEl.classList.toggle('aim',aimK>.5);
+  const vg=!state.paused&&!state.cine&&((activeCar&&!!activeCar.tur)||MPG.id!==null);
+  const cv=wv&&!state.paused&&(fp||WEAPONS[state.weapon].ranged)&&player.mode==='walk'||(!state.paused&&!!activeHeli)||vg; if(crossEl.hidden===cv) crossEl.hidden=!cv;
+  crossEl.classList.toggle('hit',state.hitT>0); crossEl.classList.toggle('aim',aimK>.5&&!vg); crossEl.classList.toggle('veh',vg); crossEl.classList.toggle('cool',vg&&!!activeCar&&!!activeCar.tank&&activeCar.cd>0);
   if(activeCar||activeJet){ const k=Math.round((activeJet?activeJet.spd:Math.hypot(activeCar.vel.x,activeCar.vel.z))*3.6); if(k!==lastKmh){ lastKmh=k; kmhEl.textContent=k; } }
   const showHint=state.started&&!locked&&!state.over; if(hintEl.hidden===showHint) hintEl.hidden=!showHint;
 }
