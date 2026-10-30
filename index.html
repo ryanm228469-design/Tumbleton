@@ -4255,9 +4255,10 @@ function updateCamera(dt){
   let tx,ty,tz,dist,pitch=camPitch;
   if(!state.started){ tx=player.pos.x+8; ty=player.pos.y+1; tz=player.pos.z-8; dist=24; pitch=.5; if(!reduceMotion) camYaw+=dt*.05; }
   else if(activeHeli){ const H=activeHeli; tx=H.pos.x-Math.cos(camYaw)*3.2; ty=H.pos.y+4.2; tz=H.pos.z+Math.sin(camYaw)*3.2; dist=17; }
+  else if(activeCar&&activeCar.tur){ const c=activeCar; tx=c.pos.x; ty=c.pos.y+(c.top||1.9)+(c.tank?1.5:1.25); tz=c.pos.z; dist=c.tank?11:9.5; if(perfT-lastLook>1.1) camPitch+=(.1-camPitch)*Math.min(1,dt*1.5); }
   else if(activeCar){ const c=activeCar; tx=c.pos.x; ty=c.pos.y+1.7; tz=c.pos.z; dist=10;
     if(perfT-lastLook>1.1){ const vf=c.vel.x*Math.sin(c.yaw)+c.vel.z*Math.cos(c.yaw); if(Math.abs(vf)>1.5) camYaw=lerpA(camYaw,c.yaw+(vf<-4?PI:0),Math.min(1,dt*2.6)); camPitch+=(.3-camPitch)*Math.min(1,dt*1.5); } }
-  else { tx=player.pos.x; ty=player.pos.y+(player.mode==='ragdoll'?.5:.9-.5*(player.crouchK||0)); tz=player.pos.z; dist=6.5-3.1*aimK-.6*shoulderK;
+  else { tx=player.pos.x; ty=player.pos.y+(player.mode==='ragdoll'?.5:.9-.5*(player.crouchK||0)); tz=player.pos.z; dist=6.5-3.1*aimK-.6*shoulderK; if(MPG.id!==null){ ty+=1.4; dist=7.5; }
     if(shoulderK>.01){ const rx=-Math.cos(camYaw), rz=Math.sin(camYaw); let sh=(.85+.2*aimK)*shoulderK;
       for(let q=1;q<=4;q++){ const f=q/4; if(insideBuilding(tx+rx*sh*f,ty,tz+rz*sh*f)||(SEWG&&ty<-4.2&&sewCam(tx+rx*sh*f,ty,tz+rz*sh*f))){ sh*=Math.max(0,(q-1)/4-.05); break; } }
       shoulderS+=(sh-shoulderS)*Math.min(1,dt*10); tx+=rx*shoulderS; tz+=rz*shoulderS; ty+=.12*shoulderK; } else shoulderS=0; }
