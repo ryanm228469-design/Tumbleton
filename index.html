@@ -2161,6 +2161,58 @@ function makeCarMesh(color,variant){
     for(const [x,z] of [[-.98,1.4],[.98,1.4],[-.98,-1.35],[.98,-1.35]]) parts.push({g:Ws(x,z),c:tyre,wh:[x,z,.4]});
     lights=[B(.46,.1,.05,-.66,.7,2.21),B(.46,.1,.05,.66,.7,2.21)];
     dims={off:1.1,cr:1.08,top:1.4,mass:9,acc:32,topv:50,steer:2.6,grip:10.5};
+  } else if(variant==='motorbike'||variant==='dirtbike'||variant==='scooter'||variant==='bicycle'){
+    const ch='#9a9ea6';
+    if(variant==='motorbike'){
+      parts=[{g:B(.36,.3,.72,0,.8,.14),c:color},{g:B(.44,.44,.5,0,.86,.56),c:color},{g:B(.3,.1,.62,0,.9,-.26),c:dark},{g:B(.3,.2,.42,0,.94,-.62),c:color},
+        {g:B(.32,.3,.52,0,.5,0),c:'#3a3d42'},{g:B(.1,.1,.62,.19,.44,-.46),c:ch},{g:B(.72,.05,.05,0,1.1,.48),c:dark},{g:B(.05,.62,.05,-.12,.68,.68),c:dark},{g:B(.05,.62,.05,.12,.68,.68),c:dark},
+        {g:B(.32,.22,.04,0,1.14,.72),c:glass},{g:B(.16,.06,.04,0,.98,-.83),c:tail}];
+      for(const z of [.74,-.72]) parts.push({wh:[0,z,.34]});
+      lights=[B(.2,.12,.04,0,.92,.82)];
+      dims={off:.55,cr:.42,top:1.3,mass:3,acc:30,topv:46,steer:2.6,grip:11,ride:true,bike:true,seat:[0,1.0,-.2],hunch:.28};
+    } else if(variant==='dirtbike'){
+      parts=[{g:B(.3,.26,.6,0,.92,.12),c:color},{g:B(.34,.1,.8,0,1.06,-.18),c:dark},{g:B(.3,.08,.5,0,1.05,.72),c:color},{g:B(.26,.08,.5,0,1.04,-.72),c:color},
+        {g:B(.3,.3,.42,0,.6,0),c:'#3a3d42'},{g:B(.09,.09,.7,.17,.75,-.4),c:ch},{g:B(.8,.05,.05,0,1.24,.5),c:dark},{g:B(.05,.72,.05,-.11,.82,.66),c:'#d9d9d9'},{g:B(.05,.72,.05,.11,.82,.66),c:'#d9d9d9'},
+        {g:B(.3,.24,.04,0,1.08,.84),c:'#f2f2f2'},{g:B(.14,.06,.04,0,1.0,-.98),c:tail}];
+      for(const z of [.78,-.76]) parts.push({wh:[0,z,.4]});
+      lights=[B(.14,.1,.04,0,1.12,.87)];
+      dims={off:.58,cr:.42,top:1.4,mass:2.6,acc:28,topv:38,steer:2.8,grip:8,ride:true,bike:true,seat:[0,1.1,-.2],hunch:.18,climb:.95};
+    } else if(variant==='scooter'){
+      parts=[{g:B(.36,.08,.72,0,.32,0),c:dark},{g:B(.42,.42,.6,0,.56,-.32),c:color},{g:B(.4,.62,.12,0,.62,.5),c:color},{g:B(.08,.5,.08,0,.98,.54),c:dark},
+        {g:B(.6,.05,.05,0,1.2,.52),c:dark},{g:B(.32,.1,.52,0,.82,-.3),c:dark},{g:B(.14,.06,.04,0,.66,-.63),c:tail},{g:B(.3,.08,.3,0,.42,.58),c:color}];
+      for(const z of [.58,-.56]) parts.push({wh:[0,z,.24]});
+      lights=[B(.18,.12,.04,0,1.04,.57)];
+      dims={off:.45,cr:.38,top:1.2,mass:2,acc:16,topv:24,steer:2.8,grip:10,ride:true,bike:true,seat:[0,.92,-.26],hunch:.04};
+    } else {
+      parts=[{g:B(.05,.05,.66,0,.86,.1),c:color},{g:B(.05,.52,.05,0,.62,-.22),c:color},{g:B(.05,.5,.05,0,.66,.42),c:color},{g:B(.05,.05,.56,0,.52,.14),c:color},
+        {g:B(.05,.05,.5,0,.34,-.3),c:color},{g:B(.14,.06,.26,0,.92,-.24),c:dark},{g:B(.56,.04,.04,0,1.0,.44),c:dark},{g:B(.04,.12,.3,0,.36,0),c:'#3a3d42'}];
+      for(const z of [.55,-.55]) parts.push({wh:[0,z,.36]});
+      lights=[B(.08,.08,.04,0,.95,.5)];
+      dims={off:.42,cr:.36,top:1.2,mass:1.5,acc:9,topv:14,steer:2.6,grip:11,ride:true,bike:true,pedal:true,seat:[0,1.0,-.2],hunch:.2};
+    }
+  } else if(variant==='quad'){
+    parts=[{g:B(.9,.3,1.5,0,.66,0),c:color},{g:B(.96,.06,.42,0,.9,.58),c:dark},{g:B(.96,.06,.42,0,.9,-.6),c:dark},{g:B(.36,.14,.72,0,.92,-.12),c:dark},
+      {g:B(.72,.05,.05,0,1.14,.4),c:dark},{g:B(.06,.34,.06,0,.98,.36),c:dark},{g:B(.34,.1,.5,-.56,.86,.62),c:color},{g:B(.34,.1,.5,.56,.86,.62),c:color},
+      {g:B(.34,.1,.5,-.56,.86,-.62),c:color},{g:B(.34,.1,.5,.56,.86,-.62),c:color},{g:B(.5,.24,.4,0,.48,0),c:'#3a3d42'},{g:B(.16,.06,.04,-.3,.72,-.76),c:tail},{g:B(.16,.06,.04,.3,.72,-.76),c:tail}];
+    for(const [x,z] of [[-.56,.62],[.56,.62],[-.56,-.62],[.56,-.62]]) parts.push({wh:[x,z,.38]});
+    lights=[B(.16,.1,.04,-.24,.8,.77),B(.16,.1,.04,.24,.8,.77)];
+    dims={off:.42,cr:.7,top:1.3,mass:4,acc:24,topv:32,steer:2.5,grip:9,ride:true,seat:[0,1.04,-.16],hunch:.15,climb:.85};
+  } else if(variant==='gokart'){
+    parts=[{g:B(.9,.08,1.4,0,.16,0),c:dark},{g:B(.62,.12,.36,0,.22,.76),c:color},{g:B(.2,.16,.74,-.46,.26,0),c:color},{g:B(.2,.16,.74,.46,.26,0),c:color},
+      {g:B(.44,.42,.12,0,.44,-.42),c:dark},{g:B(.44,.08,.36,0,.24,-.26),c:dark},{g:B(.26,.26,.04,0,.52,.3),c:dark},{g:B(.04,.04,.3,0,.42,.42),c:dark},
+      {g:B(.3,.26,.26,0,.34,-.62),c:'#3a3d42'},{g:B(1.12,.08,.08,0,.2,-.78),c:color},{g:B(.08,.06,.04,0,.22,-.84),c:tail}];
+    for(const [x,z] of [[-.52,.56],[.52,.56],[-.54,-.55],[.54,-.55]]) parts.push({wh:[x,z,z>0?.18:.21]});
+    lights=[B(.12,.06,.04,0,.26,.95)];
+    dims={off:.38,cr:.64,top:.8,mass:3,acc:26,topv:31,steer:3.3,grip:12,ride:true,sit:true,seat:[0,.4,-.28],hunch:0,stab:3};
+  } else if(variant==='monster'){
+    parts=[{g:B(1.6,.3,3.6,0,1.3,0),c:dark},{g:B(2.2,.7,4.4,0,1.95,0),c:color},{g:B(1.9,.62,1.5,0,2.6,.7),c:glass},{g:B(1.94,.1,1.36,0,2.95,.7),c:color},
+      {g:B(.12,.45,1.8,-1.04,2.5,-1.25),c:color},{g:B(.12,.45,1.8,1.04,2.5,-1.25),c:color},{g:B(2.2,.45,.12,0,2.5,-2.15),c:color},{g:B(2,.1,.1,0,3.05,-.25),c:dark},
+      {g:B(.07,.5,.07,-.95,2.8,-.25),c:dark},{g:B(.07,.5,.07,.95,2.8,-.25),c:dark},{g:B(2.3,.3,.3,0,1.55,2.3),c:dark},{g:B(2.3,.3,.3,0,1.55,-2.3),c:dark},
+      {g:B(.36,.2,.05,-.8,2.05,-2.21),c:tail},{g:B(.36,.2,.05,.8,2.05,-2.21),c:tail}];
+    for(const [x,z] of [[-.9,1.45],[.9,1.45],[-.9,-1.45],[.9,-1.45]]) parts.push({g:B(.22,.85,.22,x,1.15,z),c:'#ffb703'});
+    for(const [x,z] of [[-1.3,1.45],[1.3,1.45],[-1.3,-1.45],[1.3,-1.45]]) parts.push({wh:[x,z,1.0]});
+    lights=[B(.42,.2,.05,-.7,2.1,2.21),B(.42,.2,.05,.7,2.1,2.21),B(.22,.16,.05,-.5,3.12,-.2),B(.22,.16,.05,.5,3.12,-.2)];
+    dims={off:1.4,cr:1.3,top:3.2,mass:25,acc:20,topv:34,steer:1.9,grip:8,monster:true,climb:1.5,stab:2.4};
   } else {
     parts=[{g:B(2,.72,4.2,0,.74,0),c:color},{g:B(1.74,.6,2.1,0,1.38,-.25),c:glass},{g:B(1.8,.12,1.92,0,1.72,-.25),c:color},
       {g:B(2.06,.22,.2,0,.52,2.12),c:dark},{g:B(2.06,.22,.2,0,.52,-2.12),c:dark},{g:B(.4,.16,.05,-.7,.86,-2.12),c:tail},{g:B(.4,.16,.05,.7,.86,-2.12),c:tail}];
@@ -2170,7 +2222,7 @@ function makeCarMesh(color,variant){
     dims={off:1.05,cr:1.05,top:1.8,mass:10,acc:22,topv:36,steer:2.3,grip:9};
   }
   if(!dims.offs) dims.offs=[-1,1];
-  if(POLY&&variant!=='bus'){ const bb=parts[0].g.boundingBox||(parts[0].g.computeBoundingBox(),parts[0].g.boundingBox), w=bb.max.x-bb.min.x, zf=bb.max.z, zr=bb.min.z, yb=bb.min.y, yt=bb.max.y, ym=(yb+yt)/2;
+  if(POLY&&variant!=='bus'&&!dims.ride){ const bb=parts[0].g.boundingBox||(parts[0].g.computeBoundingBox(),parts[0].g.boundingBox), w=bb.max.x-bb.min.x, zf=bb.max.z, zr=bb.min.z, yb=bb.min.y, yt=bb.max.y, ym=(yb+yt)/2;
     parts.push({g:B(w*.46,Math.min(.22,(yt-yb)*.4),.05,0,ym,zf+.02),c:'#1e2023'},{g:B(.5,.13,.03,0,yb+.12,zf+.13),c:'#f2f0e6'},{g:B(.5,.13,.03,0,yb+.2,zr-.13),c:'#f2f0e6'},
       {g:B(.12,.1,.2,-(w/2+.07),yt+.12,zf*.32),c:color},{g:B(.12,.1,.2,w/2+.07,yt+.12,zf*.32),c:color},{g:B(.04,.06,.2,-(w/2+.01),ym+.12,zf*.05),c:'#2a2a2e'},{g:B(.04,.06,.2,w/2+.01,ym+.12,zf*.05),c:'#2a2a2e'},
       {g:B(w+.02,.04,.02,0,ym-.02,zf*.1),c:'#'+new THREE.Color(color).multiplyScalar(.6).getHexString()}); }
@@ -2188,12 +2240,12 @@ function makeCarMesh(color,variant){
 }
 class Car{
   constructor(x,z,yaw,mode,opt){ opt=opt||{};
-    const r=Math.random(); const variant=opt.variant||(r<.36?'sedan':r<.48?'taxi':r<.6?'van':r<.74?'pickup':r<.85?'sports':r<.92?'bus':'icecream');
+    const r=Math.random(); const variant=opt.variant||(Math.random()<.1?['motorbike','motorbike','scooter','scooter','bicycle','dirtbike'][Math.floor(Math.random()*6)]:null)||(r<.36?'sedan':r<.48?'taxi':r<.6?'van':r<.74?'pickup':r<.85?'sports':r<.92?'bus':'icecream');
     const color=variant==='taxi'?'#f4c430':variant==='icecream'?'#f7cad0':variant==='bus'?['#1b6ca8','#2a9d8f','#e76f51'][Math.floor(Math.random()*3)]:(opt.color||CAR_COLORS[Math.floor(Math.random()*CAR_COLORS.length)]);
     const {g,dims}=makeCarMesh(color,variant); this.g=g; this.variant=variant; this.color=color; g.rotation.order='YXZ'; this.pos=g.position; this.pos.set(x,groundHeight(x,z),z);
     Object.assign(this,dims); this.yaw=yaw; this.vel=new V3(); this.vy=0; this.air=false; this.spin=0; this.mode=mode; this.pitch=0; this.roll=0;
     this.ai=null; this.spd=0; this.wait=0; this.ignore=0; this.cruise=Math.min(R(9,12),this.topv*.45); this.launchCD=0; this.spawned=!!opt.spawned; this.wasTraffic=mode==='traffic';
-    g.rotation.set(0,yaw,0); scene.add(g); cars.push(this); }
+    g.rotation.set(0,yaw,0); scene.add(g); cars.push(this); if(this.ride) addDummyRider(this); }
 }
 const DIR_YAW=[0,PI/2,PI,-PI/2], STEP=[[0,1],[1,0],[0,-1],[-1,0]];
 function laneTarget(a,b,d){ const y=DIR_YAW[d]; return {x:lineC(a)+Math.cos(y)*LANE, z:lineC(b)-Math.sin(y)*LANE}; }
@@ -2788,7 +2840,26 @@ function carSkid(c,dt,amt){ if(amt<=0||c.air||!c.g.visible) return; const fx=Mat
   for(const sd of [-1,1]){ const x=c.pos.x+fx*back-fz*sd*w, z=c.pos.z+fz*back+fx*sd*w; SKID.add(x,groundHeight(x,z,c.pos.y+.5),z,Math.atan2(c.vel.x,c.vel.z),len); }
   if(amt>.5&&Math.random()<.35) smoke(c.pos.x+fx*back,c.pos.y+.25,c.pos.z+fz*back,0xd8d8d8,.45,.8,.7);
   if(sp>6) Snd.screech(c.pos.x,c.pos.z,Math.min(1,amt)); }
+
+/* ---------- riders: bikes, quads and go-karts show who's riding ---------- */
+const _rdv=new V3();
+function poseRider(p,d,t){ const ped=d.pedal&&t!==undefined, s=ped?Math.sin(t):0;
+  if(d.sit){ p.legL.rotation.set(-1.45,0,-.14); p.legR.rotation.set(-1.45,0,.14); p.shinL.rotation.set(.22,0,0); p.shinR.rotation.set(.22,0,0); }
+  else { p.legL.rotation.set(-1.15+s*.38,0,-.17); p.legR.rotation.set(-1.15-s*.38,0,.17); p.shinL.rotation.set(1.35-s*.42,0,0); p.shinR.rotation.set(1.35+s*.42,0,0); }
+  const ar=d.sit?-1.0:-1.2; p.armL.rotation.set(ar,0,-.1); p.armR.rotation.set(ar,0,.1); p.foreL.rotation.set(-.35,0,0); p.foreR.rotation.set(-.35,0,0);
+  if(p.rig){ p.rig.position.y=0; p.rig.rotation.set(d.hunch||0,0,0); } }
+function addDummyRider(c){ const P=makePersonMesh(SKIN[Math.floor(Math.random()*SKIN.length)],CAR_COLORS[Math.floor(Math.random()*CAR_COLORS.length)],PANTS[Math.floor(Math.random()*PANTS.length)],HAIR[Math.floor(Math.random()*HAIR.length)]);
+  P.g.position.set(c.seat[0],c.seat[1],c.seat[2]); poseRider(P,c); P.g.traverse(o=>{ if(o.isMesh) o.castShadow=true; }); P.g.visible=false; c.g.add(P.g); c.dummy=P; }
+function riderPose(c,dt){ const p=player; c.g.updateMatrixWorld(); _rdv.set(c.seat[0],c.seat[1],c.seat[2]); c.g.localToWorld(_rdv); p.pos.copy(_rdv); p.g.quaternion.copy(c.g.quaternion);
+  c.pedT=(c.pedT||0)+dt*Math.hypot(c.vel.x,c.vel.z)*1.6; poseRider(p,c,c.pedal?c.pedT:undefined); const st=(c.steerVis=(c.steerVis||0)+((c.steerIn||0)-(c.steerVis||0))*Math.min(1,dt*8));
+  p.armL.rotation.y=st*.25; p.armR.rotation.y=st*.25; }
+function riderReset(){ for(const k of ['legL','legR','armL','armR','shinL','shinR','foreL','foreR']) if(player[k]) player[k].rotation.set(0,0,0); player.armL.rotation.z=-.05; player.armR.rotation.z=.05; if(player.rig) player.rig.rotation.set(0,0,0); }
+function riderBail(c,sp){ const fx=Math.sin(c.yaw), fz=Math.cos(c.yaw); c.g.updateMatrixWorld(); _rdv.set(c.seat[0],c.seat[1]+.45,c.seat[2]); c.g.localToWorld(_rdv);
+  enterExit(); if(activeCar===c) return; player.pos.copy(_rdv); knock(player,fx*sp*.75,4+sp*.18,fz*sp*.75,10); damagePlayer(Math.min(30,sp*1.1)); flash('Wipeout!'); state.shake=Math.max(state.shake,.4); c.prevSp=0; }
 function updateCar(c,dt){
+  if(c.ride){ const sp=Math.hypot(c.vel.x,c.vel.z);
+    if(c.dummy){ const on=c.mode==='traffic'||c.mode==='police'||(c.mode==='net'&&sp>1); c.dummy.g.visible=on; if(on&&c.pedal){ c.pedT=(c.pedT||0)+dt*sp*1.6; poseRider(c.dummy,c,c.pedT); } }
+    if(c===activeCar&&!state.over&&!state.cine){ if(((c.prevSp||0)>9&&c.prevSp-sp>(c.bike?7.5:10))||c.flipLeft>.3){ const v=Math.max(sp,c.prevSp||0); c.prevSp=0; riderBail(c,v); return; } c.prevSp=sp; } }
   if(c.net){ mpNCUpdate(c,dt); return; }
   if(c.boat){ updateBoat(c,dt); return; }
   if(c.visO){ c.pos.sub(c.visO); c.visO.set(0,0,0); }
@@ -2829,7 +2900,7 @@ function updateCar(c,dt){
   const ox=c.pos.x, oz=c.pos.z; c.pos.x+=c.vel.x*dt; c.pos.z+=c.vel.z*dt;
   let gh=groundHeight(c.pos.x,c.pos.z,c.pos.y);
   if(c.pos.y<WATER_Y-.25){ c.vel.multiplyScalar(Math.max(0,1-dt*2.4)); if(Math.random()<dt*5) puff(c.pos.x+R(-1,1),WATER_Y+.1,c.pos.z+R(-1,1),0xdff3ff,.5,false); }
-  if(!c.air&&gh-c.pos.y>.6){ c.pos.x=ox; c.pos.z=oz; c.vel.multiplyScalar(-.3); gh=groundHeight(ox,oz,c.pos.y); if(c===activeCar) state.shake=Math.max(state.shake,.2); }
+  if(!c.air&&gh-c.pos.y>(c.climb||.6)){ c.pos.x=ox; c.pos.z=oz; c.vel.multiplyScalar(-.3); gh=groundHeight(ox,oz,c.pos.y); if(c===activeCar) state.shake=Math.max(state.shake,.2); }
   if(c.air){ c.vy-=G*dt; c.pos.y+=c.vy*dt; if(c.pos.y<=gh){ if(c.vy<-12&&c===activeCar) state.shake=Math.max(state.shake,Math.min(.5,-c.vy*.02)); const im=-c.vy; c.sPv=(c.sPv||0)+R(-.4,.4)*Math.min(12,im)*.25+im*.02; c.sRv=(c.sRv||0)+R(-1,1)*Math.min(12,im)*.12;
       if(im>14) vehDmg(c,(im-14)*1.5); if(im>6) Snd.thud(c.pos.x,c.pos.z,im*.8); if(c.flipLeft>.6){ c.vy=Math.min(9,im*.35); c.pos.y=gh+.02; c.spin+=R(-1,1); vehDmg(c,6); c.vel.multiplyScalar(.75); } else { c.pos.y=gh; c.air=false; c.vy=0; c.vel.multiplyScalar(.9); } } }
   else { if(gh<c.pos.y-.35){ c.air=true; } else { c.vy=clamp((gh-c.pos.y)/dt,-30,30); c.pos.y=gh; } }
@@ -2847,12 +2918,13 @@ function updateCar(c,dt){
     c.sPv=(c.sPv||0)+((pT-(c.sP||0))*110-(c.sPv||0)*9)*dt; c.sP=(c.sP||0)+c.sPv*dt;
     c.sRv=(c.sRv||0)+((rT-(c.sR||0))*90-(c.sRv||0)*8)*dt; c.sR=(c.sR||0)+c.sRv*dt;
     // hard corners lift the inside wheels; tall vehicles (vans, buses) tip easily, low sports cars almost never
-    const S=36*Math.pow(1.9/Math.max(1.2,c.top||1.9),1.5), a=Math.abs(latA), mine=c.mode==='player'||c.mode==='free';
+    const S=36*Math.pow(1.9/Math.max(1.2,c.top||1.9),1.5)*(c.stab||1), a=Math.abs(latA), mine=(c.mode==='player'||c.mode==='free')&&!c.bike;
     const lift=mine&&!c.wreck&&Math.abs(vfw)>12&&a>S*.8?Math.min(.42,(a-S*.8)/(S*.2)*.3):0; c.tip=(c.tip||0)+(lift*Math.sign(latA)-(c.tip||0))*Math.min(1,dt*7);
     c.tipT=lift>.28?(c.tipT||0)+dt:0; if(c.tipT>1.1&&!c.flipLeft){ c.tipT=0; c.air=true; c.vy=5.5; c.pos.y+=.05; carFlip(c,-Math.sign(latA)*fz,Math.sign(latA)*fx,1); vehDmg(c,10); if(c===activeCar) state.shake=Math.max(state.shake,.4); }
     if(Math.abs(lift)>.05) skidAmt=Math.max(skidAmt,.5);
   } else { c.sPv=(c.sPv||0)*Math.exp(-3*dt); c.sP=(c.sP||0)*Math.exp(-3*dt); c.sR=(c.sR||0)*Math.exp(-3*dt); c.tip=(c.tip||0)*Math.exp(-5*dt); }
   c.roll+=(c.sR-c.roll)*Math.min(1,dt*12); c.accP=clamp(c.sP,-.14,.14);
+  if(c.bike){ const still=Math.abs(vfw)<1.2&&c.mode!=='traffic'&&c!==activeCar; const lean=c.air?0:still?.16:clamp(-yr*Math.abs(vfw)*.045,-.62,.62); c.lean=(c.lean||0)+(lean-(c.lean||0))*Math.min(1,dt*7); c.roll=c.lean; }
   carSkid(c,dt,skidAmt);
   c.wheelRot=(c.wheelRot||0)+vfw*dt; const wst=clamp(yr/Math.max(3,Math.abs(vfw))*2.6*Math.sign(vfw||1),-.5,.5);
   c.wSteer=(c.wSteer||0)+(wst-(c.wSteer||0))*Math.min(1,dt*8);
@@ -2943,7 +3015,8 @@ function collisions(){
         const d=Math.sqrt(d2), nx=dx/d, nz=dz/d, pen=(rs-d)/2;
         a.pos.x-=nx*pen; a.pos.z-=nz*pen; b.pos.x+=nx*pen; b.pos.z+=nz*pen;
         const rel=(a.vel.x-b.vel.x)*nx+(a.vel.z-b.vel.z)*nz;
-        if(rel>0){ const jj=rel*.65; a.vel.x-=nx*jj; a.vel.z-=nz*jj; b.vel.x+=nx*jj; b.vel.z+=nz*jj;
+        if(rel>0){ const jj=rel*.65, ma=a.mass||10, mb=b.mass||10, ka=2*mb/(ma+mb), kb=2*ma/(ma+mb); a.vel.x-=nx*jj*ka; a.vel.z-=nz*jj*ka; b.vel.x+=nx*jj*kb; b.vel.z+=nz*jj*kb;
+          if(a.monster!==b.monster&&rel>4){ const o=a.monster?b:a; o.air=true; o.vy=Math.max(o.vy||0,2+rel*.32); o.spin+=R(-1,1)*2; vehDmg(o,rel*2.2); if(o.mode==='traffic') o.mode='free'; }
           if(rel>4){ Snd.crash(a.pos.x,a.pos.z,rel*1.5); for(const c of [a,b]){ if(c.mode==='traffic') c.mode='free'; c.spin+=R(-1,1)*rel*.12; if(rel>7) vehDmg(c,(rel-5)*2.4); } if(a===activeCar||b===activeCar) state.shake=Math.max(state.shake,Math.min(.45,rel*.02)); }
           else { for(const c of [a,b]) if(c.mode==='traffic'){ c.spd=c.vel.length(); } } } } } }
 }
@@ -3043,10 +3116,10 @@ function spawnSelected(){
   const foot=activeCar?activeCar.pos.y:player.pos.y-HIP, gy=q=>groundHeight(q.x,q.z,foot+.5);
   if(id==='ramp'){ const p=at(3+5); addRamp(p.x,p.z,camYaw-PI/2,10,2.6,5,true,gy(p)); }
   else if(id==='pad'){ const p=at(4.5); addPad(p.x,p.z,true,gy(p)); }
-  else if(mpClient()&&id==='car'){ const p=at(6); mpSendHost({t:'cs',p:[mpR1(p.x),mpR1(gy(p)),mpR1(p.z)],y:mpR2(camYaw)}); }
+  else if(mpClient()&&id==='car'){ const p=at(6); const k=state.cKind||'random'; mpSendHost({t:'cs',p:[mpR1(p.x),mpR1(gy(p)),mpR1(p.z)],y:mpR2(camYaw),v:k==='random'?-1:MPVAR.indexOf(k)}); }
   else if(mpClient()&&id==='person'){ const p=at(3.5); mpSendHost({t:'ps',p:[mpR1(p.x),mpR1(gy(p)),mpR1(p.z)],cop:state.pKind==='police'?1:0}); }
   else if(mpClient()&&MPOK.includes(id)){ const p=at(3.5); mpSendHost({t:'os',k:MPOK.indexOf(id),p:[mpR1(p.x),mpR1(gy(p)+2.8),mpR1(p.z)]}); }
-  else if(id==='car'){ const p=at(6); const c=new Car(p.x,p.z,camYaw,'free',{spawned:true}); c.pos.y=gy(p)+.8; c.air=true; }
+  else if(id==='car'){ const p=at(6); const k=state.cKind||'random'; const c=new Car(p.x,p.z,camYaw,'free',{spawned:true,variant:k==='random'?undefined:k}); c.pos.y=gy(p)+.8; c.air=true; }
   else if(id==='zombie'&&mpClient()){ const p=at(7); mpZSpawnReq(p.x,gy(p),p.z,state.zKind==='random'?pickZKind(1):state.zKind,camYaw+PI); }
   else if(id==='zombie'){ const p=at(7); const z=new Person(p.x,p.z,{spawned:true,zombie:true,y:gy(p),kind:state.zKind==='random'?pickZKind(1):state.zKind}); z.yaw=camYaw+PI; z.atkCD=1; puff(z.pos.x,.6,z.pos.z,0x7bc950,.5,false); }
   else if(id==='person'){ const p=at(3.5); const np=state.pKind==='police'?mkCop({x:p.x,z:p.z,y:gy(p)},true):new Person(p.x,p.z,{spawned:true,y:gy(p)}); np.spawned=true; np.pos.y+=2.5; knock(np,0,2,0,2); }
@@ -3286,10 +3359,11 @@ function enterExit(){
     const t={x:ex,z:ez}; if(collideStatics(t,.5,c.pos.y,c.pos.y+1.9)){ ex=c.pos.x-lx*eo; ez=c.pos.z-lz*eo; }
     if(c.boat&&Math.abs(c.pos.z-RIVER_Z)>8.5){ ex=c.pos.x; ez=RIVER_Z+Math.sign(c.pos.z-RIVER_Z)*(RIV_OUT+1.2); }
     player.mode='walk'; player.g.visible=true; player.pos.set(ex,groundHeight(ex,ez,c.pos.y)+HIP,ez); player.yaw=c.yaw;
-    player.vel.set(c.vel.x*.6,0,c.vel.z*.6); c.mode='free'; activeCar=null; if(mpClient()) mpCarReturn(c);
+    player.vel.set(c.vel.x*.6,0,c.vel.z*.6); c.mode='free'; activeCar=null; if(c.ride){ riderReset(); player.g.quaternion.setFromAxisAngle(UP,c.yaw); } if(mpClient()) mpCarReturn(c);
     const sp=Math.hypot(c.vel.x,c.vel.z); if(sp>11){ knock(player,c.vel.x*.8,5,c.vel.z*.8,7); damagePlayer(Math.min(40,sp*1.5)); }
     return; }
   if(player.mode!=='walk'||state.over||state.downT>0) return; const c=nearestCar(); if(!c) return;
+  if(c.dummy&&c.dummy.g.visible&&!c.net){ const lx=Math.cos(c.yaw), lz=-Math.sin(c.yaw); c.dummy.g.visible=false; const q=new Person(c.pos.x+lx*1.2,c.pos.z+lz*1.2); knock(q,lx*5,3,lz*5,6); }
   if(c.net){ if(c.wreck) return; mpCarTake(c); }
   c.mode='player'; c.spd=0; activeCar=c; player.mode='drive'; player.crouch=false; player.g.visible=false; player.punchT=0; lastLook=-9;
 }
@@ -3737,6 +3811,7 @@ function renderBar(){
 const ZORDER=['normal','brute','runner','grabber','crawler','bloater','cop','random'], ZNAMES={normal:'Normal',brute:'Brute',runner:'Runner',grabber:'Grabber',crawler:'Crawler',bloater:'Bloater',cop:'Zombie cop',random:'Random'};
 function select(i,user){ const list=curList(), build=state.bar==='build';
   if(user&&!build&&state.sel===i&&list[i].id==='person'){ state.pKind=state.pKind==='police'?'human':'police'; flash(state.pKind==='police'?'Spawning: police officers':'Spawning: people'); }
+  if(user&&!build&&state.sel===i&&list[i].id==='car'){ state.cKind=CKINDS[(CKINDS.indexOf(state.cKind||'random')+1)%CKINDS.length]; flash('Vehicle toy: '+CKNAME[state.cKind]+' (press again to change)'); }
   if(user&&!build&&state.sel===i&&list[i].id==='zombie'){ state.zKind=ZORDER[(ZORDER.indexOf(state.zKind)+1)%ZORDER.length]; flash('Zombie type: '+ZNAMES[state.zKind]); }
   if(build) state.selB=i; else state.sel=i;
   [...slotsEl.children].forEach((b,k)=>b.classList.toggle('on',k===i)); const it=list[i];
@@ -3881,6 +3956,7 @@ const COCK={
   sports:{eye:[-.45,1.06,-.32],xw:.83,yb:.9,yt:1.27,zf:.42,zb:-1.25,floor:.88,dash:[1.6,.2,.36,0,.84,.26],wheel:[-.45,.96,.1]},
   pickup:{eye:[-.45,1.44,.62],xw:.93,yb:1.13,yt:1.73,zf:1.6,zb:.1,floor:1.13,dash:[1.8,.18,.3,0,1.08,1.45],wheel:[-.45,1.3,1.2]},
   bus:{hideBody:true,eye:[-.8,2.35,3.55],xw:1.29,yb:1.95,yt:2.85,zf:4.48,zb:-4.48,floor:.6,dash:[2.4,.25,.45,0,1.85,4.25],wheel:[-.8,2.05,4]},
+  monster:{eye:[-.45,2.61,.47],xw:.93,yb:2.3,yt:2.9,zf:1.45,zb:-.05,floor:2.3,dash:[1.8,.18,.3,0,2.25,1.3],wheel:[-.45,2.47,1.05]},
   van:{hideBody:true,eye:[-.5,1.57,.92],xw:1.06,yb:1.32,yt:1.86,zf:2.3,zb:-2.3,floor:.5,dash:[1.96,.2,.3,0,1.36,2.12],wheel:[-.5,1.52,1.62]}
 };
 function makeCockpit(P){
@@ -3993,12 +4069,14 @@ function updateCamera(dt){
   { const sp=activeCar?Math.hypot(activeCar.vel.x,activeCar.vel.z):Math.hypot(player.vel.x,player.vel.z), sprint=!activeCar&&sp>7;
     const fovT=SET.fov+(activeCar?Math.min(12,sp*.28):sprint&&aimK<.1?5:0)-aimK*(fp?24:16); fovNow+=(fovT-fovNow)*Math.min(1,dt*3); if(Math.abs(camera.fov-fovNow)>.01){ camera.fov=fovNow; camera.updateProjectionMatrix(); } }
   const fpOn=fp&&state.started&&!state.over&&(activeCar||activeHeli||player.mode!=='drive');
-  player.g.visible=!activeCar&&!fpOn;
+  player.g.visible=(!activeCar||!!activeCar.ride)&&!fpOn; if(activeCar&&activeCar.ride) riderPose(activeCar,dt);
   if(activeJet&&!state.cine){ player.g.visible=false; detachCockpits(null); showShell(null); jetCamera(dt); return; }
   if(activeCrane&&!state.cine){ player.g.visible=false; detachCockpits(null); showShell(null); craneCamera(dt); return; }
   if(fpOn){
     let ex,ey,ez;
-    if(activeCar){ const c=activeCar, ck=cockpitFor(c.variant); detachCockpits(ck); if(ck.parent!==c.g) c.g.add(ck);
+    if(activeCar&&activeCar.ride){ showShell(null); detachCockpits(null); const c=activeCar; c.g.updateMatrixWorld(); _v.set(c.seat[0],c.seat[1]+(c.sit?.62:.74),c.seat[2]+.14); c.g.localToWorld(_v); ex=_v.x; ey=_v.y; ez=_v.z;
+      if(perfT-lastLook>.7){ camYaw=lerpA(camYaw,c.yaw,Math.min(1,dt*7)); camPitch+=(.1-camPitch)*Math.min(1,dt*3); } }
+    else if(activeCar){ const c=activeCar, ck=cockpitFor(c.variant); detachCockpits(ck); if(ck.parent!==c.g) c.g.add(ck);
       c.steerVis=(c.steerVis||0)+((c.steerIn||0)-(c.steerVis||0))*Math.min(1,dt*8); ck.userData.spin.rotation.z=c.steerVis*1.9;
       showShell(c); if(ck.userData.P.hideBody){ for(const m of c.g.userData.shell) m.visible=false; shellHidden=c; }
       c.g.updateMatrixWorld(); _v.set(...ck.userData.P.eye); c.g.localToWorld(_v); ex=_v.x; ey=_v.y; ez=_v.z;
@@ -4241,7 +4319,7 @@ function cineShot(){ const C=state.cine, s=C.shots[C.i]; C.t=0; C.a=s.from(); C.
   const p=resolveP(s.p); if(s.text&&p&&p.isPerson) speakNow(s.text,p); if(s.fn) s.fn(); }
 function cineUpdate(dt){ const C=state.cine; if(!C) return; const s=C.shots[C.i]; C.t+=dt; const k=clamp(C.t/s.dur,0,1), e=k*k*(3-2*k);
   if(s.orbit){ const O=s.orbit, a=O.a0+(O.a1-O.a0)*k; camera.position.set(O.c.x+Math.cos(a)*O.r,O.c.y+O.h,O.c.z+Math.sin(a)*O.r); camera.lookAt(O.c.x,O.c.y+(O.ly||0),O.c.z); }
-  else { camera.position.lerpVectors(C.a,C.b,e); _v.lerpVectors(C.la,C.lb,e); camera.lookAt(_v); } player.g.visible=!activeCar;
+  else { camera.position.lerpVectors(C.a,C.b,e); _v.lerpVectors(C.la,C.lb,e); camera.lookAt(_v); } player.g.visible=!activeCar||!!activeCar.ride;
   if(C.t>=s.dur){ C.i++; if(C.i>=C.shots.length) cineEnd(); else cineShot(); } }
 function cineEnd(){ const C=state.cine; if(!C) return; state.cine=null; if(C.shots.cleanup) try{ C.shots.cleanup(); }catch(e){} document.body.classList.remove('cine'); barsEl.hidden=true; player.immune=2; try{ speechSynthesis.cancel(); }catch(e){} if(C.done) C.done(); }
 function banner(big,small,bad){ $('banh').textContent=big; $('banp').textContent=small||''; banEl.classList.remove('show','bad'); void banEl.offsetWidth; if(bad) banEl.classList.add('bad'); banEl.classList.add('show'); }
@@ -4954,7 +5032,7 @@ function frameBody(now){
   { const pm=player.mode, air=state.started&&((pm==='walk'&&!player.ground)||pm==='ragdoll'||pm==='held'), sp=air?Math.hypot(player.vel.x,player.vel.y*1.2,player.vel.z):0;
     Snd.wind(player.chute?Math.min(.2,.08+sp*.02):clamp((sp-7)/34,0,1)*.6,!!player.chute); }
   mpTick(dt); updateCamera(dt); if(state.cine) cineUpdate(dt); mhTick(dt); updateBubbles(dt); storyHUD(); policeHUD(); updateGhost(); if(state.msgT>0) state.msgT-=dt; updateHUD();
-  Snd.engine(activeJet&&!state.over?20+activeJet.spd*.5:activeCar&&!state.over?Math.hypot(activeCar.vel.x,activeCar.vel.z):-1);
+  Snd.engine(activeJet&&!state.over?20+activeJet.spd*.5:activeCar&&!state.over&&!activeCar.pedal?Math.hypot(activeCar.vel.x,activeCar.vel.z):-1);
   screenGuard(dt); renderer.clear(); renderer.render(scene,camera);
   if(fp&&!state.cine&&state.started&&!state.over&&!activeCar&&!activeHeli&&!player.chute&&(player.mode==='walk'||player.mode==='lift')){ updateViewModel(dt); renderer.clearDepth(); renderer.render(vmScene,vmCam); }
 }
@@ -5608,8 +5686,9 @@ function glCrash(){ if(glDead) return; glDead=true; save(); try{ if(story.on) sa
   const b=document.createElement('button'); b.type='button'; b.className='opt'; b.textContent='Reload the game'; b.addEventListener('click',()=>restartTo(story.on?'story':'sandbox')); c.append(h,p,b); document.body.appendChild(d); b.focus(); }
 canvas.addEventListener('webglcontextlost',e=>{ e.preventDefault(); console.warn('[guard] WebGL context lost'); setTimeout(()=>{ if(renderer&&renderer.getContext&&renderer.getContext().isContextLost()) glCrash(); },1500); },false);
 /* ---------- online multiplayer (Sandbox): room codes over PeerJS (WebRTC); the host relays everyone's position ---------- */
-const MPV='tumbleton-50', MP_PFX='tumbleton-mp-', MPMAX=20, MPHZ=12, MPCOLS=['#ff7a1a','#e5484d','#2f80ed','#27ae60','#9b51e0','#f2c94c','#00b8a9','#ff6fb5','#f6f4ec','#2d3142'];
-const MPVAR=['sedan','taxi','van','pickup','sports','bus','icecream'], MPA='ABCDEFGHJKLMNPQRSTUVWXYZ';
+const MPV='tumbleton-51', MP_PFX='tumbleton-mp-', MPMAX=20, MPHZ=12, MPCOLS=['#ff7a1a','#e5484d','#2f80ed','#27ae60','#9b51e0','#f2c94c','#00b8a9','#ff6fb5','#f6f4ec','#2d3142'];
+const CKINDS=['random','sedan','sports','pickup','van','bus','icecream','monster','motorbike','dirtbike','scooter','bicycle','quad','gokart'], CKNAME={random:'Random',sedan:'Sedan',sports:'Sports car',pickup:'Ute',van:'Van',bus:'Bus',icecream:'Ice cream van',monster:'Monster truck',motorbike:'Motorbike',dirtbike:'Dirt bike',scooter:'Scooter',bicycle:'Bicycle',quad:'Quad bike',gokart:'Go-kart'};
+const MPVAR=['sedan','taxi','van','pickup','sports','bus','icecream','motorbike','dirtbike','scooter','bicycle','quad','gokart','monster'], MPA='ABCDEFGHJKLMNPQRSTUVWXYZ';
 const MP={np:new Map(),pmap:new Map(),pn:0,nc:new Map(),cmap:new Map(),cn:0,no:new Map(),omap:new Map(),on2:0,wT:0,bSig:'',grab:null,nz:new Map(),zmap:new Map(),zn:0,zT:0,zClean:0,spawnT:new Map(),pub:true,sname:'',on:false,host:false,code:'',peer:null,conn:null,id:-1,nextId:1,pl:new Map(),av:new Map(),sendT:0,busy:false,name:'',col:'',libP:null,joinTO:0,sinceHost:0};
 try{ MP.name=localStorage.getItem('tumbleton-mpname')||''; MP.col=localStorage.getItem('tumbleton-mpcol')||''; }catch(e){}
 if(!MP.name) MP.name='Player'+(100+Math.floor(Math.random()*900)); if(!MPCOLS.includes(MP.col)) MP.col=MPCOLS[Math.floor(Math.random()*MPCOLS.length)];
@@ -5906,7 +5985,7 @@ function mpHostWorld(P,d){ const av=MP.av.get(P.id); if(!av) return; const near=
   else if(d.t==='ct'){ const c=MP.cmap.get(+d.id); if(!c||!near(c)||c===activeCar) return; MP.cmap.delete(+d.id); const i=cars.indexOf(c); if(i>=0) cars.splice(i,1); scene.remove(c.g); const b=burning.indexOf(c); if(b>=0) burning.splice(b,1); }
   else if(d.t==='cr'){ const p=Array.isArray(d.p)?d.p.map(mpNum):null; if(!p||Math.hypot(p[0]-av.pos.x,p[2]-av.pos.z)>40) return; let n=0; for(const c of cars) if(c.mode==='free') n++; if(n>60) return;
     const col=typeof d.col==='string'&&/^#[0-9a-fA-F]{6}$/.test(d.col)?d.col:null; const c=new Car(p[0],p[2],mpNum(d.y),'free',{variant:MPVAR[d.v|0]||'sedan',color:col||undefined,spawned:true}); c.pos.y=p[1]; c.hp=clamp(mpNum(d.hp),1,100); if(c.hp<=70) vehDent(c); if(d.pol) dressPolice(c); }
-  else if(d.t==='cs'){ const p=Array.isArray(d.p)?d.p.map(mpNum):null; if(!p||Math.hypot(p[0]-av.pos.x,p[2]-av.pos.z)>40) return; const c=new Car(p[0],p[2],mpNum(d.y),'free',{spawned:true}); c.pos.y=p[1]+.8; c.air=true; }
+  else if(d.t==='cs'){ const p=Array.isArray(d.p)?d.p.map(mpNum):null; if(!p||Math.hypot(p[0]-av.pos.x,p[2]-av.pos.z)>40) return; const c=new Car(p[0],p[2],mpNum(d.y),'free',{spawned:true,variant:MPVAR[d.v|0]&&(d.v|0)>=0&&isFinite(d.v)&&d.v>=0?MPVAR[d.v|0]:undefined}); c.pos.y=p[1]+.8; c.air=true; }
   else if(d.t==='oi'){ const o=MP.omap.get(+d.id); if(!o||!near(o)||!props.includes(o)) return; const v=Array.isArray(d.v)?d.v.map(n=>clamp(mpNum(n),-50,50)):[0,0,0]; wake(o); o.vel.x+=v[0]; o.vel.y+=v[1]; o.vel.z+=v[2];
     if(o.kind==='blast'&&Math.hypot(v[0],v[1],v[2])>7){ const t=.15+Math.random()*.25; o.fuse=o.fuse<0?t:Math.min(o.fuse,t); } }
   else if(d.t==='os'){ const p=Array.isArray(d.p)?d.p.map(mpNum):null, k=MPOK[d.k|0]; if(!p||!k||Math.hypot(p[0]-av.pos.x,p[2]-av.pos.z)>30) return; if(props.filter(o=>o.spawned).length>220) return; const o=new Prop(k,p[0],p[1],p[2],{spawned:true,yaw:Math.random()*TAU}); o.angVel.set(R(-2,2),R(-2,2),R(-2,2)); }
@@ -5930,12 +6009,12 @@ function mpAvatar(id,P){ const h=mpHash(P.name+'#'+id), parts=makePersonMesh(SKI
 function mpDispose(g){ scene.remove(g); g.traverse(o=>{ if(o.geometry) o.geometry.dispose(); }); }
 function mpAvDrop(id){ const av=MP.av.get(id); if(!av) return; mpDispose(av.g); scene.remove(av.tag); av.tag.material.map.dispose(); av.tag.material.dispose(); if(av.veh) mpDispose(av.veh.g); if(av.chute) mpDispose(av.chute); MP.av.delete(id); }
 function mpBoatMesh(col){ const g=new THREE.Group(); g.add(new THREE.Mesh(mergeGeos([{g:BX(2.2,.8,5,0,.4,-.3),c:'#f2f0ea'},{g:BX(2.3,.22,5.1,0,.85,-.3),c:col},{g:BX(1.5,.9,1.5,0,1.35,-.9),c:'#f2f0ea'},{g:BX(1.52,.35,1.52,0,1.7,-.9),c:'#2c3e50'},{g:new THREE.ConeGeometry(1.15,1.8,4).rotateY(PI/4).scale(1,1,.55).rotateX(PI/2).translate(0,.5,3.1),c:'#f2f0ea'}],true),VC)); return g; }
-function mpVehMake(vk,variant,col){ let g, rotor=null, glow=null, blur=null;
-  if(vk===1) g=makeCarMesh(col,variant).g;
+function mpVehMake(vk,variant,col){ let g, rotor=null, glow=null, blur=null, seat=null;
+  if(vk===1){ const m=makeCarMesh(col,variant); g=m.g; if(m.dims.ride) seat=m.dims; }
   else if(vk===2){ const H=new Heli(0,-60,0,0,col); const i=helis.indexOf(H); if(i>=0) helis.splice(i,1); g=H.g; rotor=H.rotor; blur=H.blur; }
   else if(vk===3){ const m=jetMesh(col); g=m.g; glow=m.glow; m.bombs.forEach(b=>b.visible=false); }
   else g=mpBoatMesh(col);
-  g.rotation.order='YXZ'; if(!g.parent) scene.add(g); return {g,rotor,glow,blur}; }
+  g.rotation.order='YXZ'; if(!g.parent) scene.add(g); return {g,rotor,glow,blur,seat}; }
 function mpChuteMesh(col){ const g=new THREE.Group(), cm=lam(col,{roughness:.7,side:THREE.DoubleSide}); g.add(new THREE.Mesh(new THREE.SphereGeometry(2.6,12,6,0,TAU,0,PI/2.6).scale(1,.45,1).translate(0,2.6,0),cm));
   const lm=new THREE.LineBasicMaterial({color:0x333333}), pts=[]; for(let k=0;k<6;k++){ const a=k/6*TAU; pts.push(new V3(0,0,0),new V3(Math.cos(a)*2.2,2.75,Math.sin(a)*2.2)); } g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts),lm)); scene.add(g); return g; }
 function mpPose(av,mode,fl,dt){ const p=av.parts, sp=av.spd, air=(fl&2)&&mode===0; av.phase+=sp>.2?dt*TAU*(.82+.085*Math.min(sp,10)):0;
@@ -5970,8 +6049,9 @@ function mpAvatars(dt){ const now=performance.now();
     let tagY=av.pos.y+1.35;
     if(av.veh){ const g=av.veh.g, k=Math.min(1,dt*12); g.position.copy(av.pos); g.rotation.x+=wrapA(s[3]-g.rotation.x)*k; g.rotation.y+=wrapA(s[4]-g.rotation.y)*k; g.rotation.z+=wrapA(s[5]-g.rotation.z)*k;
       if(av.veh.rotor){ av.veh.rotor.rotation.y+=dt*28; if(av.veh.blur) av.veh.blur.material.opacity=.22; } if(av.veh.glow) av.veh.glow.visible=true; tagY=av.pos.y+(vk===2?4.4:vk===3?3:vk===4?3:2.9); }
-    av.g.visible=!vk&&mode!==5;
-    if(av.g.visible){ av.g.position.copy(av.pos);
+    av.g.visible=(!vk||!!(av.veh&&av.veh.seat))&&mode!==5;
+    if(av.g.visible&&vk&&av.veh&&av.veh.seat){ const d=av.veh.seat; av.veh.g.position.copy(av.pos); av.veh.g.updateMatrixWorld(); _rdv.set(d.seat[0],d.seat[1],d.seat[2]); av.veh.g.localToWorld(_rdv); av.g.position.copy(_rdv); av.g.quaternion.copy(av.veh.g.quaternion); av.pedT=(av.pedT||0)+dt*av.spd*1.6; poseRider(av.parts,d,d.pedal?av.pedT:undefined); }
+    else if(av.g.visible){ av.g.position.copy(av.pos);
       if(mode===3&&s.length>=18){ _mq.set(s[14],s[15],s[16],s[17]); if(_mq.lengthSq()>.01){ _mq.normalize(); av.g.quaternion.slerp(_mq,Math.min(1,dt*12)); } }
       else { const W=WEAPONS[WORDER[s[13]|0]]||WEAPONS.fists, look=s[11]+PI, still=av.spd<.6; const want=(still||W.ranged||(s[7]&8))&&mode!==2?look:s[4]; av.yaw=lerpA(av.yaw,want,Math.min(1,dt*(still?6:12))); av.g.quaternion.setFromAxisAngle(UP,av.yaw); }
       mpPose(av,mode,s[7],dt); mpAvLook(av,s,mode,dt); }
