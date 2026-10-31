@@ -968,7 +968,7 @@ function groundHeight(x,z,yb){
   let h=riverH(z); const cell0=cellAt(x,z); if(cell0&&cell0.r.length) h=rampH(cell0.r,x,z,yb,h);
   for(let i=0;i<ramps.length;i++){ const r=ramps[i]; if(r.y>.01&&(yb===undefined||yb<r.y-.6)) continue; const dx=x-r.x, dz=z-r.z; const lx=dx*r.c-dz*r.s, lz=dx*r.s+dz*r.c;
     if(lx>-r.L/2&&lx<r.L/2&&lz>-r.W/2&&lz<r.W/2){ const hh=r.y+r.H*(lx+r.L/2)/r.L; if(hh>h) h=hh; } }
-  if(yb!==undefined&&x>AIR.x0-6&&!cellAt(x,z)){ for(const b of AIR.boxes) if(x>b.x0&&x<b.x1&&z>b.z0&&z<b.z1&&yb>=b.h-0.6&&yb>=(b.y0||0)-.05&&b.h>h) h=b.h; }
+  if(yb!==undefined&&(x>AIR.x0-6||x<-LIM)&&!cellAt(x,z)){ for(const b of outBoxes(x,z)) if(x>b.x0&&x<b.x1&&z>b.z0&&z<b.z1&&yb>=b.h-0.6&&yb>=(b.y0||0)-.05&&b.h>h) h=b.h; }
   if(yb!==undefined){ const cell=cellAt(x,z); if(cell){ const LB=cell.gb?cell.gb[gKey(cell,x,z)]:cell.b;
     for(let pass=0;pass<2;pass++){ const bs=pass?cell.b:LB; for(let i=pass?(cell.gb?cell.sb:bs.length):0;i<bs.length;i++){ const b=bs[i];
     if(x>b.x0&&x<b.x1&&z>b.z0&&z<b.z1&&yb>=b.h-0.6&&yb>=(b.y0||0)-.05&&b.h>h) h=b.h; } } } }
@@ -985,7 +985,7 @@ const gKey=(c,x,z)=>clamp(Math.floor((x-c.ox)/GB),0,GNB-1)*GNB+clamp(Math.floor(
 let ceilHit=Infinity;
 function collideStatics(p,r,yb,yt){
   ceilHit=Infinity; if(yt===undefined) yt=yb+2;
-  const cell=cellAt(p.x,p.z); if(!cell) return p.x>AIR.x0-6?airCollide(p,r,yb,yt):null; let hit=null;
+  const cell=cellAt(p.x,p.z); if(!cell) return (p.x>AIR.x0-6||p.x<-LIM)?airCollide(p,r,yb,yt):null; let hit=null;
   const gk=cell.gb?gKey(cell,p.x,p.z):0, LB=cell.gb?cell.gb[gk]:cell.b;
   for(let pass=0;pass<2;pass++){ const list=pass?cell.b:LB; for(let qi=pass?(cell.gb?cell.sb:list.length):0;qi<list.length;qi++){ const b=list[qi]; const by0=b.y0||0; if((yb>=b.h-0.6&&yb>=by0-.05)||yt<=by0+.05) continue;
     if(p.x<b.x0-r||p.x>b.x1+r||p.z<b.z0-r||p.z>b.z1+r) continue;
@@ -1331,6 +1331,70 @@ function buildProperty(tier,cx,cz,cell){ const keep=_rngF; _rngF=mulberry32(9100
     const rec=cell.ints[cell.ints.length-1]; if(rec){ rec.kind=null; rec.spots=[]; rec.owned=true; }
     PROPS[tier]={i:tier,cx,cz,cell,rec,signP:{x:cx+gateW/2+2.2,z:cz+E-1.6},padP:{x:cx+GX,z:cz+GZ+4.2},portal:{x:cx+GX,z:cz+GZ-1.2},exitYaw:0,door:rec?rec.doorOut:{x:cx,z:cz+2}};
   } finally { _rngF=keep; } }
+
+/* ---------- Stage 3: the west countryside: State Highway 1, Rangiwai township, two farms ---------- */
+const COUNTRY={town:{x:-515,z:-87},farmA:{x:-420,z:-160},farmB:{x:-440,z:208},paddocks:[],shops:[]};
+function buildCountry(){ const keep=_rngF; _rngF=mulberry32(4242); try{
+  const B=AIR.boxes, box=(x0,x1,y0,y1,z0,z1,m,col)=>{ addS(BX(x1-x0,y1-y0,z1-z0,(x0+x1)/2,(y0+y1)/2,(z0+z1)/2),m); if(col!==false) B.push({x0,x1,z0,z1,y0,h:y1}); };
+  const white=lam('#f2f2f2',{roughness:.6}), yel=lam('#ffcc33',{roughness:.6}), dirt=flat(lam('#a68a64',{roughness:1})), gravel=flat(lam('#b9b2a4',{roughness:1})), conc=lam('#b8bab6',{roughness:.9}), dark=lam('#2b2d31',{roughness:.6});
+  const road=(x0,x1,z0,z1)=>{ addS(PL(x1-x0,z1-z0,(x0+x1)/2,.04,(z0+z1)/2),matAsphalt); };
+  // country road 1 (through Rangiwai) and road 2 (to the dairy farm), with gravel shoulders and dashed centre lines
+  for(const [z,x1] of [[-87,-775],[203,-640]]){ road(x1,-266,z-5,z+5); addS(PL(-266-x1,1.6,(x1-266)/2,.035,z-5.8),gravel); addS(PL(-266-x1,1.6,(x1-266)/2,.035,z+5.8),gravel);
+    for(let x=-270;x>x1+3;x-=9) addS(PL(4.5,.18,x-2.25,.05,z),white); addS(PL(-266-x1,.14,(x1-266)/2,.05,z-4.5),white); addS(PL(-266-x1,.14,(x1-266)/2,.05,z+4.5),white); }
+  // State Highway 1: four lanes north to south at x=-330, bridge over the river, roadworks at both ends
+  const HX=-330; road(HX-10,HX+10,-276,276); for(const dx of [-5,5]) for(let z=-274;z<274;z+=10) if(Math.abs(z+87)>12&&Math.abs(z-203)>12) addS(PL(.18,5,HX+dx,.05,z+2.5),white);
+  for(const dx of [-9.3,9.3]) addS(PL(.2,552,HX+dx,.05,0),white); addS(PL(.16,552,HX-.25,.05,0),yel); addS(PL(.16,552,HX+.25,.05,0),yel);
+  box(HX-10.5,HX+10.5,-1.2,0,RIVER_Z-RIV_OUT-4,RIVER_Z+RIV_OUT+4,conc,true); for(const dx of [-10.3,10.3]) box(HX+dx-.25,HX+dx+.25,0,1.1,RIVER_Z-RIV_OUT-4,RIVER_Z+RIV_OUT+4,conc,true);
+  for(const z of [RIVER_Z-6,RIVER_Z+6]) box(HX-1.2,HX+1.2,WATER_Y-2,-1.2,z-1.2,z+1.2,conc,false);
+  for(const sz of [-1,1]){ const z=sz*272; for(let k=-4;k<=4;k++){ box(HX+k*2.3-.9,HX+k*2.3+.9,0,1,z-.3,z+.3,k%2?white:lam('#e5484d'),true); }
+    addS(BX(9,2.2,.12,HX,2.6,z-sz*1.2),signMat([['SH1 · ROADWORKS',64],['Highway opening soon',40]],'#f77f00','#1b1b1b',512,128)); box(HX-4.6,HX-4.3,0,2.4,z-sz*1.2-.15,z-sz*1.2+.15,dark,false); box(HX+4.3,HX+4.6,0,2.4,z-sz*1.2-.15,z-sz*1.2+.15,dark,false); }
+  for(const [z,txt] of [[-110,'SH1 · North'],[180,'SH1 · South']]){ addS(BX(5,1.4,.1,HX+13,3.4,z),signMat([[txt,60]],'#1f7a4d','#ffffff',512,128)); box(HX+12.9,HX+13.1,0,2.7,z-.1,z+.1,dark,false); }
+  addS(BX(7,1.6,.1,-300,3.2,-80),signMat([['Rangiwai 2 km  →',60],['Hillcrest Farm',40]],'#1f7a4d','#ffffff',512,140)); box(-300.1,-299.9,0,2.4,-80.1,-79.9,dark,false);
+  addS(BX(7,1.6,.1,-300,3.2,196),signMat([['Riverside Dairy  →',60]],'#1f7a4d','#ffffff',512,100)); box(-300.1,-299.9,0,2.4,195.9,196.1,dark,false);
+  // Rangiwai township along road 1
+  const Z=-87, shop=(x0,x1,north,depth,h,col,name,sub)=>{ const z0=north?Z-9-depth:Z+9, z1=north?Z-9:Z+9+depth, fz=north?z1:z0, sg=north?1:-1, m=lam(col,{roughness:.85});
+      box(x0,x1,0,h,z0,z1,m,true); box(x0-.3,x1+.3,h,h+.35,z0-.3,z1+.3,lam('#ece6da'),false);
+      addS(BX(x1-x0-1,1.1,.12,(x0+x1)/2,h-.9,fz+sg*.08),signMat([[name,70]].concat(sub?[[sub,34]]:[]),'#fbf7ee','#2b2d31',768,128));
+      box(x0+.6,x1-.6,.2,2.6,fz+sg*.04-.04,fz+sg*.04+.04,lam('#2c3e50',{emissive:new THREE.Color('#ffcf7a'),emissiveIntensity:.2}),false);
+      box(x0,x1,2.9,3.05,north?fz:fz-2.2,north?fz+2.2:fz,lam(['#c0392b','#1d6fb8','#2e8b57','#f39c12'][COUNTRY.shops.length%4]),false);
+      COUNTRY.shops.push({name,x:(x0+x1)/2,z:fz+sg*3}); };
+  addS(PL(200,4,-520,.06,Z-7),matWalk); addS(PL(200,4,-520,.06,Z+7),matWalk);
+  shop(-440,-452,true,10,4.5,'#f4a261','Rangiwai Dairy','Pies · Milk · Lotto'); shop(-455,-469,true,11,4.2,'#2a9d8f','Fish & Chips'); shop(-473,-493,true,14,7,'#6d4c41','The Thirsty Weka','Pub & Bistro');
+  shop(-497,-509,true,10,4.5,'#d62828','PostShop'); shop(-560,-578,true,12,5,'#7d8597','Rangiwai Hall'); shop(-582,-598,true,10,4.4,'#8e9aaf','Op Shop');
+  shop(-476,-494,false,12,6,'#5b6168','Gazza\'s Garage','Mechanic · Tyres'); shop(-498,-512,false,10,4.3,'#e9c46a','Rangiwai Bakery'); shop(-582,-600,false,11,4.5,'#9c6644','Farm Supplies','Fencing · Feed · Gumboots');
+  // petrol station with a canopy and pumps
+  { const px=-455, pz=Z+20; addS(PL(30,22,px,.05,pz),flat(lam('#5d6166',{roughness:.9}))); box(px-12,px+12,5,5.6,pz-8,pz+6,lam('#e63946'),false); for(const x of [px-10,px+10]) for(const z of [pz-6,pz+4]) box(x-.25,x+.25,0,5,z-.25,z+.25,white,true);
+    for(const x of [px-6,px-2,px+2,px+6]) box(x-.5,x+.5,0,1.7,pz-1.3,pz-.3,lam('#f1faee'),true); addS(BX(10,1,.1,px,5.3,pz+6.06),signMat([['FUEL · Z',80]],'#e63946','#ffffff',512,64));
+    box(px-14,px-4,0,4,pz+8,pz+11,lam('#f1faee'),true); COUNTRY.shops.push({name:'Petrol station',x:px,z:pz}); }
+  // the white church with a spire, set back from the road
+  { const cx=-532, cz=Z-24; box(cx-5,cx+5,0,6,cz-9,cz+5,white,true); roofGable(cx-5,cx+5,cz-9,cz+5,6,4,white,lam('#3d4452'),false); box(cx-1.6,cx+1.6,0,13,cz+5,cz+8,white,true);
+    addS(new THREE.ConeGeometry(2.3,6,4).rotateY(PI/4).translate(cx,16,cz+6.5),lam('#3d4452')); box(cx-.08,cx+.08,19,21,cz+6.42,cz+6.58,white,false); box(cx-.6,cx+.6,20,20.2,cz+6.42,cz+6.58,white,false); }
+  // a few houses at the end of town
+  for(let k=0;k<4;k++){ const x0=-612-k*20, north=k%2===0, z0=north?Z-26:Z+12, z1=z0+12; box(x0,x0+12,0,4,z0,z1,matHome[k%HOME_C.length],true); roofGable(x0,x0+12,z0,z1,4,2.2,matGable[k%HOME_C.length],matRoofT[k%5],true); addS(PL(4,north?12-0:12,x0+6,.05,north?Z-14:Z+6),matDrive); }
+  addS(BX(7,2,.12,-420,2.6,Z-8),signMat([['Welcome to',44],['RANGIWAI',96],['Pop. 412 · Drive safe',36]],'#2e7d4f','#ffffff',512,256)); box(-423.4,-423.2,0,2,Z-8.1,Z-7.9,dark,false); box(-416.8,-416.6,0,2,Z-8.1,Z-7.9,dark,false);
+  // farms: barn, silo, farmhouse, fenced paddocks, crop rows
+  const fence=(x0,x1,z0,z1,gap)=>{ const fm=lam('#8b6b4a',{roughness:.95}); const seg=(a0,a1,b0,b1)=>{ box(a0,a1,0,1.15,b0,b1,fm,true); };
+      seg(x0,x1,z0-.08,z0+.08); seg(x0,x1,z1-.08,z1+.08); seg(x0-.08,x0+.08,z0,z1); if(gap){ seg(x1-.08,x1+.08,z0,(z0+z1)/2-4); seg(x1-.08,x1+.08,(z0+z1)/2+4,z1); } else seg(x1-.08,x1+.08,z0,z1); };
+  const barn=(cx,cz,w,d,h)=>{ const red=lam('#a4302a',{roughness:.9}); box(cx-w/2,cx+w/2,0,h,cz-d/2,cz+d/2,red,true); roofGable(cx-w/2,cx+w/2,cz-d/2,cz+d/2,h,h*.55,red,lam('#5b6068'),false);
+      box(cx-3,cx+3,0,4.6,cz+d/2-.05,cz+d/2+.05,lam('#f2f2f2'),false); box(cx-2.8,cx+2.8,.1,4.4,cz+d/2+.02,cz+d/2+.1,lam('#7a2420'),false); };
+  const silo=(x,z)=>{ addS(new THREE.CylinderGeometry(3,3,15,16).translate(x,7.5,z),lam('#c9ccd3',{metalness:.5,roughness:.4})); addS(new THREE.SphereGeometry(3,16,8,0,TAU,0,PI/2).translate(x,15,z),lam('#9aa0a6',{metalness:.5,roughness:.4})); B.push({x0:x-2.6,x1:x+2.6,z0:z-2.6,z1:z+2.6,y0:0,h:15}); };
+  const farmhouse=(cx,cz,col)=>{ box(cx-6,cx+6,0,4.2,cz-5,cz+5,matHome[col],true); roofGable(cx-6,cx+6,cz-5,cz+5,4.2,2.4,matGable[col],matRoofT[1],true); box(cx-4,cx+4,2.8,3,cz+5,cz+7.5,lam('#f6f4ef'),false); };
+  const rows=(x0,x1,z0,z1,c1,c2)=>{ addS(PL(x1-x0,z1-z0,(x0+x1)/2,.045,(z0+z1)/2),flat(lam(c2,{roughness:1}))); for(let x=x0+1.2;x<x1-1;x+=2.4) addS(BX(1.1,.7,z1-z0-2,x,.35,(z0+z1)/2),flat(lam(c1,{roughness:1}))); };
+  // Hillcrest Farm (north of town): sheep paddock, wheat, barn and silo
+  addS(PL(5,52,-405,.045,-87-31),dirt); farmhouse(-405,-150,3); barn(-440,-176,16,22,8); silo(-458,-160); silo(-458,-170);
+  fence(-590,-478,-200,-120,true); COUNTRY.paddocks.push({x0:-588,x1:-480,z0:-198,z1:-122,kind:'sheep',n:22});
+  rows(-590,-478,-262,-206,'#e9c46a','#b08a3e'); fence(-592,-476,-264,-204,false);
+  // Riverside Dairy (south of the river, off road 2): cows, maize, milking shed
+  addS(PL(5,40,-420,.045,203+22),dirt); farmhouse(-420,250,0); barn(-470,236,18,16,7); box(-505,-485,0,4,224,244,lam('#d9d9d9'),true); roofGable(-505,-485,224,244,4,1.8,lam('#d9d9d9'),lam('#6b6f73'),true);
+  fence(-620,-512,214,268,true); COUNTRY.paddocks.push({x0:-618,x1:-514,z0:216,z1:266,kind:'cow',n:12});
+  rows(-620,-430,140,190,'#57a33a','#6b5a3a'); fence(-622,-428,138,192,false);
+  for(let k=0;k<8;k++) addS(new THREE.CylinderGeometry(.9,.9,1.4,14).rotateZ(PI/2).translate(-445+k*2.1,.9,214-((k%2)*2)),lam('#d8b25a',{roughness:1}));
+  // trees and hedgerows across the countryside
+  const clear=(x,z)=>{ if(Math.abs(z+87)<16||Math.abs(z-203)<14||Math.abs(x-HX)<16) return false; if(Math.abs(z-RIVER_Z)<RIV_OUT+3) return false;
+    for(const p of [[-600,-470,-270,-110],[-625,-420,135,270],[-470,-395,-190,-140],[-620,-410,-112,-60],[-640,-560,-110,-60]]) if(x>p[0]-3&&x<p[1]+3&&z>p[2]-3&&z<p[3]+3) return false; return true; };
+  for(let k=0;k<170;k++){ const x=-285-rng()*495, z=-270+rng()*540; if(!clear(x,z)) continue; addTree(x,z,.9+rng()*.8,null); }
+  for(let k=0;k<26;k++){ const a=PI*.6+rng()*PI*.8, rad=560+rng()*120, x=Math.cos(a)*rad-160, z=Math.sin(a)*rad*.55, w=30+rng()*50, h=14+rng()*30; if(x>-760) continue; addS(new THREE.BoxGeometry(w,h,25+rng()*30).rotateY(a).translate(x-40,h/2-1,z),pick(matHill)); }
+} finally { _rngF=keep; } }
 function makeStore(cx,cz,cell){
   const X0=cx-15,X1=cx+15,Z0=cz-14,Z1=cz+8,H=6.5,T=.4,dw=2.4,fy=.2;
   const wallM=lam('#d9d2c4',{roughness:.9}), trim=lam('#2f4f3a',{roughness:.7}), dark=lam('#33363c',{roughness:.6}), peg=lam('#c9a46a',{roughness:.85}), shelfM=lam('#7d8288',{roughness:.5,metalness:.4});
@@ -1790,13 +1854,15 @@ for(let i=0;i<N;i++) for(let j=0;j<N;j++){
   }
 }
 /* edge hedge, border trees, hills, clouds */
-for(const s of [-1,1]){ addS(BX(2*LIM+3.2,1.3,1.4,0,.65,s*(LIM+1.6)),matHedge); for(const [a,b] of (s>0?[[-LIM-3.2,-40],[-18,RIVER_Z-RIV_OUT],[RIVER_Z+RIV_OUT,LIM+3.2]]:[[-LIM-3.2,RIVER_Z-RIV_OUT],[RIVER_Z+RIV_OUT,LIM+3.2]])) addS(BX(1.4,1.3,b-a,s*(LIM+1.6),.65,(a+b)/2),matHedge); }
+for(const s of [-1,1]){ addS(BX(2*LIM+3.2,1.3,1.4,0,.65,s*(LIM+1.6)),matHedge); for(const [a,b] of (s>0?[[-LIM-3.2,-40],[-18,RIVER_Z-RIV_OUT],[RIVER_Z+RIV_OUT,LIM+3.2]]:[[-LIM-3.2,-94],[-80,RIVER_Z-RIV_OUT],[RIVER_Z+RIV_OUT,196],[210,LIM+3.2]])) addS(BX(1.4,1.3,b-a,s*(LIM+1.6),.65,(a+b)/2),matHedge); }
+const inCountry=(x,z)=>x<-LIM-2&&z>-LIM-40&&z<LIM+40;
 const inAir=(x,z,m)=>x>AIR.x0-m&&x<AIR.x1+m&&z>AIR.z0-m&&z<AIR.z1+m;
-for(let k=0;k<220;k++){ const x=rr(-HALF-130,HALF+130), z=rr(-HALF-130,HALF+130); if(Math.max(Math.abs(x),Math.abs(z))<LIM+5||Math.abs(z-RIVER_Z)<RIV_OUT+3) continue; if(inAir(x,z,4)){ suppressS=true; addTree(x,z,rr(.9,1.6),null); suppressS=false; continue; } addTree(x,z,rr(.9,1.6),null); }
-for(let k=0;k<46;k++){ const a=k/46*TAU+rr(-.05,.05), rad=rr(LIM+70,LIM+130), w=rr(30,70), h=rr(10,34); if(Math.abs(Math.sin(a)*rad-RIVER_Z)<RIV_OUT+40) continue; if(inAir(Math.cos(a)*rad,Math.sin(a)*rad,40)){ rr(0,1); rr(0,1); continue; } addS(new THREE.BoxGeometry(w,h,rr(25,50)).rotateY(a).translate(Math.cos(a)*rad,h/2-1,Math.sin(a)*rad),pick(matHill)); }
+for(let k=0;k<220;k++){ const x=rr(-HALF-130,HALF+130), z=rr(-HALF-130,HALF+130); if(Math.max(Math.abs(x),Math.abs(z))<LIM+5||Math.abs(z-RIVER_Z)<RIV_OUT+3) continue; if(inAir(x,z,4)||inCountry(x,z)){ suppressS=true; addTree(x,z,rr(.9,1.6),null); suppressS=false; continue; } addTree(x,z,rr(.9,1.6),null); }
+for(let k=0;k<46;k++){ const a=k/46*TAU+rr(-.05,.05), rad=rr(LIM+70,LIM+130), w=rr(30,70), h=rr(10,34); if(Math.abs(Math.sin(a)*rad-RIVER_Z)<RIV_OUT+40) continue; if(inAir(Math.cos(a)*rad,Math.sin(a)*rad,40)||inCountry(Math.cos(a)*rad,Math.sin(a)*rad)){ rr(0,1); rr(0,1); continue; } addS(new THREE.BoxGeometry(w,h,rr(25,50)).rotateY(a).translate(Math.cos(a)*rad,h/2-1,Math.sin(a)*rad),pick(matHill)); }
 buildRiver();
 airportBuild();
 if(POLY){ detailPass(); aoPass(); }
+buildCountry();
 flushS(); SEW.surf=scene.children.filter(m=>m.isMesh&&m!==skyDome);
 sealCells(); staticSealed=true;
 
@@ -3200,6 +3266,35 @@ function addDigArm(c){ const M=lam(c.color||'#f2b705',{roughness:.7}), D=lam('#2
   const b1=new THREE.Mesh(new THREE.BoxGeometry(.35,.4,3.2).translate(0,0,1.6),M); b1.castShadow=true; boom.add(b1); const el=new THREE.Group(); el.position.set(0,0,3.2); boom.add(el);
   const b2=new THREE.Mesh(new THREE.BoxGeometry(.3,.3,2.2).translate(0,0,1.1),M); b2.castShadow=true; el.add(b2); const bk=new THREE.Mesh(new THREE.BoxGeometry(1.1,.7,.6).translate(0,-.2,2.35),D); bk.castShadow=true; el.add(bk);
   boom.rotation.x=-.55; el.rotation.x=1.5; c.g.add(piv); c.arm={boom,el,t:0}; }
+
+/* ---------- countryside at runtime: sheep and cows, locals in town, and zombies that get worse the further out you go ---------- */
+const ANIMALS=[];
+function animalMesh(kind){ const g=new THREE.Group(), cow=kind==='cow', bodyC=cow?(Math.random()<.5?'#f2f2f2':'#3a2a22'):'#f4f1e8', M=c=>lam(c,{roughness:.95});
+  const bx=(w,h,d,x,y,z,c)=>{ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c)); m.position.set(x,y,z); m.castShadow=true; g.add(m); return m; };
+  if(cow){ bx(1.1,1.0,2.2,0,1.25,0,bodyC); if(bodyC==='#f2f2f2'){ bx(1.12,.5,.7,0,1.4,.3,'#222'); bx(1.12,.45,.5,0,1.2,-.6,'#222'); } bx(.6,.6,.7,0,1.55,1.35,bodyC==='#f2f2f2'?'#222':'#5b3a2a'); bx(.62,.3,.25,0,1.35,1.72,'#e8b4a0'); for(const [x,z] of [[-.38,.75],[.38,.75],[-.38,-.75],[.38,-.75]]) bx(.22,.8,.22,x,.4,z,'#2a2a2a'); bx(.12,.12,.12,-.3,1.95,1.3,'#eee'); bx(.12,.12,.12,.3,1.95,1.3,'#eee'); }
+  else { bx(.9,.75,1.2,0,.85,0,bodyC); bx(.95,.6,1.25,0,.95,0,'#fbf9f2'); bx(.38,.42,.42,0,1.0,.75,'#2a2a2a'); for(const [x,z] of [[-.25,.4],[.25,.4],[-.25,-.4],[.25,-.4]]) bx(.14,.5,.14,x,.25,z,'#2a2a2a'); }
+  return g; }
+function setupCountry(){ for(const P of COUNTRY.paddocks) for(let k=0;k<P.n;k++){ const g=animalMesh(P.kind), a={kind:P.kind,P,g,pos:g.position,vel:new V3(),yaw:Math.random()*TAU,t:Math.random()*4,tx:0,tz:0,air:false,down:0,spin:0};
+      a.pos.set(P.x0+Math.random()*(P.x1-P.x0),0,P.z0+Math.random()*(P.z1-P.z0)); a.tx=a.pos.x; a.tz=a.pos.z; scene.add(g); ANIMALS.push(a); }
+  GREET.country=['Kia ora! Not much happens out here.','Watch out for the sheep on the road.','Zombies are worse past the town, mate.','Best pies in the district, these.'];
+  for(const S of COUNTRY.shops.slice(0,6)){ try{ const q=new Person(S.x+(Math.random()-.5)*4,S.z,{}); q.work={x:q.pos.x,z:S.z,y:0,yaw:Math.random()*TAU,kind:'shop',greet:'country'}; q.phase0=Math.random()*5; dressWorker(q,q.work); }catch(e){} }
+  for(const [x,z,yaw,v] of [[-440,-110,0,'pickup'],[-470,-73,PI/2,'pickup'],[-430,-165,PI,'quad'],[-432,-150,PI/2,'pickup'],[-430,225,0,'quad'],[-455,248,PI/2,'pickup'],[-505,-74,PI/2,'sedan'],[-590,-100,-PI/2,'van']]){ const c=new Car(x,z,yaw,'free',{variant:v}); c.parked=true; } }
+let ctryT=0;
+function countryTick(dt){ if(!state.started) return; const px=player.pos.x, pz=player.pos.z, out=px<-LIM-10;
+  for(const a of ANIMALS){ if(Math.abs(a.pos.x-px)>230||Math.abs(a.pos.z-pz)>230){ continue; }
+    if(a.air){ a.vel.y-=22*dt; a.pos.addScaledVector(a.vel,dt); a.g.rotation.x+=a.spin*dt; a.g.rotation.z+=a.spin*.6*dt; if(a.pos.y<=0&&a.vel.y<0){ a.pos.y=0; if(a.vel.y<-6){ a.vel.y*=-.35; a.vel.x*=.6; a.vel.z*=.6; } else { a.air=false; a.vel.set(0,0,0); a.down=2.2; } } continue; }
+    if(a.down>0){ a.down-=dt; a.g.rotation.z=PI/2*Math.min(1,a.down); a.g.rotation.x*=.9; if(a.down<=0){ a.g.rotation.set(0,a.yaw,0); } continue; }
+    for(const c of cars){ const sp=Math.hypot(c.vel.x,c.vel.z); if(sp<3) continue; if(Math.abs(c.pos.x-a.pos.x)>4||Math.abs(c.pos.z-a.pos.z)>4) continue; if(Math.hypot(c.pos.x-a.pos.x,c.pos.z-a.pos.z)<(c.cr||1)+1){ a.air=true; a.vel.set(c.vel.x*1.15+(Math.random()-.5)*3,5+sp*.35,c.vel.z*1.15+(Math.random()-.5)*3); a.spin=(Math.random()-.5)*14; Snd.thud(a.pos.x,a.pos.z,sp); if(c===activeCar) state.shake=Math.max(state.shake,.12); break; } }
+    if(a.air) continue;
+    const dp=Math.hypot(px-a.pos.x,pz-a.pos.z), flee=dp<7&&player.mode==='walk'; a.t-=dt;
+    if(flee){ a.tx=a.pos.x+(a.pos.x-px)/dp*8; a.tz=a.pos.z+(a.pos.z-pz)/dp*8; a.t=1.5; }
+    else if(a.t<=0){ const P=a.P; if(Math.random()<.5){ a.tx=clamp(a.pos.x+(Math.random()-.5)*16,P.x0,P.x1); a.tz=clamp(a.pos.z+(Math.random()-.5)*16,P.z0,P.z1); } else { a.tx=a.pos.x; a.tz=a.pos.z; } a.t=3+Math.random()*5; }
+    const dx=a.tx-a.pos.x, dz=a.tz-a.pos.z, d=Math.hypot(dx,dz); if(d>.3){ const v=(flee?4.5:1.1)*(a.kind==='cow'?.8:1), want=Math.atan2(dx,dz); a.yaw+=wrapA(want-a.yaw)*Math.min(1,dt*5); a.pos.x+=Math.sin(a.yaw)*v*dt; a.pos.z+=Math.cos(a.yaw)*v*dt; a.g.position.y=Math.abs(Math.sin(perfT*9+a.t))*.06; }
+    a.g.rotation.set(0,a.yaw,0); }
+  ctryT-=dt; if(ctryT>0) return; ctryT=5; if(!out||story.on||mpClient()||state.over) return;
+  const lim=Math.min(14,4+Math.floor((-px-LIM)/70)); let n=0; for(const q of people) if(q.zombie&&!q.dead&&q.pos.x<-LIM&&Math.hypot(q.pos.x-px,q.pos.z-pz)<90) n++;
+  for(let k=0;k<2&&n<lim;k++,n++){ const a=Math.random()*TAU, r=35+Math.random()*25, x=clamp(px+Math.cos(a)*r,-785,-LIM-6), z=clamp(pz+Math.sin(a)*r,-LIM+6,LIM-6); if(Math.abs(z-RIVER_Z)<RIV_OUT+2) continue;
+    const zb=new Person(x,z,{spawned:true,zombie:true,kind:pickZKind(1+Math.floor((-px-LIM)/120))}); zb.aggro=8; } }
 function autoPark(dt){ const c=activeCar; if(!c||state.paused||state.cine) return; if(padHere()==='park'&&Math.hypot(c.vel.x,c.vel.z)<.6){ c.parkT=(c.parkT||0)+dt; if(c.parkT>.9){ c.parkT=0; padUse(); } } else if((c.parkT||0)>0) c.parkT=0; }
 function digTick(dt){ for(const c of cars){ if(!c.arm) continue; const A=c.arm; if(A.t>0){ A.t-=dt; const k=1-Math.max(0,A.t)/1.1, sw=Math.sin(k*PI); A.boom.rotation.x=-.55+sw*.9; A.el.rotation.x=1.5-sw*.4;
       if(!A.hit&&k>.45){ A.hit=true; const fx=Math.sin(c.yaw), fz=Math.cos(c.yaw), hx=c.pos.x+fx*4.6, hz=c.pos.z+fz*4.6; puff(hx,c.pos.y+.4,hz,0x9a8a6a,1.1,false); Snd.thud(hx,hz,10); state.shake=Math.max(state.shake,.25);
@@ -3209,7 +3304,7 @@ function digTick(dt){ for(const c of cars){ if(!c.arm) continue; const A=c.arm; 
         for(const b of placedBlocks.slice()) if(Math.hypot(b.m.position.x-hx,b.m.position.z-hz)<2.6) smashBlock(b); } }
     else { A.boom.rotation.x+=(-.55-A.boom.rotation.x)*Math.min(1,dt*4); A.el.rotation.x+=(1.5-A.el.rotation.x)*Math.min(1,dt*4); } }
   const c=activeCar; if(c&&c.arm&&c.arm.t<=0&&!state.paused&&!state.cine&&(state.mouseHeld||keys.KeyF)&&!padHere()){ c.arm.t=1.1; c.arm.hit=false; } }
-function setupMotor(){ try{ setupSale(); }catch(e){ console.warn('houses',e); }
+function setupMotor(){ try{ setupSale(); }catch(e){ console.warn('houses',e); } try{ setupCountry(); }catch(e){ console.warn('country',e); }
   try{ for(const d of CARYARD.disp||[]){ const c=new Car(d.x,d.z,d.x<CARYARD.kiosk.x?PI/2:-PI/2,'free',{variant:d.v}); c.display=true; c.parked=true; }
     for(const d of CARYARD.show||[]){ const c=new Car(d.x,d.z,d.yaw,'free',{variant:d.v}); c.display=true; c.parked=true; }
     if(CARYARD.clerk){ const q=new Person(CARYARD.clerk.x,CARYARD.clerk.z,{colors:['#e0ac85','#d62828','#2d3142','#2b1d14']}); q.work={x:CARYARD.clerk.x,z:CARYARD.clerk.z,y:0,yaw:0,kind:'shop',greet:'cars'}; q.yaw=0; q.g.quaternion.setFromAxisAngle(UP,0); q.phase0=1; dressWorker(q,q.work); }
@@ -3217,7 +3312,7 @@ function setupMotor(){ try{ setupSale(); }catch(e){ console.warn('houses',e); }
   GREET.cars=['G\'day! Every vehicle comes with a free garage delivery.','Tanks are on special this week. Well, not really.','Have a look around, they don\'t bite.','Need a house first? Check the FOR SALE signs in the suburbs.'];
   GREET.motor=['Drive into a bay and press F.','Left bay for mods, right bay for repairs.','We fix anything that isn\'t a smoking crater.','Zombie rammer? Best money you\'ll ever spend.'];
   try{ for(const site of [0,1]){ const S=SITES[site]; if(!S) continue; const x=lotC(S[0]), z=lotC(S[1]); roadPark(x+10,z+24,site?'digger':'bulldozer'); } }catch(e){ console.warn('site vehicles',e); } }
-function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
+function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
   const c=activeCar;
   if(c&&c.emerg==='fire'&&use){ camera.getWorldDirection(_ewd); let dx=_ewd.x, dy=_ewd.y+.16, dz=_ewd.z; const l=Math.hypot(dx,dy,dz)||1; hoseSpray(nozzleWorld(c),{x:dx/l,y:Math.max(-.35,dy/l),z:dz/l},dt,true); }
   if(c&&c.emerg==='tow'){ if(use&&!c.useW){ if(c.towed){ towRelease(c); flash('Let go of the car'); } else { const h=hookWorld(c); let best=null,bd=4.6;
@@ -3330,7 +3425,7 @@ function applyGrip(c,grip,dt){ const fx=Math.sin(c.yaw), fz=Math.cos(c.yaw), rx=
 const dyn=[];
 function buildDyn(){ dyn.length=0; for(const o of props) dyn.push(o); for(const p of people) if(p.mode!=='drive'&&p.mode!=='held'&&p.mode!=='lift') dyn.push(p); }
 const isWalker=o=>o.isPerson&&(o.mode==='walk'||o.mode==='getup');
-function bounds(p,v){ if(p.x>GZ0.x-150) return; const XM=(p.z>AIR.z0&&p.z<AIR.z1)?AIR.x1:LIM; if(p.x>XM){p.x=XM; if(v.x>0)v.x*=-.4;} else if(p.x<-LIM){p.x=-LIM; if(v.x<0)v.x*=-.4;} if(p.z>LIM){p.z=LIM; if(v.z>0)v.z*=-.4;} else if(p.z<-LIM){p.z=-LIM; if(v.z<0)v.z*=-.4;} }
+function bounds(p,v){ if(p.x>GZ0.x-150) return; const XM=(p.z>AIR.z0&&p.z<AIR.z1)?AIR.x1:LIM; if(p.x>XM){p.x=XM; if(v.x>0)v.x*=-.4;} else if(p.x<((p.z>-LIM&&p.z<LIM)?-790:-LIM)){p.x=((p.z>-LIM&&p.z<LIM)?-790:-LIM); if(v.x<0)v.x*=-.4;} if(p.z>LIM){p.z=LIM; if(v.z>0)v.z*=-.4;} else if(p.z<-LIM){p.z=-LIM; if(v.z<0)v.z*=-.4;} }
 const _near=[];
 function collisions(){
   for(const o of dyn){ if(o.sleep||o.lodSkip) continue; const foot=o.mode==='getup'&&o.getFloor!==undefined?o.getFloor:o.pos.y-(isWalker(o)?HIP:o.gr);
@@ -4002,6 +4097,9 @@ function findMenu(){ if(!state.started||state.over||!cfEl.hidden) return; const 
   if(MOTOR.door) add('Tumbleton Motors','Mods and repairs for your car · '+dist(MOTOR.door.x,MOTOR.door.z),go(MOTOR.door.x,MOTOR.door.z,'Tumbleton Motors is marked. Follow the arrow'));
   const mine=SALE.filter(S=>GAR.h[S.i]&&GAR.h[S.i].own);
   for(const S of mine) add('Your home: '+S.D.name,'Garage entrance · '+dist(S.portal.x,S.portal.z),go(S.portal.x,S.portal.z,'Your garage is marked. Follow the arrow'));
+  add('Rangiwai township','Country town out west past State Highway 1 · '+dist(COUNTRY.town.x,COUNTRY.town.z),go(COUNTRY.town.x,COUNTRY.town.z,'Rangiwai is marked. Head west out of the city'));
+  add('Hillcrest Farm','Sheep, a big red barn and silos · '+dist(COUNTRY.farmA.x,COUNTRY.farmA.z),go(COUNTRY.farmA.x,COUNTRY.farmA.z,'Hillcrest Farm is marked'));
+  add('Riverside Dairy','Cows and maize south of the river · '+dist(COUNTRY.farmB.x,COUNTRY.farmB.z),go(COUNTRY.farmB.x,COUNTRY.farmB.z,'Riverside Dairy is marked'));
   for(const S of SALE) if(!(GAR.h[S.i]&&GAR.h[S.i].own)) add('For sale: '+S.D.name,money(S.D.price)+' · garage for '+S.D.cap+' · '+dist(S.signP.x,S.signP.z),go(S.signP.x,S.signP.z,S.D.name+' is marked. Follow the arrow to the FOR SALE sign'));
   add('Close','',()=>menuDone()); }
 function findStore(){ if(!STORE||!state.started) return; state.wpDest=null; state.shopWpUntil=perfT+45; flash('The Hardware & Arms store is marked. Follow the arrow'); }
@@ -4486,8 +4584,8 @@ function updateViewModel(dt){
       else { mag.position.copy(wl); mag.visible=W.id==='shotgun'?false:W.id==='launcher'?!!(a&&a.mag>0):true; } } }
   vmHemi.intensity=hemi.intensity*1.15; vmSun.intensity=sun.intensity*.65; vmScene.environment=scene.environment;
 }
-function insideBuilding(x,y,z){ const cell=cellAt(x,z); if(!cell) return x>AIR.x0-6&&AIR.boxes.some(b=>x>b.x0-.3&&x<b.x1+.3&&z>b.z0-.3&&z<b.z1+.3&&y<b.h+.3&&y>(b.y0||0)-.3); const LB=cell.gb?cell.gb[gKey(cell,x,z)]:cell.b; for(let pass=0;pass<2;pass++){ const bs=pass?cell.b:LB; for(let i=pass?(cell.gb?cell.sb:bs.length):0;i<bs.length;i++){ const b=bs[i]; if(x>b.x0-.3&&x<b.x1+.3&&z>b.z0-.3&&z<b.z1+.3&&y<b.h+.3&&y>(b.y0||0)-.3) return true; } } return false; }
-function solidAt(x,y,z){ const cell=cellAt(x,z); if(!cell) return x>AIR.x0-6&&AIR.boxes.some(b=>x>b.x0&&x<b.x1&&z>b.z0&&z<b.z1&&y<b.h&&y>(b.y0||0)); const LB=cell.gb?cell.gb[gKey(cell,x,z)]:cell.b; for(let pass=0;pass<2;pass++){ const bs=pass?cell.b:LB; for(let i=pass?(cell.gb?cell.sb:bs.length):0;i<bs.length;i++){ const b=bs[i]; if(x>b.x0&&x<b.x1&&z>b.z0&&z<b.z1&&y<b.h&&y>(b.y0||0)) return true; } } return false; }
+function insideBuilding(x,y,z){ const cell=cellAt(x,z); if(!cell) return (x>AIR.x0-6||x<-LIM)&&outBoxes(x,z).some(b=>x>b.x0-.3&&x<b.x1+.3&&z>b.z0-.3&&z<b.z1+.3&&y<b.h+.3&&y>(b.y0||0)-.3); const LB=cell.gb?cell.gb[gKey(cell,x,z)]:cell.b; for(let pass=0;pass<2;pass++){ const bs=pass?cell.b:LB; for(let i=pass?(cell.gb?cell.sb:bs.length):0;i<bs.length;i++){ const b=bs[i]; if(x>b.x0-.3&&x<b.x1+.3&&z>b.z0-.3&&z<b.z1+.3&&y<b.h+.3&&y>(b.y0||0)-.3) return true; } } return false; }
+function solidAt(x,y,z){ const cell=cellAt(x,z); if(!cell) return (x>AIR.x0-6||x<-LIM)&&outBoxes(x,z).some(b=>x>b.x0&&x<b.x1&&z>b.z0&&z<b.z1&&y<b.h&&y>(b.y0||0)); const LB=cell.gb?cell.gb[gKey(cell,x,z)]:cell.b; for(let pass=0;pass<2;pass++){ const bs=pass?cell.b:LB; for(let i=pass?(cell.gb?cell.sb:bs.length):0;i<bs.length;i++){ const b=bs[i]; if(x>b.x0&&x<b.x1&&z>b.z0&&z<b.z1&&y<b.h&&y>(b.y0||0)) return true; } } return false; }
 function updateCamera(dt){
   heliCockpitOff();
   { const W=WEAPONS[state.weapon], on=state.started&&!state.over&&!state.paused&&!activeCar&&!activeHeli&&!!W.ranged&&player.mode==='walk';
@@ -5710,7 +5808,10 @@ GREET.black=['Psst. Down here, mate.','Best deals under the city.','No questions
 function boxPush(p,r,x0,x1,z0,z1){ if(p.x<x0-r||p.x>x1+r||p.z<z0-r||p.z>z1+r) return null; const cx=clamp(p.x,x0,x1), cz=clamp(p.z,z0,z1), dx=p.x-cx, dz=p.z-cz, d2=dx*dx+dz*dz; if(d2>r*r) return null; let nx,nz,pen;
   if(d2<1e-9){ const l=p.x-x0, rt=x1-p.x, t=p.z-z0, bt=z1-p.z, m=Math.min(l,rt,t,bt); if(m===l){nx=-1;nz=0;pen=l+r;} else if(m===rt){nx=1;nz=0;pen=rt+r;} else if(m===t){nx=0;nz=-1;pen=t+r;} else {nx=0;nz=1;pen=bt+r;} }
   else { const d=Math.sqrt(d2); nx=dx/d; nz=dz/d; pen=r-d; } p.x+=nx*pen; p.z+=nz*pen; return {nx,nz}; }
-function airCollide(p,r,yb,yt){ let hit=null; for(const b of AIR.boxes){ const by0=b.y0||0; if((yb>=b.h-0.6&&yb>=by0-.05)||yt<=by0+.05) continue; const h=boxPush(p,r,b.x0,b.x1,b.z0,b.z1); if(h) hit=h; } return hit; }
+const OUTG={n:-1,m:new Map()};
+function outBoxes(x,z){ if(OUTG.n!==AIR.boxes.length){ OUTG.m.clear(); for(const b of AIR.boxes){ for(let i=Math.floor((b.x0-2.5)/16);i<=Math.floor((b.x1+2.5)/16);i++) for(let j=Math.floor((b.z0-2.5)/16);j<=Math.floor((b.z1+2.5)/16);j++){ const k=i*4096+j; let L=OUTG.m.get(k); if(!L){ L=[]; OUTG.m.set(k,L); } L.push(b); } } OUTG.n=AIR.boxes.length; }
+  return OUTG.m.get(Math.floor(x/16)*4096+Math.floor(z/16))||[]; }
+function airCollide(p,r,yb,yt){ let hit=null; for(const b of outBoxes(p.x,p.z)){ const by0=b.y0||0; if((yb>=b.h-0.6&&yb>=by0-.05)||yt<=by0+.05) continue; const h=boxPush(p,r,b.x0,b.x1,b.z0,b.z1); if(h) hit=h; } return hit; }
 function sewCollide(p,r){ let hit=null; const i0=Math.floor(p.x-r-SEW.X0), i1=Math.floor(p.x+r-SEW.X0), j0=Math.floor(p.z-r-SEW.Z0), j1=Math.floor(p.z+r-SEW.Z0);
   for(let j=j0;j<=j1;j++) for(let i=i0;i<=i1;i++){ const t=(i<0||j<0||i>=SEW.NG||j>=SEW.NG)?0:SEWG[j*SEW.NG+i]; if(t) continue; const h=boxPush(p,r,SEW.X0+i,SEW.X0+i+1,SEW.Z0+j,SEW.Z0+j+1); if(h) hit=h; }
   for(const b of SEW.boxes){ const h=boxPush(p,r,b.x0,b.x1,b.z0,b.z1); if(h) hit=h; } return hit; }
