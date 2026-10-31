@@ -2041,9 +2041,12 @@ const LINES={
 };
 const bubbleLayer=document.getElementById('bubbles'), bubbles=[]; let lastSpeak=-9;
 let voiceList=[];
-function loadVoices(){ try{ const all=speechSynthesis.getVoices()||[]; const en=all.filter(v=>/^en/i.test(v.lang)); voiceList=en.length?en:all; }catch(e){} }
+const VOICE_ODD=/albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|junior|ralph|fred|kathy|grandma|grandpa|rocko|shelley|sandy|flo\b|eddy|reed|novelty/i;
+// people speak with a neutral accent: American, British, Australian, New Zealand, Canadian or Irish English, and no joke voices
+function loadVoices(){ try{ const all=speechSynthesis.getVoices()||[], ok=v=>!VOICE_ODD.test(v.name||''), loc=v=>(v.lang||'').replace('_','-').toLowerCase();
+  let L=all.filter(v=>ok(v)&&/^en-(us|gb|au|nz|ca|ie)$/.test(loc(v))); if(!L.length) L=all.filter(v=>ok(v)&&/^en-(us|gb)/.test(loc(v))); if(!L.length) L=all.filter(v=>/^en/i.test(v.lang)&&ok(v)); voiceList=L.length?L:all.filter(v=>/^en/i.test(v.lang)); }catch(e){} }
 try{ if(window.speechSynthesis){ loadVoices(); speechSynthesis.addEventListener('voiceschanged',loadVoices); } }catch(e){}
-function voiceOf(p){ if(!p.voice) p.voice={k:Math.random(),pitch:R(.55,1.75),rate:R(.88,1.35)}; return p.voice; }
+function voiceOf(p){ if(!p.voice) p.voice={k:Math.random(),pitch:R(.75,1.4),rate:R(.9,1.2)}; return p.voice; }
 function speak(text,p){ try{ if(!Snd.isOn()||!window.speechSynthesis||perfT-lastSpeak<.9) return; const d=Math.hypot(p.pos.x-camTarget.x,p.pos.z-camTarget.z); if(d>35) return; lastSpeak=perfT;
   if(!voiceList.length) loadVoices(); const vo=voiceOf(p), u=new SpeechSynthesisUtterance(text);
   if(voiceList.length) u.voice=voiceList[Math.floor(vo.k*voiceList.length)];
