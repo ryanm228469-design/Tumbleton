@@ -1395,7 +1395,7 @@ function buildSouth(){ const keep=_rngF; _rngF=mulberry32(7373); try{
 const sst=(a,b,x)=>{ const t=clamp((x-a)/(b-a),0,1); return t*t*(3-2*t); };
 function nHash(i,j){ let h=(i*374761393+j*668265263)|0; h=Math.imul(h^(h>>>13),1274126177); return ((h^(h>>>16))>>>0)/4294967295; }
 function vnoise(x,z){ const i=Math.floor(x), j=Math.floor(z), fx=x-i, fz=z-j, u=fx*fx*(3-2*fx), v=fz*fz*(3-2*fz), a=nHash(i,j), b=nHash(i+1,j), c=nHash(i,j+1), d=nHash(i+1,j+1); return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v; }
-const NORTH={lake:{x0:140,x1:232,z0:-525,z1:-438,y:20},quarry:{x:-205,z:-385,r:46,d:1},peak:{x:112,z:-622},roads:[],grid:new Map(),look:{x:98,z:-606,y:64},cable:{a:{x:40,y:2,z:-300},b:{x:74,y:66.5,z:-590}},dam:{x:186,z:-435}};
+const NORTH={lake:{x0:140,x1:232,z0:-525,z1:-438,y:20},quarry:{x:-205,z:-385,r:46,d:1},peak:{x:112,z:-622},roads:[],grid:new Map(),look:{x:98,z:-606,y:64},cable:{a:{x:40,y:2,z:-312},b:{x:74,y:66.5,z:-590}},dam:{x:186,z:-435}};
 const G2=(x,z,cx,cz,r)=>Math.exp(-((x-cx)*(x-cx)+(z-cz)*(z-cz))/(2*r*r));
 function mtnBase(x,z){ const t=sst(-292,-430,z), e=1-sst(250,285,Math.abs(x)); const n=vnoise(x/70+40,z/70+40)*.6+vnoise(x/28+9,z/28+9)*.3+vnoise(x/11,z/11)*.1;
   let h=t*e*(8+42*n)+e*(48*G2(x,z,NORTH.peak.x,NORTH.peak.z,62)+36*G2(x,z,-25,-490,24)+26*G2(x,z,136,-434,15)+26*G2(x,z,236,-434,15)+22*G2(x,z,-120,-640,60));
@@ -1403,7 +1403,7 @@ function mtnBase(x,z){ const t=sst(-292,-430,z), e=1-sst(250,285,Math.abs(x)); c
 NORTH.fort={x:-190,z:-668,r:42}; NORTH.fort.y=Math.round(mtnBase(-190,-668)*2)/2;
 function roadNear(x,z){ const L=NORTH.grid.get(Math.floor(x/16)*4096+Math.floor(z/16)); if(!L) return null; let best=null,bd=1e9;
   for(const [R,i] of L){ const a=R.p[i], b=R.p[i+1], dx=b.x-a.x, dz=b.z-a.z, l2=dx*dx+dz*dz||1, t=clamp(((x-a.x)*dx+(z-a.z)*dz)/l2,0,1), px=a.x+dx*t, pz=a.z+dz*t, d=Math.hypot(x-px,z-pz); if(d<bd){ bd=d; best={d,y:a.y+(b.y-a.y)*t,tun:R.tun&&a.tun&&b.tun,R}; } } return best; }
-function northH(x,z,yb){ let h=mtnBase(x,z); const Q=NORTH.quarry, dq=Math.hypot(x-Q.x,z-Q.z);
+function northH(x,z,yb){ let h=mtnBase(x,z)*sst(-301,-318,z); const Q=NORTH.quarry, dq=Math.hypot(x-Q.x,z-Q.z);
   if(dq<Q.r+12){ const k=1-sst(Q.r-14,Q.r+10,dq), tq=Q.d+Math.round(sst(8,Q.r,dq)*24/3.5)*3.5; h=h*(1-k)+Math.min(h,tq)*k; }
   const Lk=NORTH.lake; if(x>Lk.x0-14&&x<Lk.x1+14&&z>Lk.z0-14&&z<-300){ const ins=Math.min(x-Lk.x0,Lk.x1-x,(z<Lk.z1?z-Lk.z0:1e9))+0, kk=sst(-6,10,ins);
     if(z<Lk.z1) h=h*(1-kk)+Math.min(h,Lk.y-1.5)*kk; else { const vy=2*(1-sst(-432,-300,z)), kv=sst(-8,8,Math.min(x-Lk.x0,Lk.x1-x)); h=h*(1-kv)+Math.min(h,vy)*kv; } }
@@ -1454,7 +1454,7 @@ function buildNorth(){ const keep=_rngF; _rngF=mulberry32(5151); try{
         for(const o of portals){ const dx=cx-o.x, dz=cz-o.z, a=dx*o.ux+dz*o.uz, l=-dx*o.uz+dz*o.ux; if(Math.abs(l)<6.4&&a>-3&&a<3&&cy>o.y+.6){ cut=true; break; } } if(!cut) keepI.push(I[t],I[t+1],I[t+2]); } g.setIndex(keepI); }
     const m=new THREE.Mesh(g,flat(lam('#ffffff',{vertexColors:true,roughness:1}))); m.receiveShadow=true; scene.add(m); }
   // forest: pines all over the slopes
-  { const parts=[]; for(let k=0;k<900;k++){ const x=-275+rng()*550, z=-300-rng()*470, h=northH(x,z), r=roadNear(x,z); if(r&&r.d<9) continue; if(Math.hypot(x-NORTH.quarry.x,z-NORTH.quarry.z)<NORTH.quarry.r+6) continue; const Lk=NORTH.lake; if(x>Lk.x0-6&&x<Lk.x1+6&&z>Lk.z0-6&&z<-300) continue; if(h>88||h<.5&&z>-310) continue;
+  { const parts=[]; for(let k=0;k<900;k++){ const x=-275+rng()*550, z=-300-rng()*470, h=northH(x,z), r=roadNear(x,z); if(r&&r.d<9||z>-306) continue; if(Math.hypot(x-NORTH.quarry.x,z-NORTH.quarry.z)<NORTH.quarry.r+6) continue; const Lk=NORTH.lake; if(x>Lk.x0-6&&x<Lk.x1+6&&z>Lk.z0-6&&z<-300) continue; if(h>88||h<.5&&z>-310) continue;
       if(Math.hypot(x-NORTH.look.x,z-NORTH.look.z)<22||Math.hypot(x-NORTH.fort.x,z-NORTH.fort.z)<NORTH.fort.r+6) continue; const cb=NORTH.cable, t=clamp(((x-cb.a.x)*(cb.b.x-cb.a.x)+(z-cb.a.z)*(cb.b.z-cb.a.z))/((cb.b.x-cb.a.x)**2+(cb.b.z-cb.a.z)**2),0,1); if(Math.hypot(x-(cb.a.x+(cb.b.x-cb.a.x)*t),z-(cb.a.z+(cb.b.z-cb.a.z)*t))<9) continue;
       const s=.8+rng()*.9; parts.push({g:new THREE.CylinderGeometry(.25*s,.3*s,2*s,5).translate(x,h+s,z),c:'#5b4636'},{g:new THREE.ConeGeometry(2.2*s,5*s,7).translate(x,h+4.2*s,z),c:rng()<.5?'#2f5d3a':'#3c6e45'},{g:new THREE.ConeGeometry(1.6*s,3.6*s,7).translate(x,h+6.6*s,z),c:'#3c6e45'}); B.push({x0:x-.4,x1:x+.4,z0:z-.4,z1:z+.4,y0:h-1,h:h+6*s}); }
     const m=new THREE.Mesh(mergeGeos(parts,true),VC); m.castShadow=true; scene.add(m); }
@@ -1480,8 +1480,8 @@ function buildNorth(){ const keep=_rngF; _rngF=mulberry32(5151); try{
 } finally { _rngF=keep; } }
 
 /* ---------- Stage 6a: the east fun zone: Tumbleton Raceway, Send It Stunt Park and Kiwi Land theme park ---------- */
-const EAST={track:[],tlen:0,ring:{x:330,z:-203},stunt:{x0:300,x1:560,z0:140,z1:276},park:{x0:590,x1:786,z0:138,z1:276},fire:{x:349.5,y:7.5,z:250,r:3.6},
-  coaster:null,wheel:{x:700,y:19,z:258,r:16},tower:{x:765,z:205,h:40},carousel:{x:640,z:255}};
+const EAST={track:[],tlen:0,ring:{x:330,z:-203},stunt:{x0:300,x1:560,z0:140,z1:276},park:{x0:590,x1:762,z0:138,z1:276},fire:{x:349.5,y:7.5,z:250,r:3.6},
+  coaster:null,wheel:{x:700,y:19,z:258,r:16},tower:{x:742,z:205,h:40},carousel:{x:640,z:255}};
 (function(){ const T=EAST.track, cx0=420, cx1=700, cz=-212, R=52; const seg=[]; // stadium loop, anticlockwise from the start line on the south straight
   for(let x=560;x<cx1;x+=2) seg.push([x,cz+R]); for(let a=0;a<PI;a+=2/R) seg.push([cx1+Math.sin(a)*R,cz+Math.cos(a)*R]); for(let x=cx1;x>cx0;x-=2) seg.push([x,cz-R]); for(let a=0;a<PI;a+=2/R) seg.push([cx0-Math.sin(a)*R,cz-Math.cos(a)*R]); for(let x=cx0;x<560;x+=2) seg.push([x,cz+R]);
   let L=0; for(let i=0;i<seg.length;i++){ const a=seg[i], b=seg[(i+1)%seg.length]; T.push({x:a[0],z:a[1],s:L,curve:Math.abs(a[1]-cz)<R-.5}); L+=Math.hypot(b[0]-a[0],b[1]-a[1]); } EAST.tlen=L; })();
@@ -1544,7 +1544,7 @@ function buildEast(){ const keep=_rngF; _rngF=mulberry32(6161); try{
     // drop tower
     const D=EAST.tower; box(D.x-1.4,D.x+1.4,0,D.h,D.z-1.4,D.z+1.4,lam('#5b6168',{metalness:.4}),true); box(D.x-2,D.x+2,D.h,D.h+1.4,D.z-2,D.z+2,lam('#e5484d'),false); box(D.x-5,D.x+5,0,.5,D.z-9,D.z-5,lam('#2f80ed'),true); addS(BX(6,1,.1,D.x,2.8,D.z-9.1),signMat([['SKY DROP',56]],'#2f80ed','#ffffff',512,64));
     // stalls, benches, balloons
-    for(const [x,z,c,t] of [[610,236,'#e5484d','CANDY FLOSS'],[610,262,'#2a9d8f','HOT CHIPS'],[745,250,'#ffb703','ICE CREAM']]){ box(x-3,x+3,0,2.6,z-2,z+2,lam('#f4efe4'),true); box(x-3.4,x+3.4,2.6,3.1,z-2.6,z+2.6,lam(c),false); addS(BX(5,.8,.1,x,2.2,z-2.05),signMat([[t,48]],c,'#ffffff',512,64)); } }
+    for(const [x,z,c,t] of [[610,236,'#e5484d','CANDY FLOSS'],[610,262,'#2a9d8f','HOT CHIPS'],[735,264,'#ffb703','ICE CREAM']]){ box(x-3,x+3,0,2.6,z-2,z+2,lam('#f4efe4'),true); box(x-3.4,x+3.4,2.6,3.1,z-2.6,z+2.6,lam(c),false); addS(BX(5,.8,.1,x,2.2,z-2.05),signMat([[t,48]],c,'#ffffff',512,64)); } }
 } finally { _rngF=keep; } }
 
 /* ---------- Stage 6b: Camp Kahu (friendly soldiers) and the overrun Fort Kererū in the hills ---------- */
@@ -1599,6 +1599,33 @@ function buildBases(){ const keep=_rngF; _rngF=mulberry32(7373); try{
     for(let k=0;k<14;k++) addS(new THREE.CircleGeometry(.6+rng()*1.2,10).rotateX(-PI/2).translate(X+(rng()-.5)*50,y+.07,Z+(rng()-.5)*50),lam('#5a1414',{roughness:1}));
     for(let k=0;k<20;k++){ const g=new THREE.BoxGeometry(.4+rng()*1.2,.3,.4+rng()*1).rotateY(rng()*3).translate(X+(rng()-.5)*54,y+.15,Z+(rng()-.5)*54); addS(g,rng()<.5?conc:olive); } }
 } finally { _rngF=keep; } }
+
+/* ---------- Stage 7: the Tumbleton Ring Road: SH1 in the west, the Northern Motorway, the Eastern Motorway, and Marine Parade in the south ---------- */
+function buildRing(){ const B=AIR.boxes, box=(x0,x1,y0,y1,z0,z1,m,col)=>{ addS(BX(x1-x0,y1-y0,z1-z0,(x0+x1)/2,(y0+y1)/2,(z0+z1)/2),m); if(col!==false) B.push({x0,x1,z0,z1,y0,h:y1}); };
+  const rd=matAsphalt.clone(); rd.polygonOffset=true; rd.polygonOffsetFactor=-2; rd.polygonOffsetUnits=-2; const wh=lam('#f2f2f2'); wh.polygonOffset=true; wh.polygonOffsetFactor=-3; wh.polygonOffsetUnits=-3; const ye=lam('#ffd166'); ye.polygonOffset=true; ye.polygonOffsetFactor=-3; ye.polygonOffsetUnits=-3;
+  const conc=lam('#b8bab6',{roughness:.9}), dark=lam('#2b2d31'), green=lam('#1e6b3a');
+  const Y=.12, L=.14;
+  // Northern Motorway z=-290, x -340..784; Eastern Motorway x=776, z -298..335
+  addS(PL(1124,16,222,Y,-290),rd); addS(PL(16,633,776,Y,18.5),rd);
+  for(let x=-336;x<760;x+=10){ for(const z of [-294,-286]) addS(PL(4,.18,x+2,L,z),wh); } for(const z of [-290.25,-289.75]) addS(PL(1100,.16,222,L,z),ye); for(const z of [-297.4,-282.6]) addS(PL(1110,.2,222,L,z),wh);
+  for(let z=-282;z<330;z+=10){ for(const x of [772,780]) addS(PL(.18,4,x,L,z+2),wh); } for(const x of [775.75,776.25]) addS(PL(.16,600,x,L,20),ye); for(const x of [768.6,783.4]) addS(PL(.2,620,x,L,18),wh);
+  // SH1 runs on to meet the motorway and Marine Parade; the parade runs east to the motorway
+  addS(PL(20,24,-330,Y,-287),rd); addS(PL(20,60,-330,Y,306),rd); addS(PL(72,10,-304,Y,330),rd); addS(PL(512,10,524,Y,330),rd);
+  for(let x=272;x<770;x+=9) addS(PL(4.5,.18,x+2.25,L,330),wh); for(let x=-336;x<-270;x+=9) addS(PL(4.5,.18,x+2.25,L,330),wh);
+  // links from the city's north edge road through the hedge
+  for(const x of [-203,145]) addS(PL(14,16,x,Y-.02,-274),rd);
+  // the Eastern Motorway bridge over the river
+  { const z0=RIVER_Z-RIV_OUT-4, z1=RIVER_Z+RIV_OUT+4; box(767.5,784.5,-1.2,0,z0,z1,conc,true); for(const x of [767.7,784.3]) box(x-.25,x+.25,0,1.1,z0,z1,conc,true); for(const z of [RIVER_Z-6,RIVER_Z+6]) box(774.8,777.2,WATER_Y-2,-1.2,z-1.2,z+1.2,conc,false); }
+  // big green motorway signs on gantries
+  const gantry=(x,z,alongX,lines)=>{ const w=alongX?.6:18, d=alongX?18:.6; if(alongX){ for(const dz of [-9.4,9.4]) box(x-.3,x+.3,0,7,z+dz-.3,z+dz+.3,dark,true); box(x-.3,x+.3,6.6,7.2,z-9.4,z+9.4,dark,false); } else { for(const dx of [-9.4,9.4]) box(x+dx-.3,x+dx+.3,0,7,z-.3,z+.3,dark,true); box(x-9.4,x+9.4,6.6,7.2,z-.3,z+.3,dark,false); }
+    const sg=new THREE.Mesh(new THREE.BoxGeometry(alongX?.15:9,2.4,alongX?9:.15),signMat(lines,'#1e6b3a','#ffffff',768,192)); sg.position.set(x,5.4,z); scene.add(sg); };
+  gantry(-330,-262,false,[['SH1 NORTH',64],['Ring Road east · Mountains',40]]); gantry(-300,-290,true,[['NORTHERN MOTORWAY',56],['Raceway · Mt Tumbleton',40]]);
+  gantry(700,-290,true,[['EASTERN MOTORWAY',56],['Kiwi Land · Harbour',40]]); gantry(776,60,false,[['RING ROAD SOUTH',56],['Marine Parade · Beach',40]]);
+  gantry(-330,262,false,[['SH1 SOUTH',64],['Marine Parade · Harbour',40]]); gantry(700,330,true,[['RING ROAD NORTH',56],['Kiwi Land · Raceway',40]]);
+  // street lights every 40 m
+  const lp=[]; for(let x=-320;x<770;x+=40) lp.push([x,-299.5]); for(let z=-270;z<330;z+=40) if(Math.abs(z-RIVER_Z)>24) lp.push([786,z]);
+  const parts=[]; for(const [x,z] of lp){ parts.push({g:new THREE.CylinderGeometry(.12,.15,8,6).translate(x,4,z),c:'#7d8288'},{g:new THREE.BoxGeometry(1.4,.25,.5).translate(x+(z<-290?0:-.7),8,z+(z<-290?.7:0)),c:'#e9e9e9'}); B.push({x0:x-.2,x1:x+.2,z0:z-.2,z1:z+.2,y0:0,h:8}); } scene.add(new THREE.Mesh(mergeGeos(parts,true),VC));
+}
 function buildCountry(){ const keep=_rngF; _rngF=mulberry32(4242); try{
   const B=AIR.boxes, box=(x0,x1,y0,y1,z0,z1,m,col)=>{ addS(BX(x1-x0,y1-y0,z1-z0,(x0+x1)/2,(y0+y1)/2,(z0+z1)/2),m); if(col!==false) B.push({x0,x1,z0,z1,y0,h:y1}); };
   const white=lam('#f2f2f2',{roughness:.6}), yel=lam('#ffcc33',{roughness:.6}), dirt=flat(lam('#a68a64',{roughness:1})), gravel=flat(lam('#b9b2a4',{roughness:1})), conc=lam('#b8bab6',{roughness:.9}), dark=lam('#2b2d31',{roughness:.6});
@@ -1611,8 +1638,6 @@ function buildCountry(){ const keep=_rngF; _rngF=mulberry32(4242); try{
   for(const dx of [-9.3,9.3]) addS(PL(.2,552,HX+dx,.05,0),white); addS(PL(.16,552,HX-.25,.05,0),yel); addS(PL(.16,552,HX+.25,.05,0),yel);
   box(HX-10.5,HX+10.5,-1.2,0,RIVER_Z-RIV_OUT-4,RIVER_Z+RIV_OUT+4,conc,true); for(const dx of [-10.3,10.3]) box(HX+dx-.25,HX+dx+.25,0,1.1,RIVER_Z-RIV_OUT-4,RIVER_Z+RIV_OUT+4,conc,true);
   for(const z of [RIVER_Z-6,RIVER_Z+6]) box(HX-1.2,HX+1.2,WATER_Y-2,-1.2,z-1.2,z+1.2,conc,false);
-  for(const sz of [-1,1]){ const z=sz*272; for(let k=-4;k<=4;k++){ box(HX+k*2.3-.9,HX+k*2.3+.9,0,1,z-.3,z+.3,k%2?white:lam('#e5484d'),true); }
-    addS(BX(9,2.2,.12,HX,2.6,z-sz*1.2),signMat([['SH1 · ROADWORKS',64],['Highway opening soon',40]],'#f77f00','#1b1b1b',512,128)); box(HX-4.6,HX-4.3,0,2.4,z-sz*1.2-.15,z-sz*1.2+.15,dark,false); box(HX+4.3,HX+4.6,0,2.4,z-sz*1.2-.15,z-sz*1.2+.15,dark,false); }
   for(const [z,txt] of [[-110,'SH1 · North'],[180,'SH1 · South']]){ addS(BX(5,1.4,.1,HX+13,3.4,z),signMat([[txt,60]],'#1f7a4d','#ffffff',512,128)); box(HX+12.9,HX+13.1,0,2.7,z-.1,z+.1,dark,false); }
   addS(BX(7,1.6,.1,-300,3.2,-80),signMat([['Rangiwai 2 km  →',60],['Hillcrest Farm',40]],'#1f7a4d','#ffffff',512,140)); box(-300.1,-299.9,0,2.4,-80.1,-79.9,dark,false);
   addS(BX(7,1.6,.1,-300,3.2,196),signMat([['Riverside Dairy  →',60]],'#1f7a4d','#ffffff',512,100)); box(-300.1,-299.9,0,2.4,195.9,196.1,dark,false);
@@ -2142,15 +2167,15 @@ for(let i=0;i<N;i++) for(let j=0;j<N;j++){
   }
 }
 /* edge hedge, border trees, hills, clouds */
-for(const s of [-1,1]){ if(s<0){ for(const [a,b] of [[-LIM-1.6,-37],[-21,LIM+1.6]]) addS(BX(b-a,1.3,1.4,(a+b)/2,.65,-LIM-1.6),matHedge); } else for(const [a,b] of [[-LIM-1.6,-153],[-137,79],[95,LIM+1.6]]) addS(BX(b-a,1.3,1.4,(a+b)/2,.65,LIM+1.6),matHedge); for(const [a,b] of (s>0?[[-LIM-3.2,-211],[-195,-40],[-18,RIVER_Z-RIV_OUT],[RIVER_Z+RIV_OUT,195],[211,LIM+3.2]]:[[-LIM-3.2,-94],[-80,RIVER_Z-RIV_OUT],[RIVER_Z+RIV_OUT,196],[210,LIM+3.2]])) addS(BX(1.4,1.3,b-a,s*(LIM+1.6),.65,(a+b)/2),matHedge); }
-const inCountry=(x,z)=>(x<-LIM-2&&z>-LIM-40&&z<LIM+40)||z>LIM+2||z<-LIM-2||(x>LIM+2&&((z>-290&&z<-138)||(z>132&&z<290)));
+for(const s of [-1,1]){ if(s<0){ for(const [a,b] of [[-LIM-1.6,-211],[-195,-37],[-21,137],[153,LIM+1.6]]) addS(BX(b-a,1.3,1.4,(a+b)/2,.65,-LIM-1.6),matHedge); } else for(const [a,b] of [[-LIM-1.6,-153],[-137,79],[95,LIM+1.6]]) addS(BX(b-a,1.3,1.4,(a+b)/2,.65,LIM+1.6),matHedge); for(const [a,b] of (s>0?[[-LIM-3.2,-211],[-195,-40],[-18,RIVER_Z-RIV_OUT],[RIVER_Z+RIV_OUT,195],[211,LIM+3.2]]:[[-LIM-3.2,-94],[-80,RIVER_Z-RIV_OUT],[RIVER_Z+RIV_OUT,196],[210,LIM+3.2]])) addS(BX(1.4,1.3,b-a,s*(LIM+1.6),.65,(a+b)/2),matHedge); }
+const inCountry=(x,z)=>x>740||(x<-LIM-2&&z>-LIM-40&&z<LIM+40)||z>LIM+2||z<-LIM-2||(x>LIM+2&&((z>-290&&z<-138)||(z>132&&z<290)));
 const inAir=(x,z,m)=>x>AIR.x0-m&&x<AIR.x1+m&&z>AIR.z0-m&&z<AIR.z1+m;
 for(let k=0;k<220;k++){ const x=rr(-HALF-130,HALF+130), z=rr(-HALF-130,HALF+130); if(Math.max(Math.abs(x),Math.abs(z))<LIM+5||Math.abs(z-RIVER_Z)<RIV_OUT+3) continue; if(inAir(x,z,4)||inCountry(x,z)){ suppressS=true; addTree(x,z,rr(.9,1.6),null); suppressS=false; continue; } addTree(x,z,rr(.9,1.6),null); }
 for(let k=0;k<46;k++){ const a=k/46*TAU+rr(-.05,.05), rad=rr(LIM+70,LIM+130), w=rr(30,70), h=rr(10,34); if(Math.abs(Math.sin(a)*rad-RIVER_Z)<RIV_OUT+40) continue; if(inAir(Math.cos(a)*rad,Math.sin(a)*rad,40)||inCountry(Math.cos(a)*rad,Math.sin(a)*rad)){ rr(0,1); rr(0,1); continue; } addS(new THREE.BoxGeometry(w,h,rr(25,50)).rotateY(a).translate(Math.cos(a)*rad,h/2-1,Math.sin(a)*rad),pick(matHill)); }
 buildRiver();
 airportBuild();
 if(POLY){ detailPass(); aoPass(); }
-buildCountry(); buildSouth(); buildNorth(); buildEast(); buildBases();
+buildCountry(); buildSouth(); buildNorth(); buildEast(); buildBases(); buildRing();
 flushS(); SEW.surf=scene.children.filter(m=>m.isMesh&&m!==skyDome);
 sealCells(); staticSealed=true;
 
@@ -3789,6 +3814,13 @@ function setupBases(){ const C=BASES.camp;
   try{ BASES.got=localStorage.getItem('tumbleton-fort')==='1'; }catch(e){}
   const cr=new THREE.Mesh(mergeGeos([{g:BX(1.4,.9,.9,0,.45,0),c:'#4b5320'},{g:BX(1.45,.15,.95,0,.95,0),c:'#ffb703'}],true),VC); cr.position.set(F.x-8,F.y,F.z+9); scene.add(cr); cr.visible=!BASES.got; BASES.crate=cr; }
 
+
+/* ---------- keeping cars: a car you've driven stays put while you're nearby; park it on your blue ring to keep it for good ---------- */
+const KEEP={last:null,tip:0};
+function usedNear(c){ return !!c.used&&Math.hypot(c.pos.x-player.pos.x,c.pos.z-player.pos.z)<260; }
+function keepHint(c){ if(!c||c.gid||c.boat||story.on) return ''; const S=garFind(); if(!S) return ''; return Math.hypot(c.pos.x-S.padP.x,c.pos.z-S.padP.z)<45?' · Stop on your blue ring to keep it in your garage':''; }
+function keepTick(dt){ const c=activeCar; if(c&&!c.boat){ c.used=true; KEEP.last=c; return; }
+  if(KEEP.last&&!c){ const k=KEEP.last; KEEP.last=null; if(!k.gid&&!k.boat&&!story.on&&cars.includes(k)&&KEEP.tip<2&&perfT>(KEEP.tipT||0)){ KEEP.tip++; KEEP.tipT=perfT+120; flash(garFind()?'Tip: drive it onto the blue ring at your house to keep it for good':'Tip: buy a house (B · Find Places) to get a garage and keep cars for good'); } } }
 let rescueI=0;
 function underOK(x,z,y){ if(Math.abs(x)<HALF+12&&Math.abs(z)<HALF+12) return true; if(x>1150) return true; if(z<-LIM&&Math.abs(x)<290){ const r=roadNear(x,z); if(r&&r.tun&&r.d<6) return true; } return false; }
 function rescueTick(dt){ const n=people.length+cars.length; if(!n) return; const per=Math.max(4,Math.ceil(n*dt*4));
@@ -3834,7 +3866,7 @@ function setupMotor(){ try{ setupSale(); }catch(e){ console.warn('houses',e); } 
   GREET.cars=['G\'day! Every vehicle comes with a free garage delivery.','Tanks are on special this week. Well, not really.','Have a look around, they don\'t bite.','Need a house first? Check the FOR SALE signs in the suburbs.'];
   GREET.motor=['Drive into a bay and press F.','Left bay for mods, right bay for repairs.','We fix anything that isn\'t a smoking crater.','Zombie rammer? Best money you\'ll ever spend.'];
   try{ for(const site of [0,1]){ const S=SITES[site]; if(!S) continue; const x=lotC(S[0]), z=lotC(S[1]); roadPark(x+10,z+24,site?'digger':'bulldozer'); } }catch(e){ console.warn('site vehicles',e); } }
-function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); southTick(dt); northTick(dt); eastTick(dt); basesTick(dt); rescueTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
+function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); southTick(dt); northTick(dt); eastTick(dt); basesTick(dt); rescueTick(dt); keepTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
   const c=activeCar;
   if(c&&c.emerg==='fire'&&use){ camera.getWorldDirection(_ewd); let dx=_ewd.x, dy=_ewd.y+.16, dz=_ewd.z; const l=Math.hypot(dx,dy,dz)||1; hoseSpray(nozzleWorld(c),{x:dx/l,y:Math.max(-.35,dy/l),z:dz/l},dt,true); }
   if(c&&c.emerg==='tow'){ if(use&&!c.useW){ if(c.towed){ towRelease(c); flash('Let go of the car'); } else { const h=hookWorld(c); let best=null,bd=4.6;
@@ -3947,9 +3979,9 @@ function applyGrip(c,grip,dt){ const fx=Math.sin(c.yaw), fz=Math.cos(c.yaw), rx=
 const dyn=[];
 function buildDyn(){ dyn.length=0; for(const o of props) dyn.push(o); for(const p of people) if(p.mode!=='drive'&&p.mode!=='held'&&p.mode!=='lift') dyn.push(p); }
 const isWalker=o=>o.isPerson&&(o.mode==='walk'||o.mode==='getup');
-const EBR=[[0,LIM,-LIM,LIM],[LIM-1,AIR.x1,AIR.z0,AIR.z1],[LIM-1,790,-276,-146],[LIM-1,790,136,276],[LIM-1,LIM+5,-770,770]];
-function bounds(p,v){ if(p.x>GZ0.x-150) return; if(p.x>LIM){ let bd=1e9,bx=p.x,bz=p.z,ins=false; for(const r of EBR){ if(p.x>=r[0]&&p.x<=r[1]&&p.z>=r[2]&&p.z<=r[3]){ ins=true; break; } const cx=clamp(p.x,r[0],r[1]), cz=clamp(p.z,r[2],r[3]), d=(cx-p.x)**2+(cz-p.z)**2; if(d<bd){ bd=d; bx=cx; bz=cz; } }
-    if(!ins){ if(bx!==p.x&&v.x*(p.x-bx)>0) v.x*=-.4; if(bz!==p.z&&v.z*(p.z-bz)>0) v.z*=-.4; p.x=bx; p.z=bz; } } else if(p.x<((p.z>-LIM&&p.z<LIM)?-790:-LIM)){p.x=((p.z>-LIM&&p.z<LIM)?-790:-LIM); if(v.x<0)v.x*=-.4;} if(p.z>((p.x>-LIM-5&&p.x<LIM+5)?770:LIM)){p.z=((p.x>-LIM-5&&p.x<LIM+5)?770:LIM); if(v.z>0)v.z*=-.4;} else if(p.z<((p.x>-LIM-5&&p.x<LIM+5)?-770:-LIM)){p.z=((p.x>-LIM-5&&p.x<LIM+5)?-770:-LIM); if(v.z<0)v.z*=-.4;} }
+const EBR=[[-LIM,LIM,-LIM,LIM],[-790,-LIM,-LIM,LIM],[-LIM-5,LIM+5,-770,-LIM],[-LIM-5,LIM+5,LIM,770],[LIM-1,AIR.x1,AIR.z0,AIR.z1],[LIM-1,790,-276,-146],[LIM-1,790,136,276],[-345,790,-300,-276],[764,790,-300,345],[-345,790,276,345],[-345,-LIM,-300,345]];
+function bounds(p,v){ if(p.x>GZ0.x-150) return; let bd=1e9,bx=p.x,bz=p.z; for(const r of EBR){ if(p.x>=r[0]&&p.x<=r[1]&&p.z>=r[2]&&p.z<=r[3]) return; const cx=clamp(p.x,r[0],r[1]), cz=clamp(p.z,r[2],r[3]), d=(cx-p.x)**2+(cz-p.z)**2; if(d<bd){ bd=d; bx=cx; bz=cz; } }
+  if(bx!==p.x&&v.x*(p.x-bx)>0) v.x*=-.4; if(bz!==p.z&&v.z*(p.z-bz)>0) v.z*=-.4; p.x=bx; p.z=bz; }
 const _near=[];
 function collisions(){
   for(const o of dyn){ if(o.sleep||o.lodSkip) continue; const foot=o.mode==='getup'&&o.getFloor!==undefined?o.getFloor:o.pos.y-(isWalker(o)?HIP:o.gr);
@@ -4629,6 +4661,7 @@ function findMenu(){ if(!state.started||state.over||!cfEl.hidden) return; const 
   if(MOTOR.door) add('Tumbleton Motors','Mods and repairs for your car · '+dist(MOTOR.door.x,MOTOR.door.z),go(MOTOR.door.x,MOTOR.door.z,'Tumbleton Motors is marked. Follow the arrow'));
   const mine=SALE.filter(S=>GAR.h[S.i]&&GAR.h[S.i].own);
   for(const S of mine) add('Your home: '+S.D.name,'Garage entrance · '+dist(S.portal.x,S.portal.z),go(S.portal.x,S.portal.z,'Your garage is marked. Follow the arrow'));
+  add('Ring Road','SH1, the Northern and Eastern Motorways and Marine Parade loop right round the map · '+dist(-330,-290),go(-330,-290,'The Ring Road is marked. SH1 is out past the west side of the city'));
   add('Camp Kahu','Army base with friendly soldiers, free supplies, a tank and a helicopter · '+dist(BASES.camp.gate.x,BASES.camp.gate.z),go(BASES.camp.gate.x,BASES.camp.gate.z-6,'Camp Kahu is marked. It\'s at the far west end of the southern country road'));
   add('Fort Kererū','Overrun army fort in the hills. Zombies everywhere, but there\'s a supply cache · '+dist(NORTH.fort.x,NORTH.fort.z),go(NORTH.fort.x,NORTH.fort.z+30,'The fort is marked. Take the old military road off the mountain road'));
   add('Tumbleton Raceway','Race 3 rivals over 3 laps: stop on the RACE ring in the pits · '+dist(EAST.ring.x,EAST.ring.z),go(EAST.ring.x,EAST.ring.z,'The raceway pits are marked. Head out of the city\'s east side'));
@@ -4997,7 +5030,7 @@ function updateHUD(){
   if(state.msgT>0&&state.started&&!state.over) pr=state.msg; else
   if(state.started){ const stp=jetPrompt()||cranePrompt()||storyPrompt()||storePrompt()||motorPrompt()||trainPrompt()||ferryPrompt()||gondPrompt()||ridePrompt()||sewerPrompt(); if(stp) pr=stp; else if(activeHeli) pr='<kbd>E</kbd> Get out · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>Click</kbd> guns · <kbd>Right-click</kbd> rockets';  else if(player.chute) pr='<kbd>WASD</kbd> steer · <kbd>Space</kbd> cut away';
     else if(player.mode==='walk'&&!player.ground&&player.vel.y<-2&&player.pos.y-HIP-groundHeight(player.pos.x,player.pos.z,player.pos.y-HIP)>3.5) pr='<kbd>Space</kbd> Open parachute';
-    else if(activeCar) pr=activeCar.boat?'<kbd>W</kbd><kbd>S</kbd> throttle · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>E</kbd> Get out':'<kbd>E</kbd> Get out'; else if(state.downT>0) pr='Knocked out. Heading back to the plaza…'; else if(state.over) pr=''; else if(player.mode==='held') pr=player.heldBy&&!player.heldBy.zombie?'They grabbed you! Brace for the throw…':'A grabber has you! Brace for the throw…'; else if(player.mode==='ragdoll'||player.mode==='getup') pr='Ouch. Getting back up…'; else if(player.immune>0&&people.some(q=>q.zombie)) pr='Back on your feet. Run!'; else if(player.mode==='walk'&&liftNear()){ const n=liftNear(); pr=n.L.v!==0?(n.inside?'Going '+(n.L.v>0?'up':'down')+'…':'Lift is moving…'):Math.abs(n.L.y-n.lvl)>.05?'<kbd>E</kbd> Call the lift':n.inside?'<kbd>E</kbd> Ride the lift '+(n.lvl===0?'up':'down'):'Step into the lift'; } else if(player.mode==='walk'&&nearestHeli()) pr='<kbd>E</kbd> Fly the helicopter'; else if(nearestCar()) pr=nearestCar().boat?'<kbd>E</kbd> Drive this boat':'<kbd>E</kbd> Drive this car'; }
+    else if(activeCar) pr=activeCar.boat?'<kbd>W</kbd><kbd>S</kbd> throttle · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>E</kbd> Get out':'<kbd>E</kbd> Get out'+keepHint(activeCar); else if(state.downT>0) pr='Knocked out. Heading back to the plaza…'; else if(state.over) pr=''; else if(player.mode==='held') pr=player.heldBy&&!player.heldBy.zombie?'They grabbed you! Brace for the throw…':'A grabber has you! Brace for the throw…'; else if(player.mode==='ragdoll'||player.mode==='getup') pr='Ouch. Getting back up…'; else if(player.immune>0&&people.some(q=>q.zombie)) pr='Back on your feet. Run!'; else if(player.mode==='walk'&&liftNear()){ const n=liftNear(); pr=n.L.v!==0?(n.inside?'Going '+(n.L.v>0?'up':'down')+'…':'Lift is moving…'):Math.abs(n.L.y-n.lvl)>.05?'<kbd>E</kbd> Call the lift':n.inside?'<kbd>E</kbd> Ride the lift '+(n.lvl===0?'up':'down'):'Step into the lift'; } else if(player.mode==='walk'&&nearestHeli()) pr='<kbd>E</kbd> Fly the helicopter'; else if(nearestCar()) pr=nearestCar().boat?'<kbd>E</kbd> Drive this boat':'<kbd>E</kbd> Drive this car'; }
   if(pr!==lastPrompt){ lastPrompt=pr; promptEl.innerHTML=pr; promptEl.hidden=!pr; }
   const hp=Math.ceil(state.hp); if(hp!==lastHp){ lastHp=hp; hpn.textContent=hp; hpf.style.width=hp+'%'; hpf.style.backgroundColor=hp>60?'#5cc46b':hp>30?'#f4c430':'#e5484d'; }
   hurtEl.style.opacity=state.hurtFx.toFixed(3);
@@ -5248,7 +5281,7 @@ function updateWorld(dt){
   // idle vehicles: after a minute unused, either vanish or rejoin traffic
   let tc=0; for(const c of cars) if(c.mode==='traffic') tc++;
   for(let i=cars.length-1;i>=0;i--){ const c=cars[i];
-    if(c.mode!=='free'||c===activeCar||c.boat||c.story||c.parked||c.gid){ c.idleT=0; continue; }
+    if(c.mode!=='free'||c===activeCar||c.boat||c.story||c.parked||c.gid||usedNear(c)){ c.idleT=0; continue; }
     if(Math.hypot(c.pos.x-f.x,c.pos.z-f.z)<6){ c.idleT=0; continue; }
     c.idleT=(c.idleT||0)+dt;
     if(c.idleT>15&&!c.air){ c.idleT=0;
@@ -5265,7 +5298,7 @@ function updateWorld(dt){
   trafficTimer-=dt;
   if(trafficTimer<=0){ trafficTimer=2;
     if(!mpClient()&&cars.filter(c=>c.mode==='traffic').length<20) spawnTraffic(70);
-    if(cars.length>36){ let far=null,fd=60; for(const c of cars){ if(c===activeCar||c.spawned||c.mode!=='free'||c.boat||c.story||c.parked||c.gid||c.display||c.inGarage) continue; const d=Math.hypot(c.pos.x-f.x,c.pos.z-f.z); if(d>fd){fd=d;far=c;} } if(far){ scene.remove(far.g); cars.splice(cars.indexOf(far),1); } } }
+    if(cars.length>36){ let far=null,fd=60; for(const c of cars){ if(c===activeCar||c.spawned||c.mode!=='free'||c.boat||c.story||c.parked||c.gid||c.display||c.inGarage||usedNear(c)) continue; const d=Math.hypot(c.pos.x-f.x,c.pos.z-f.z); if(d>fd){fd=d;far=c;} } if(far){ scene.remove(far.g); cars.splice(cars.indexOf(far),1); } } }
 }
 
 
