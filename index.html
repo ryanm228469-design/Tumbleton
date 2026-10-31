@@ -573,7 +573,7 @@ catch(e){ document.getElementById('nogl').hidden=false; document.getElementById(
 /* ---------- helpers ---------- */
 const PI=Math.PI, TAU=PI*2, V3=THREE.Vector3;
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
-const rng=mulberry32(20261024);
+let _rngF=mulberry32(20261024); const rng=()=>_rngF();
 const rr=(a,b)=>a+(b-a)*rng();
 const pick=a=>a[Math.floor(rng()*a.length)];
 const R=(a,b)=>a+(b-a)*Math.random();
@@ -876,7 +876,7 @@ function detailPass(){ const dr=mulberry32(5150), DR=(a,b)=>a+(b-a)*dr(), pk=a=>
     binMs=['#2f6b45','#2a4f8f','#4a4d52','#7a6a2a'].map(c=>lam(c,{roughness:.7})), orangeM=lam('#f06d1f',{roughness:.6}), whiteM=lam('#f2f0ea',{roughness:.6}), woodM=lam('#a47a4c',{roughness:.9}),
     pipeM=lam('#8b9097',{metalness:.55,roughness:.45}), dumpM=lam('#2f6b45',{roughness:.7}), toolM=lam('#c0392b',{roughness:.5}), stoneMs=['#8a857c','#6f6a63','#a39d92','#5b4a3a'].map(c=>lam(c,{roughness:1}));
   const dirtM=new THREE.MeshBasicMaterial({map:dirtTex(),transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-2}); dirtM.userData.keep=true;
-  const isSpecial=(i,j)=>(!!SPECIAL[i+','+j]&&SPECIAL[i+','+j]!=='cars'&&SPECIAL[i+','+j]!=='motor')||SITES.some(([a,b])=>a===i&&b===j);
+  const isSpecial=(i,j)=>(!!SPECIAL[i+','+j]&&!/^(cars|motor|h\d)$/.test(SPECIAL[i+','+j]))||SITES.some(([a,b])=>a===i&&b===j);
   // kerbs, drains and painted parking bays around every block
   for(let i=0;i<N;i++) for(let j=0;j<N;j++){ if(j===RIVER_J) continue; const cx=lotC(i), cz=lotC(j), e=BLOCK/2;
     for(const [sx,sz] of [[1,0],[-1,0],[0,1],[0,-1]]){
@@ -1183,7 +1183,7 @@ function lotSide(x0,x1,z0,z1,lot){ const e=BLOCK/2-6; return x0<lot.x-e?'x0':x1>
 
 
 /* --- landmarks: the dinosaur museum and the sky bridge towers --- */
-const SPECIAL={'6,4':'museum','2,4':'twins','4,2':'store','6,3':'station','5,2':'warehouse','3,2':'cars','6,2':'motor'}; const SUBH=[], CARYARD={}, MOTOR={}; let STORE=null, STATION=null, WAREHOUSE=null; const STORE_CLOCK={};
+const SPECIAL={'6,4':'museum','2,4':'twins','4,2':'store','6,3':'station','5,2':'warehouse','3,2':'cars','6,2':'motor','2,7':'h0','6,7':'h1','7,1':'h2','8,4':'h3'}; const SUBH=[], CARYARD={}, MOTOR={}; let STORE=null, STATION=null, WAREHOUSE=null; const STORE_CLOCK={};
 function snapLot(cell){ return {b:cell.b.length,c:cell.c.length,r:cell.r.length,ints:cell.ints.length,ws:workSpots.length,cs:carSpots.length,lh:lampHeads.length,ec:enterableCount,sc:storeyCount,lf:lifts.length,hs:heliSpots.length}; }
 function restoreLot(cell,q){ cell.b.length=q.b; cell.c.length=q.c; cell.r.length=q.r; cell.ints.length=q.ints; workSpots.length=q.ws; carSpots.length=q.cs; lampHeads.length=q.lh; enterableCount=q.ec; storeyCount=q.sc; lifts.length=q.lf; heliSpots.length=q.hs; }
 function textTex(lines,bg,fg,w,h){ const c=cv(w||512,h||128),x=c.getContext('2d'); x.fillStyle=bg; x.fillRect(0,0,c.width,c.height); x.fillStyle=fg; x.textAlign='center'; x.textBaseline='middle';
@@ -1275,6 +1275,62 @@ function makeMotorShop(cx,cz,cell){
   for(const [x,z] of [[X0+2,cz-18],[X0+2,cz-16.6],[X1-2,cz-18],[cx-3,cz-19.5],[cx+3,cz-19.5]]){ for(let k=0;k<3;k++) addS(new THREE.TorusGeometry(.42,.2,6,14).rotateX(PI/2).translate(x,.2+k*.36,z),dark); cell.c.push({x,z,r:.65,h:1.1}); }
   wall(X1-4,X1-1,Z0+.6,Z0+1.4,0,1.1,lam('#c0392b'),true); wall(X0+1,X0+4,Z0+.6,Z0+1.4,0,1.1,lam('#c0392b'),true);
   Object.assign(MOTOR,{mods:{x:cx-8,z:cz-12.4},rep:{x:cx+8,z:cz-12.4},door:{x:cx,z:cz-1},clerk:{x:cx+1.6,z:cz-3.2}}); }
+
+/* ---------- the four houses for sale: each one a whole block, bigger and fancier with the price ---------- */
+const PROPS=[];
+function roofGable(x0,x1,z0,z1,y,rh,gm,rm,alongX){ const cx=(x0+x1)/2, cz=(z0+z1)/2, L=alongX?x1-x0:z1-z0, D=alongX?z1-z0:x1-x0, tr=g=>{ if(alongX) g.rotateY(PI/2); return g.translate(cx,y,cz); };
+  const sh=new THREE.Shape(); sh.moveTo(-D/2,0); sh.lineTo(D/2,0); sh.lineTo(0,rh); sh.lineTo(-D/2,0); const gg=new THREE.ExtrudeGeometry(sh,{depth:L,bevelEnabled:false}); gg.translate(0,0,-L/2); addS(tr(gg),gm);
+  const ov=.5, sl=rh/(D/2), ang=Math.atan(sl); for(const sg of [-1,1]){ const ex=sg*(D/2+ov), ey=-ov*sl, len=Math.hypot(ex,rh-ey)+.1, g=new THREE.BoxGeometry(len,.16,L+.9); g.rotateZ(sg>0?-ang:ang); g.translate(ex/2+sg*Math.sin(ang)*.07,(rh+ey)/2+Math.cos(ang)*.07,0); addS(tr(g),rm); } }
+function buildProperty(tier,cx,cz,cell){ const keep=_rngF; _rngF=mulberry32(9100+tier*77);
+  try{ const box=(x0,x1,y0,y1,z0,z1,m,col)=>{ addS(BX(x1-x0,y1-y0,z1-z0,cx+(x0+x1)/2,(y0+y1)/2,cz+(z0+z1)/2),m); if(col!==false) cell.b.push({x0:cx+x0,x1:cx+x1,z0:cz+z0,z1:cz+z1,y0,h:y1}); };
+    const E=BLOCK/2-.5, stone=lam(['#d9d2c4','#e6dccb','#cfd3d6','#efe8d8'][tier],{roughness:.85}), white=lam('#f6f4ef',{roughness:.6}), dark=lam('#2b2d31',{roughness:.6}), gold=lam('#c9a24a',{roughness:.4,metalness:.6});
+    addS(PL(BLOCK-1,BLOCK-1,cx,.05,cz),matPark);
+    const gateW=tier===3?9:7, fenceM=tier>=2?stone:matHedge, fh=tier===3?1.8:tier===2?1.4:1.1;
+    const GX=tier===3?-16:tier===2?16.5:tier===1?14:12.5, GZ=tier===3?6:-1;
+    { const ops=[[-gateW/2,gateW/2],[GX-3,GX+3]].sort((a,b)=>a[0]-b[0]); let x=-E; for(const [a,b] of ops){ if(a>x) box(x,a,0,fh,E-.5,E,fenceM); x=Math.max(x,b); } if(x<E) box(x,E,0,fh,E-.5,E,fenceM); }
+    box(-E,E,0,fh,-E,-E+.5,fenceM); box(-E,-E+.5,0,fh,-E,E,fenceM); box(E-.5,E,0,fh,-E,E,fenceM);
+    if(tier>=2) for(const x of [-gateW/2-.4,gateW/2+.4]){ box(x-.5,x+.5,0,fh+1.1,E-.7,E+.2,stone); if(tier===3) addS(new THREE.SphereGeometry(.38,10,8).translate(cx+x,fh+1.5,cz+E-.25),gold); }
+    addS(PL(gateW-1,14,cx,.06,cz+E-7),matDrive);
+    addS(PL(5,E-GZ-2,cx+GX,.065,cz+(E+GZ+2)/2),matDrive);
+    // the garage entrance: a concrete portal with a ramp going down into the dark
+    box(GX-2.6,GX-2.2,0,3.4,GZ-4,GZ+1,lam('#a9acaf'),true); box(GX+2.2,GX+2.6,0,3.4,GZ-4,GZ+1,lam('#a9acaf'),true); box(GX-2.6,GX+2.6,3.4,3.8,GZ-4,GZ+1,lam('#8d9093'),true); box(GX-2.6,GX+2.6,0,3.4,GZ-4.4,GZ-4,lam('#a9acaf'),true);
+    addS(PL(4.4,4.6,cx+GX,.07,cz+GZ-1.8),flat(lam('#161718',{roughness:1}))); for(let k=0;k<3;k++) addS(new THREE.ConeGeometry(.35,.6,3).rotateX(PI/2).translate(cx+GX,.09,cz+GZ-3.2+k*1.1),flat(lam('#ffb703',{emissive:new THREE.Color('#7a5400'),emissiveIntensity:.6})));
+    addS(BX(4.6,.7,.08,cx+GX,4.25,cz+GZ+1.06),signMat([['GARAGE ↓',80]],'#1d3a8a','#ffffff',512,80));
+    let hx0,hx1,hz0,hz1,h,mat,door;
+    if(tier===0){ hx0=-6;hx1=6;hz0=-9;hz1=1;h=4.3;mat=matHome[2];
+      makeInterior(cx+hx0,cx+hx1,cz+hz0,cz+hz1,h,cell,'z1',mat,0,'house'); roofGable(cx+hx0,cx+hx1,cz+hz0,cz+hz1,h,2.3,matGable[2],matRoofT[0],true);
+      box(-2,2,3.05,3.2,1,3,white,false); for(const x of [-1.8,1.8]) box(x-.1,x+.1,0,3.05,2.8,3,white,false);
+      for(const [x,z] of [[-14,12],[-15,-12],[8,-15],[-6,15]]) addTree(cx+x,cz+z,1,cell); }
+    else if(tier===1){ hx0=-9;hx1=9;hz0=-12;hz1=1;h=9.2;mat=matHome[1];
+      makeInterior(cx+hx0,cx+hx1,cz+hz0,cz+hz1,h,cell,'z1',mat,0,'house'); roofGable(cx+hx0,cx+hx1,cz+hz0,cz+hz1,h,3,matGable[1],matRoofT[1],true);
+      box(-5,5,3.1,3.3,1,4,white,false); for(const x of [-4.8,-1.6,1.6,4.8]) box(x-.12,x+.12,0,3.1,3.8,4,white,false); box(-5,5,.0,.25,1,4,lam('#9c6b3f'),false);
+      box(5.5,8.5,4.6,4.8,-12.8,-11.6,white,false);
+      addS(new THREE.CylinderGeometry(1.5,1.5,.08,20).translate(cx-12,.75,cz-14),matTramp); addS(new THREE.TorusGeometry(1.55,.07,6,20).rotateX(PI/2).translate(cx-12,.78,cz-14),matBlueP);
+      for(const [x,z] of [[-15,10],[-16,-4],[16,-16],[-6,16],[6,16]]) addTree(cx+x,cz+z,1.1,cell); }
+    else if(tier===2){ hx0=-12;hx1=8;hz0=-14;hz1=0;h=9.2;mat=matHome[5];
+      makeInterior(cx+hx0,cx+hx1,cz+hz0,cz+hz1,h,cell,'z1',mat,0,'house');
+      box(hx0-.6,hx1+.6,h,h+.35,hz0-.6,hz1+1.6,dark,false); box(8,13,0,5.2,-14,-5,lam('#3a3d42',{roughness:.5}),true); box(7.6,13.4,5.2,5.5,-14.4,-4.6,dark,false);
+      const glass=lam('#9fc8dc',{transparent:true,opacity:.45,roughness:.05,metalness:.4,depthWrite:false}); box(8,13,.4,4.8,-5.05,-4.95,glass,false);
+      box(-11,-2,4,4.25,0,2.6,white,false); box(-11,-2,4.25,5.2,2.5,2.6,lam('#bfe4f6',{transparent:true,opacity:.35,depthWrite:false}),false);
+      addS(PL(15,7,cx-4,.07,cz+9),flat(lam('#d8c3a5',{roughness:.9}))); addS(PL(12,5,cx-4,.09,cz+9),flat(lam('#2fa7d8',{roughness:.15,metalness:.2,emissive:new THREE.Color('#0b4a66'),emissiveIntensity:.4})));
+      for(const x of [-9,-5,-1]) box(x-.4,x+.4,.1,.5,13,14.6,white,false);
+      for(const [x,z] of [[-17,-16],[17,-17],[-17,6],[17,12]]) addTree(cx+x,cz+z,1.2,cell); }
+    else { hx0=-12;hx1=12;hz0=-15;hz1=0;h=13.2;mat=matHome[0];
+      makeInterior(cx+hx0,cx+hx1,cz+hz0,cz+hz1,h,cell,'z1',mat,0,'house');
+      roofGable(cx+hx0,cx+hx1,cz+hz0,cz+hz1,h,3.4,matGable[0],matRoofT[4],true);
+      for(const sx of [-1,1]){ const a=sx<0?-20:12, b=sx<0?-12:20; box(a,b,0,8.6,-14,-3,stone,true); box(a-.4,b+.4,8.6,9.1,-14.4,-2.6,white,false); roofGable(cx+a,cx+b,cz-14,cz-3,9.1,2.2,matGable[0],matRoofT[4],false);
+        for(let k=0;k<3;k++){ const wx=a+1.4+k*2.6; box(wx,wx+1.4,1.6,3.6,-2.97,-2.92,lam('#2c3e50',{emissive:new THREE.Color('#ffcf7a'),emissiveIntensity:.25}),false); box(wx,wx+1.4,5.2,7.2,-2.97,-2.92,lam('#2c3e50',{emissive:new THREE.Color('#ffcf7a'),emissiveIntensity:.25}),false); } }
+      box(-6,6,0,.28,0,5,white,false); box(-6.3,6.3,8.6,9.4,0,5.4,white,false);
+      const tri=new THREE.Shape(); tri.moveTo(-6.3,0); tri.lineTo(6.3,0); tri.lineTo(0,2.4); tri.lineTo(-6.3,0); addS(new THREE.ExtrudeGeometry(tri,{depth:5.4,bevelEnabled:false}).translate(cx,9.4,cz),white);
+      for(const x of [-5.2,-1.8,1.8,5.2]) addS(new THREE.CylinderGeometry(.42,.48,8.1,14).translate(cx+x,4.55,cz+4.4),white);
+      addS(new THREE.CylinderGeometry(4.2,4.4,.6,28).translate(cx,.3,cz+12),stone); addS(new THREE.CylinderGeometry(3.7,3.7,.06,28).translate(cx,.62,cz+12),matPond); addS(new THREE.CylinderGeometry(.5,.7,2.4,12).translate(cx,1.5,cz+12),stone); addS(new THREE.SphereGeometry(.8,12,8).translate(cx,2.9,cz+12),stone);
+      cell.c.push({x:cx,z:cz+12,r:4.4,h:.6});
+      addS(new THREE.TorusGeometry(8.5,1.6,4,40,TAU).rotateX(PI/2).scale(1,.05,1).translate(cx,.06,cz+12),matDrive);
+      for(const [x,z] of [[-19,-18],[19,-18],[-19,10],[19,10],[-10,18],[10,18]]) addTree(cx+x,cz+z,1.3,cell);
+      for(const x of [-14,14]) for(const z of [6,14]){ box(x-.15,x+.15,0,2.4,z-.15,z+.15,dark,false); addS(new THREE.SphereGeometry(.28,8,6).translate(cx+x,2.6,cz+z),lam('#fff3c4',{emissive:new THREE.Color('#ffd27a'),emissiveIntensity:.9})); } }
+    const rec=cell.ints[cell.ints.length-1]; if(rec){ rec.kind=null; rec.spots=[]; rec.owned=true; }
+    PROPS[tier]={i:tier,cx,cz,cell,rec,signP:{x:cx+gateW/2+2.2,z:cz+E-1.6},padP:{x:cx+GX,z:cz+GZ+4.2},portal:{x:cx+GX,z:cz+GZ-1.2},exitYaw:0,door:rec?rec.doorOut:{x:cx,z:cz+2}};
+  } finally { _rngF=keep; } }
 function makeStore(cx,cz,cell){
   const X0=cx-15,X1=cx+15,Z0=cz-14,Z1=cz+8,H=6.5,T=.4,dw=2.4,fy=.2;
   const wallM=lam('#d9d2c4',{roughness:.9}), trim=lam('#2f4f3a',{roughness:.7}), dark=lam('#33363c',{roughness:.6}), peg=lam('#c9a46a',{roughness:.85}), shelfM=lam('#7d8288',{roughness:.5,metalness:.4});
@@ -1711,7 +1767,9 @@ for(let i=0;i<N;i++) for(let j=0;j<N;j++){
   if(t==='river') makeRiverLot(i,cx,cz,cell);
   else if(t==='site') makeSite(i,j,cx,cz,cell,lot);
   else if(t==='build'&&district(i,j)==='down'){ for(const [x0,x1,z0,z1,H] of splitDown()) makeTower(cx+x0,cx+x1,cz+z0,cz+z1,H,cell,lot); }
-  else if(t==='build'&&district(i,j)==='sub'){ makeSuburb(cx,cz,cell); for(const [ox,oz] of [[14,s],[-14,-s],[s,-14],[-s,14]]) if(rng()<.7) addTree(cx+ox,cz+oz,.8,cell); }
+  else if(t==='build'&&district(i,j)==='sub'){ const SPh=SPECIAL[i+','+j], snap=SPh?snapLot(cell):null; if(SPh) suppressS=true; const nh=SUBH.length;
+    makeSuburb(cx,cz,cell); for(const [ox,oz] of [[14,s],[-14,-s],[s,-14],[-s,14]]) if(rng()<.7) addTree(cx+ox,cz+oz,.8,cell);
+    if(SPh){ suppressS=false; restoreLot(cell,snap); SUBH.length=nh; buildProperty(+SPh[1],cx,cz,cell); } }
   else if(t==='build'){ const SPx=SPECIAL[i+','+j], snap=SPx?snapLot(cell):null; if(SPx) suppressS=true;
     for(const [x0,x1,z0,z1] of splitLot()){ const m=rr(0,1.6); const h=rng()<.14?rr(34,54):rr(9,26); makeBuilding(cx+x0+m,cx+x1-m,cz+z0+m,cz+z1-m,h,cell,lot); }
     for(const [ox,oz] of [[0,s],[0,-s],[s,0],[-s,0]]) if(rng()<.55) addTree(cx+ox,cz+oz,.8,cell);
@@ -3023,25 +3081,61 @@ function garSave(){ try{ localStorage.setItem(GAR_KEY,JSON.stringify({h:GAR.h,ca
 const garCap=()=>{ let n=0; for(const k in GAR.h) if(GAR.h[k].own) n+=GAR.h[k].cap; return n; };
 const ownsHouse=()=>Object.keys(GAR.h).some(k=>GAR.h[k].own);
 const SALE=[];
-function hW(H,n,t){ return H.ox?{x:H.cx+H.sg*n,z:H.cz+t}:{x:H.cx+t,z:H.cz+H.sg*n}; }
-function hYaw(H){ return H.ox?(H.sg>0?PI/2:-PI/2):(H.sg>0?0:PI); }
-function saleSign(S){ if(S.sign){ scene.remove(S.sign); disposeTree(S.sign); } const H=S.H, own=GAR.h[S.i]&&GAR.h[S.i].own, g=new THREE.Group(), p=hW(H,H.FE-2.2,H.b-3.2);
-  const post=new THREE.Mesh(new THREE.BoxGeometry(.12,1.7,.12),lam('#f2f2f2')); post.position.y=.85; g.add(post);
-  const m=own?signMat([['HOME',90],[S.D.name,40]],'#2e7d4f','#ffffff',512,256):signMat([['FOR SALE',74],[S.D.name,40],['$'+S.D.price.toLocaleString()+' · garage for '+S.D.cap,36]],'#e5484d','#ffffff',512,256);
-  const bd=new THREE.Mesh(new THREE.BoxGeometry(1.7,.85,.06),m); bd.position.y=1.55; g.add(bd); g.position.set(p.x,0,p.z); g.rotation.y=hYaw(H); g.traverse(o=>{ if(o.isMesh) o.castShadow=true; }); scene.add(g); S.sign=g; S.signP=p;
-  if(S.pad) S.pad.visible=!!own; }
-function setupSale(){ const PL=storyPlaces(), pc=PL.plaza, avoid=[PL.house,PL.houseDoor].filter(Boolean); const ok=SUBH.filter(H=>{ const p=hW(H,14,H.d0+1.35); return !avoid.some(a=>Math.hypot(a.x-p.x,a.z-p.z)<34); });
-  ok.sort((a,b)=>{ const pa=hW(a,14,a.d0), pb=hW(b,14,b.d0); return Math.hypot(pa.x-pc.x,pa.z-pc.z)-Math.hypot(pb.x-pc.x,pb.z-pc.z); });
-  const pickI=[.08,.3,.55,.85].map(f=>Math.min(ok.length-1,Math.floor(f*ok.length))); const used=new Set();
-  pickI.forEach((ix,i)=>{ while(used.has(ix)&&ix<ok.length-1) ix++; used.add(ix); const H=ok[ix]; if(!H) return; const S={i,H,D:HOUSES[i]}; SALE.push(S);
-    const dc=hW(H,8.2,H.d0+1.35), y=hYaw(H), wm=lam('#e4dfd3',{roughness:.9}), rm=lam('#5b4636',{roughness:.8}), dm=lam('#bfc3c7',{roughness:.6}), g=new THREE.Group();
-    const bx=(w,h,d,x,yy,z,m)=>{ const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m); b.position.set(x,yy,z); b.castShadow=true; b.receiveShadow=true; g.add(b); };
-    bx(.15,2.7,4.8,-1.42,1.35,0,wm); bx(.15,2.7,4.8,1.42,1.35,0,wm); bx(3,.15,4.8,0,2.75,0,rm); bx(3,2.7,.15,0,1.35,-2.33,wm); bx(2.7,2.2,.08,0,1.12,2.36,dm); for(let k=0;k<6;k++) bx(2.72,.04,.1,0,.25+k*.36,2.4,lam('#9a9ea4'));
-    g.position.set(dc.x,0,dc.z); g.rotation.y=y; scene.add(g); S.shed=g;
-    const a=hW(H,5.8,H.d0-.05), b2=hW(H,10.6,H.d0+2.75); H.cell.b.push({x0:Math.min(a.x,b2.x),x1:Math.max(a.x,b2.x),z0:Math.min(a.z,b2.z),z1:Math.max(a.z,b2.z),y0:0,h:2.8});
-    S.padP=hW(H,14.6,H.d0+1.35); S.yaw=y; const pad=new THREE.Mesh(new THREE.RingGeometry(1.5,1.85,32).rotateX(-PI/2),new THREE.MeshBasicMaterial({color:0x4fc3ff,transparent:true,opacity:.75,depthWrite:false})); pad.position.set(S.padP.x,.08,S.padP.z); scene.add(pad); S.pad=pad;
-    for(let k=cars.length-1;k>=0;k--){ const c=cars[k]; if(c.spawned||c.boat) continue; if(Math.hypot(c.pos.x-S.padP.x,c.pos.z-S.padP.z)<6.5||Math.hypot(c.pos.x-dc.x,c.pos.z-dc.z)<4){ scene.remove(c.g); cars.splice(k,1); } }
-    saleSign(S); }); }
+
+/* ---------- the properties at runtime: signs, beams, name tags, and the underground garages ---------- */
+const GZ0={x:1300,z:1300}, GBAYS=[]; for(let k=0;k<6;k++){ GBAYS.push({x:-8.5,z:-19+k*7,yaw:PI/2}); GBAYS.push({x:8.5,z:-19+k*7,yaw:-PI/2}); }
+const GAR_IN={S:null};
+function gOrigin(S){ return {x:GZ0.x+S.i*90,z:GZ0.z}; }
+function saleSign(S){ if(S.sign){ scene.remove(S.sign); disposeTree(S.sign); } const own=GAR.h[S.i]&&GAR.h[S.i].own, g=new THREE.Group(), p=S.signP;
+  for(const x of [-1.25,1.25]){ const post=new THREE.Mesh(new THREE.BoxGeometry(.14,2.6,.14),lam('#f2f2f2')); post.position.set(x,1.3,0); g.add(post); }
+  const m=own?signMat([['HOME',110],[S.D.name,56]],'#2e7d4f','#ffffff',512,256):signMat([['FOR SALE',96],[S.D.name,52],['$'+S.D.price.toLocaleString()+' · garage for '+S.D.cap,40]],'#e5484d','#ffffff',512,256);
+  const bd=new THREE.Mesh(new THREE.BoxGeometry(2.8,1.4,.08),m); bd.position.y=2.1; g.add(bd); g.position.set(p.x,0,p.z); g.traverse(o=>{ if(o.isMesh) o.castShadow=true; }); scene.add(g); S.sign=g;
+  if(S.pad) S.pad.visible=!!own; if(S.beam) S.beam.visible=!own; }
+function setupSale(){ PROPS.forEach((Pp,i)=>{ if(!Pp) return; const S=Object.assign(Pp,{i,D:HOUSES[i],yaw:0}); SALE.push(S);
+    const pad=new THREE.Mesh(new THREE.RingGeometry(1.6,2,32).rotateX(-PI/2),new THREE.MeshBasicMaterial({color:0x4fc3ff,transparent:true,opacity:.75,depthWrite:false})); pad.position.set(S.padP.x,.1,S.padP.z); scene.add(pad); S.pad=pad;
+    const bm=new THREE.Mesh(new THREE.CylinderGeometry(.9,.9,90,12,1,true),new THREE.MeshBasicMaterial({color:0xffc43a,transparent:true,opacity:.2,depthWrite:false,side:THREE.DoubleSide,fog:false})); bm.position.set(S.cx,45,S.cz-4); bm.renderOrder=4; scene.add(bm); S.beam=bm;
+    for(let k=cars.length-1;k>=0;k--){ const c=cars[k]; if(c.spawned||c.boat) continue; if(Math.abs(c.pos.x-S.cx)<23&&Math.abs(c.pos.z-S.cz)<23){ scene.remove(c.g); cars.splice(k,1); } }
+    saleSign(S); buildGarageRoom(S); }); }
+function buildGarageRoom(S){ const O=gOrigin(S), g=new THREE.Group(), T=S.i, B=AIR.boxes;
+  const M=(c,o)=>{ const m=lam(c,Object.assign({roughness:.85},o||{})); return m; }, floorM=M(['#8d9093','#7f8a96','#5b6168','#3b3631'][T]), wallM=M(['#c9cbcd','#d3d8de','#e8e6e0','#e9dcc4'][T]), trimM=M(['#ffb703','#2f80ed','#2a9d8f','#c9a24a'][T]), lightM=M('#ffffff',{emissive:new THREE.Color('#fff6dd'),emissiveIntensity:1});
+  const bx=(x0,x1,y0,y1,z0,z1,m,col)=>{ const b=new THREE.Mesh(new THREE.BoxGeometry(x1-x0,y1-y0,z1-z0),m); b.position.set(O.x+(x0+x1)/2,(y0+y1)/2,O.z+(z0+z1)/2); b.receiveShadow=false; b.castShadow=false; g.add(b); if(col) B.push({x0:O.x+x0,x1:O.x+x1,z0:O.z+z0,z1:O.z+z1,y0,h:y1}); };
+  bx(-14,14,-.2,0,-26,22,floorM,false); bx(-14.4,-14,0,4.8,-26,22,wallM,true); bx(14,14.4,0,4.8,-26,22,wallM,true); bx(-14.4,14.4,0,4.8,-26.4,-26,wallM,true);
+  bx(-14.4,-3.6,0,4.8,22,22.4,wallM,true); bx(3.6,14.4,0,4.8,22,22.4,wallM,true); bx(-14.4,14.4,4.8,5.1,-26.4,22.4,wallM,true);
+  for(let k=0;k<6;k++){ for(const sx of [-1,1]){ const z=-19+k*7; bx(sx*13.9-.02,sx*13.9+.02,.6,2.2,z-.9,z+.9,trimM,false); bx(sx*4.6-.06,sx*4.6+.06,.01,.02,z-3.4,z+3.4,M('#f2f2f2'),false); } bx(-1.2,1.2,4.7,4.78,-21+k*7,-19.6+k*7,lightM,false); }
+  for(const z of [-22.5,-15.5,-8.5,-1.5,5.5,12.5,19.5]) for(const sx of [-1,1]) bx(sx*4.6-.35,sx*4.6+.35,0,4.8,z-.35,z+.35,wallM,true);
+  // the ramp up to the street
+  for(let k=0;k<16;k++) B.push({x0:O.x-3.5,x1:O.x+3.5,z0:O.z+22+k,z1:O.z+39,y0:0,h:.26*(k+1)});
+  const rp=new THREE.Mesh(new THREE.BoxGeometry(7,.3,16.6),floorM); rp.position.set(O.x,2.1,O.z+30.2); rp.rotation.x=-Math.atan2(4.16,16); g.add(rp);
+  for(let k=0;k<5;k++){ const cn=new THREE.Mesh(new THREE.ConeGeometry(.5,.8,3).rotateX(-PI/2),trimM); cn.position.set(O.x,.6+k*.8+.25,O.z+24+k*3); cn.rotation.x=-.25; g.add(cn); }
+  bx(-3.9,-3.5,0,9,22,39,wallM,true); bx(3.5,3.9,0,9,22,39,wallM,true); bx(-3.9,3.9,4.8,9,22.4,22.8,wallM,false);
+  const ex=new THREE.Mesh(new THREE.PlaneGeometry(7,5),new THREE.MeshBasicMaterial({color:0xfff7d6})); ex.position.set(O.x,6.6,O.z+38.9); ex.rotation.y=PI; g.add(ex);
+  const sg=new THREE.Mesh(new THREE.PlaneGeometry(6,1.2),signMat([['↑ EXIT TO STREET',72]],'#2e7d4f','#ffffff',512,96)); sg.position.set(O.x,4.2,O.z+21.9); sg.rotation.y=PI; g.add(sg);
+  const dn=new THREE.Mesh(new THREE.PlaneGeometry(3,2.6),M('#3a3d42')); dn.position.set(O.x,1.3,O.z-25.95); g.add(dn); const ds=new THREE.Mesh(new THREE.PlaneGeometry(4.4,.9),signMat([['STAIRS UP · E',64]],'#1d3a8a','#ffffff',512,96)); ds.position.set(O.x,3.1,O.z-25.94); g.add(ds);
+  const nm=new THREE.Mesh(new THREE.PlaneGeometry(10,1.4),signMat([[S.D.name.toUpperCase()+' · GARAGE',64]],['#5b6168','#2f80ed','#2a9d8f','#8a6d2e'][T],'#ffffff',1024,128)); nm.position.set(O.x+13.85,3.4,O.z-4); nm.rotation.y=-PI/2; g.add(nm);
+  scene.add(g); S.groom=g; }
+function garageEnter(S){ const O=gOrigin(S); GAR_IN.S=S; player.mode='walk'; player.pos.set(O.x,HIP,O.z-22); player.vel.set(0,0,0); player.yaw=0; camYaw=0; camTarget.copy(player.pos);
+  let k=0; const cap=Math.min(GBAYS.length,garCap()); for(const e of GAR.cars){ if(e.out) continue; if(k>=GBAYS.length) break; const b=GBAYS[k++]; const c=spawnOwned(e,O.x+b.x,O.z+b.z,b.yaw); e.out=false; c.inGarage=true; c.pos.y=0; }
+  flash(S.D.name+' garage · get in a vehicle and drive up the ramp. E at the stairs to walk back up'); }
+function garageClear(keep){ for(let i=cars.length-1;i>=0;i--){ const c=cars[i]; if(c.inGarage&&c!==keep){ const e=GAR.cars.find(e=>e.id===c.gid); if(e) e.out=false; cars.splice(i,1); scene.remove(c.g); disposeTree(c.g); } } GAR_IN.S=null; }
+function garageLeaveFoot(){ const S=GAR_IN.S; garageClear(null); if(!S) return; player.pos.set(S.portal.x,HIP,S.portal.z+3.5); player.vel.set(0,0,0); camTarget.copy(player.pos); }
+function garageTick2(dt){ const S=GAR_IN.S; if(!S) return; const O=gOrigin(S);
+  if(player.pos.x<GZ0.x-200&&!activeCar){ garageClear(null); return; }
+  const c=activeCar; if(c&&c.inGarage&&c.pos.z>O.z+37.5){ const e=GAR.cars.find(e=>e.id===c.gid); c.inGarage=false; garageClear(c); if(e) e.out=true;
+    c.pos.set(S.padP.x,0,S.padP.z+2.5); c.yaw=S.exitYaw; c.vel.set(Math.sin(c.yaw)*7,0,Math.cos(c.yaw)*7); c.spin=0; c.air=false; c.vy=0; c.prevSp=0; c.parkT=-3; camYaw=c.yaw; camTarget.set(c.pos.x,c.pos.y+1.7,c.pos.z); flash('Out on the street!'); } }
+function houseMarks(){ if(!state.started||state.cine){ for(const S of SALE) if(S.mk) S.mk.hidden=true; return; } const w=canvas.clientWidth, h=canvas.clientHeight; camera.updateMatrixWorld();
+  for(const S of SALE){ if(!S.mk){ S.mk=document.createElement('div'); S.mk.className='mark'; marksEl.appendChild(S.mk); } const own=GAR.h[S.i]&&GAR.h[S.i].own, txt=(own?'🏠 Your home · ':'🏠 For sale · ')+S.D.name+(own?'':' · '+money(S.D.price));
+    if(S.mkT!==txt){ S.mkT=txt; S.mk.textContent=''; const sp=document.createElement('span'); sp.textContent=txt; S.mk.appendChild(sp); }
+    _v.set(S.cx,16,S.cz-4); const d=_v.distanceTo(camera.position); _v.project(camera); const vis=!GAR_IN.S&&_v.z<1&&d<420&&d>14&&Math.abs(_v.x)<1.05&&Math.abs(_v.y)<1.05;
+    if(S.mk.hidden===vis) S.mk.hidden=!vis; if(vis){ S.mk.style.transform='translate('+((_v.x*.5+.5)*w).toFixed(1)+'px,'+((-_v.y*.5+.5)*h).toFixed(1)+'px) translate(-50%,-100%)'; S.mk.style.opacity=d>250?.7:1; } } }
+function portalMenu(S){ const h=GAR.h[S.i], add=menuOpen(S.D.name+' · garage '+GAR.cars.length+'/'+garCap()+' spaces');
+  add('Go down to the garage',GAR.cars.length?'Your vehicles are parked downstairs. Drive one up the ramp to take it out':'It\'s empty for now. Buy vehicles at Vehicles R Us, or stop any car on the blue ring to keep it',()=>{ menuDone(); garageEnter(S); },'pick-go');
+  menuHead('Upgrades for '+S.D.name);
+  add('Bigger garage · '+money(3000),'+2 vehicle spaces (now '+h.cap+')',()=>{ if(state.money<3000){ menuDone('Not enough cash'); return; } state.money-=3000; save(); h.cap+=2; garSave(); menuDone('Garage extended: '+garCap()+' spaces'); },'',h.cap>=12||state.money<3000);
+  if(h.arm) add('Armoury: refill ammo','Fill every gun you own, free',()=>{ for(const k in AMMO) if(state.owned[k]){ const A=AMMO[k], a=ammoOf(k); a.mag=A.mag; a.res=A.tot-A.mag; } save(); menuDone('All your guns are full'); });
+  else add('Armoury · '+money(5000),'Refill all your ammo here for free, any time',()=>{ if(state.money<5000){ menuDone('Not enough cash'); return; } state.money-=5000; save(); h.arm=true; garSave(); menuDone('Armoury built. Open the garage menu to refill ammo'); },'',state.money<5000);
+  if(h.med) add('Medical bay: heal','Back to full health',()=>{ state.hp=100; menuDone('Fully healed'); });
+  else add('Medical bay · '+money(2500),'Heal to full health here, any time',()=>{ if(state.money<2500){ menuDone('Not enough cash'); return; } state.money-=2500; save(); h.med=true; garSave(); menuDone('Medical bay built'); },'',state.money<2500);
+  add('Close','',()=>menuDone()); }
 function garFind(){ let best=null,bd=1e9; for(const S of SALE){ if(!(GAR.h[S.i]&&GAR.h[S.i].own)) continue; const d=Math.hypot(S.padP.x-player.pos.x,S.padP.z-player.pos.z); if(d<bd){ bd=d; best=S; } } return best; }
 function spawnOwned(e,x,z,yaw,mode){ const c=new Car(x,z,yaw,mode||'free',{variant:e.v,color:e.col}); c.gid=e.id; e.out=true; c.mods={}; applyMods(c,e.mods||{}); return c; }
 function applyMods(c,m){ c.mods=Object.assign(c.mods||{},m); c.crashK=c.mods.bump?.4:1; if(c.mods.armor) c.armor=Math.min(c.armor||1,.5); if(c.mods.gun&&!c.tur){ c.mg=true; c.roofGun=true; addTurret(c); } dressMods(c); }
@@ -3071,23 +3165,10 @@ function shopMenu(){ const add=menuOpen('Vehicles R Us · you have '+money(state
   for(const [v,n,p] of VEH_SHOP){ const b=document.createElement('button'); b.type='button'; b.className='pick-m'; const nb=document.createElement('b'); nb.textContent=money(p); const t=document.createElement('span'); t.textContent=n; b.append(nb,t); b.style.flexDirection='column'; b.style.alignItems='flex-start';
     const can=ownsHouse()&&used<cap&&state.money>=p; b.disabled=!can; b.title=!ownsHouse()?'Buy a house first':used>=cap?'Your garage is full':state.money<p?'Not enough cash':'Buy';
     b.addEventListener('click',()=>{ if(state.money<p||GAR.cars.length>=garCap()) return; state.money-=p; save(); GAR.cars.push({id:GAR.n++,v,col:EMCOL[v]||state.buyCol,mods:{},out:false}); garSave(); Snd.rack&&Snd.rack(); const S=garFind();
-      menuDone('You bought a '+n+'! It\'s waiting in your garage'+(S?' at '+S.D.name:'')); if(S){ state.wpDest={x:S.padP.x,z:S.padP.z}; state.shopWpUntil=perfT+90; } }); g.appendChild(b); }
+      menuDone('You bought a '+n+'! It\'s waiting in your garage'+(S?' at '+S.D.name:'')); if(S){ state.wpDest={x:S.portal.x,z:S.portal.z}; state.shopWpUntil=perfT+90; } }); g.appendChild(b); }
   add('Close','',()=>menuDone()); }
-function houseBuy(S){ const D=S.D, add=menuOpen(D.name+' · '+money(D.price)); add('Buy '+D.name+' for '+money(D.price),'A house with a garage for '+D.cap+' vehicles. Your bought cars are kept here forever',()=>{ if(state.money<D.price){ menuDone('You need '+money(D.price-state.money)+' more'); return; } state.money-=D.price; save(); GAR.h[S.i]={own:true,cap:D.cap,arm:false,med:false}; garSave(); saleSign(S); menuDone('Welcome home! Stand on the blue ring by the garage and press E'); },'pick-go',state.money<D.price);
+function houseBuy(S){ const D=S.D, add=menuOpen(D.name+' · '+money(D.price)); add('Buy '+D.name+' for '+money(D.price),'A house with a garage for '+D.cap+' vehicles. Your bought cars are kept here forever',()=>{ if(state.money<D.price){ menuDone('You need '+money(D.price-state.money)+' more'); return; } state.money-=D.price; save(); GAR.h[S.i]={own:true,cap:D.cap,arm:false,med:false}; garSave(); saleSign(S); menuDone('Welcome home! The GARAGE entrance is by the driveway: E there to go down'); },'pick-go',state.money<D.price);
   add('Not now','',()=>menuDone()); }
-function garageMenu(S){ const h=GAR.h[S.i], add=menuOpen(S.D.name+' · garage '+GAR.cars.length+'/'+garCap());
-  if(!GAR.cars.length) add('Your garage is empty','Buy vehicles at Vehicles R Us (downtown, next to the hardware store), or drive any car onto the blue ring and press F to keep it',null,'',true);
-  for(const e of GAR.cars){ const live=e.out&&cars.find(c=>c.gid===e.id); const mods=Object.keys(e.mods||{}).filter(k=>e.mods[k]).map(k=>(MODS.find(m=>m[0]===k)||[,k])[1]).join(', ');
-    add((live?'Bring back: ':'Take out: ')+VNAME[e.v],(live?'It\'s parked somewhere in town. Bring it back here':'Parked in the garage')+(mods?' · '+mods:''),()=>{ if(live){ const i=cars.indexOf(live); if(live===activeCar) return; if(i>=0) cars.splice(i,1); scene.remove(live.g); disposeTree(live.g); }
-      const p=hW(S.H,14.6,S.H.d0+1.35); for(const c of cars) if(c!==activeCar&&Math.hypot(c.pos.x-p.x,c.pos.z-p.z)<3.5){ c.pos.x+=Math.cos(S.yaw)*4; c.pos.z-=Math.sin(S.yaw)*4; }
-      spawnOwned(e,p.x,p.z,S.yaw); player.pos.set(p.x+Math.cos(S.yaw)*2.6,player.pos.y,p.z-Math.sin(S.yaw)*2.6); menuDone('Your '+VNAME[e.v]+' rolls out of the garage'); }); }
-  menuHead('Upgrades for '+S.D.name);
-  add('Bigger garage · '+money(3000),'+2 vehicle spaces (now '+h.cap+')',()=>{ if(state.money<3000){ menuDone('Not enough cash'); return; } state.money-=3000; save(); h.cap+=2; garSave(); menuDone('Garage extended: '+garCap()+' spaces'); },'',h.cap>=12||state.money<3000);
-  if(h.arm) add('Armoury: refill ammo','Fill every gun you own, free',()=>{ for(const k in AMMO) if(state.owned[k]){ const A=AMMO[k], a=ammoOf(k); a.mag=A.mag; a.res=A.tot-A.mag; } save(); menuDone('All your guns are full'); });
-  else add('Armoury · '+money(5000),'Refill all your ammo here for free, any time',()=>{ if(state.money<5000){ menuDone('Not enough cash'); return; } state.money-=5000; save(); h.arm=true; garSave(); menuDone('Armoury built. Open the garage to refill ammo'); },'',state.money<5000);
-  if(h.med) add('Medical bay: heal','Back to full health',()=>{ state.hp=100; menuDone('Fully healed'); });
-  else add('Medical bay · '+money(2500),'Heal to full health here, any time',()=>{ if(state.money<2500){ menuDone('Not enough cash'); return; } state.money-=2500; save(); h.med=true; garSave(); menuDone('Medical bay built'); },'',state.money<2500);
-  add('Close','',()=>menuDone()); }
 function modMenu(c){ const add=menuOpen('Tumbleton Motors · Mods · '+money(state.money)); c.mods=c.mods||{};
   if(c.ride||c.boat||c.tank||c.tracks){ add('Sorry, we can\'t mod that','Mods fit cars, utes, vans, buses and trucks',null,'',true); add('Close','',()=>menuDone()); return; }
   for(const [k,n,p,d] of MODS){ const have=!!c.mods[k]||(k==='gun'&&c.tur&&!c.roofGun); add((have?'✓ ':'')+n+(have?'':' · '+money(p)),d,()=>{ if(state.money<p){ menuDone('Not enough cash'); return; } state.money-=p; save(); const m={}; m[k]=true; applyMods(c,m); if(c.gid){ const e=GAR.cars.find(e=>e.id===c.gid); if(e){ e.mods=Object.assign(e.mods||{},m); garSave(); } } Snd.rack&&Snd.rack(); menuDone(n+' fitted!'+(c.gid?'':' Tip: drive it onto your garage ring and press F to keep it')); },'',have||state.money<p); }
@@ -3098,18 +3179,19 @@ function repairMenu(c){ const hp=c.hp===undefined?100:c.hp, cost=Math.max(0,Math
   add('Close','',()=>menuDone()); }
 function padHere(){ const c=activeCar; if(!c||state.over) return null; const sp=Math.hypot(c.vel.x,c.vel.z); if(sp>2) return null;
   if(MOTOR.mods&&Math.hypot(c.pos.x-MOTOR.mods.x,c.pos.z-MOTOR.mods.z)<3) return 'mods'; if(MOTOR.rep&&Math.hypot(c.pos.x-MOTOR.rep.x,c.pos.z-MOTOR.rep.z)<3) return 'rep';
-  const S=garFind(); if(S&&Math.hypot(c.pos.x-S.padP.x,c.pos.z-S.padP.z)<3.2) return 'park'; return null; }
+  const S=garFind(); if(S&&Math.hypot(c.pos.x-S.padP.x,c.pos.z-S.padP.z)<3.4&&!c.inGarage) return 'park'; return null; }
 function padUse(){ const k=padHere(), c=activeCar; if(!k) return false;
   if(k==='mods'){ modMenu(c); return true; } if(k==='rep'){ repairMenu(c); return true; }
   if(c.boat){ flash('Boats can\'t go in the garage'); return true; }
   let e=c.gid&&GAR.cars.find(e=>e.id===c.gid); if(!e){ if(GAR.cars.length>=garCap()){ flash('Your garage is full. Upgrade it for more spaces'); return true; } if(!VNAME[c.variant]){ flash('That one won\'t fit in a garage'); return true; } e={id:GAR.n++,v:c.variant,col:c.color||'#888888',mods:Object.assign({},c.mods||{}),out:false}; GAR.cars.push(e); }
-  enterExit(); const i=cars.indexOf(c); if(i>=0) cars.splice(i,1); const b=burning.indexOf(c); if(b>=0) burning.splice(b,1); if(c.towed) towRelease(c); scene.remove(c.g); disposeTree(c.g); e.out=false; garSave(); flash('Parked in your garage'); return true; }
+  enterExit(); const i=cars.indexOf(c); if(i>=0) cars.splice(i,1); const b=burning.indexOf(c); if(b>=0) burning.splice(b,1); if(c.towed) towRelease(c); scene.remove(c.g); disposeTree(c.g); e.out=false; garSave(); flash('Parked! It\'s down in your underground garage'); return true; }
 function walkSpot(){ if(activeCar||activeHeli||activeJet||player.mode!=='walk'||state.over) return null; const p=player.pos;
   if(CARYARD.kiosk&&Math.hypot(p.x-CARYARD.kiosk.x,p.z-CARYARD.kiosk.z)<2.6) return {k:'shop'};
-  for(const S of SALE){ const own=GAR.h[S.i]&&GAR.h[S.i].own; if(own&&Math.hypot(p.x-S.padP.x,p.z-S.padP.z)<2.4&&!nearestCar()) return {k:'garage',S}; if(!own&&Math.hypot(p.x-S.signP.x,p.z-S.signP.z)<3) return {k:'house',S}; } return null; }
-function walkUse(){ const w=walkSpot(); if(!w) return false; if(w.k==='shop') shopMenu(); else if(w.k==='house') houseBuy(w.S); else garageMenu(w.S); return true; }
-function motorPrompt(){ const w=walkSpot(); if(w) return w.k==='shop'?'<kbd>E</kbd> Vehicles R Us':w.k==='house'?'<kbd>E</kbd> '+w.S.D.name+' · for sale '+money(w.S.D.price):'<kbd>E</kbd> Your garage';
-  const k=padHere(); if(k) return k==='mods'?'<kbd>F</kbd> Mods menu':k==='rep'?'<kbd>F</kbd> Repairs':'<kbd>F</kbd> Park in your garage'+(activeCar&&activeCar.gid?'':' (keeps it)'); return ''; }
+  if(GAR_IN.S){ const O=gOrigin(GAR_IN.S); if(Math.hypot(p.x-O.x,p.z-(O.z-25))<3.2) return {k:'up',S:GAR_IN.S}; return null; }
+  for(const S of SALE){ const own=GAR.h[S.i]&&GAR.h[S.i].own; if(own&&Math.hypot(p.x-S.portal.x,p.z-S.portal.z)<3.2) return {k:'garage',S}; if(!own&&(Math.hypot(p.x-S.signP.x,p.z-S.signP.z)<3.2||Math.hypot(p.x-S.portal.x,p.z-S.portal.z)<3.2)) return {k:'house',S}; } return null; }
+function walkUse(){ const w=walkSpot(); if(!w) return false; if(w.k==='shop') shopMenu(); else if(w.k==='house') houseBuy(w.S); else if(w.k==='up') garageLeaveFoot(); else portalMenu(w.S); return true; }
+function motorPrompt(){ const w=walkSpot(); if(w) return w.k==='shop'?'<kbd>E</kbd> Vehicles R Us':w.k==='house'?'<kbd>E</kbd> '+w.S.D.name+' · for sale '+money(w.S.D.price):w.k==='up'?'<kbd>E</kbd> Walk back up to the street':'<kbd>E</kbd> Your garage and upgrades';
+  const k=padHere(); if(k) return k==='mods'?'<kbd>F</kbd> Mods menu':k==='rep'?'<kbd>F</kbd> Repairs':'Stop here to park it in your garage'+(activeCar&&activeCar.gid?'':' (keeps it)'); return ''; }
 let garT=0;
 function garageTick(dt){ garT-=dt; if(garT>0) return; garT=1; for(const e of GAR.cars){ if(!e.out) continue; const c=cars.find(c=>c.gid===e.id); if(!c){ e.out=false; } else if(c.wreck&&!c.wreckNoted){ c.wreckNoted=true; c.gid=null; e.out=false; flash('Your '+VNAME[e.v]+' was wrecked. It\'s been towed home and fixed'); } }
   for(const c of cars) if(c.display){ c.vel.set(0,0,0); } }
@@ -3118,6 +3200,7 @@ function addDigArm(c){ const M=lam(c.color||'#f2b705',{roughness:.7}), D=lam('#2
   const b1=new THREE.Mesh(new THREE.BoxGeometry(.35,.4,3.2).translate(0,0,1.6),M); b1.castShadow=true; boom.add(b1); const el=new THREE.Group(); el.position.set(0,0,3.2); boom.add(el);
   const b2=new THREE.Mesh(new THREE.BoxGeometry(.3,.3,2.2).translate(0,0,1.1),M); b2.castShadow=true; el.add(b2); const bk=new THREE.Mesh(new THREE.BoxGeometry(1.1,.7,.6).translate(0,-.2,2.35),D); bk.castShadow=true; el.add(bk);
   boom.rotation.x=-.55; el.rotation.x=1.5; c.g.add(piv); c.arm={boom,el,t:0}; }
+function autoPark(dt){ const c=activeCar; if(!c||state.paused||state.cine) return; if(padHere()==='park'&&Math.hypot(c.vel.x,c.vel.z)<.6){ c.parkT=(c.parkT||0)+dt; if(c.parkT>.9){ c.parkT=0; padUse(); } } else if((c.parkT||0)>0) c.parkT=0; }
 function digTick(dt){ for(const c of cars){ if(!c.arm) continue; const A=c.arm; if(A.t>0){ A.t-=dt; const k=1-Math.max(0,A.t)/1.1, sw=Math.sin(k*PI); A.boom.rotation.x=-.55+sw*.9; A.el.rotation.x=1.5-sw*.4;
       if(!A.hit&&k>.45){ A.hit=true; const fx=Math.sin(c.yaw), fz=Math.cos(c.yaw), hx=c.pos.x+fx*4.6, hz=c.pos.z+fz*4.6; puff(hx,c.pos.y+.4,hz,0x9a8a6a,1.1,false); Snd.thud(hx,hz,10); state.shake=Math.max(state.shake,.25);
         for(const q of people){ if(q===player&&activeCar===c) continue; if(Math.hypot(q.pos.x-hx,q.pos.z-hz)<2.6) { knock(q,fx*11,6,fz*11,8,2); if(q.zombie) hurt(q,8); } }
@@ -3134,7 +3217,7 @@ function setupMotor(){ try{ setupSale(); }catch(e){ console.warn('houses',e); }
   GREET.cars=['G\'day! Every vehicle comes with a free garage delivery.','Tanks are on special this week. Well, not really.','Have a look around, they don\'t bite.','Need a house first? Check the FOR SALE signs in the suburbs.'];
   GREET.motor=['Drive into a bay and press F.','Left bay for mods, right bay for repairs.','We fix anything that isn\'t a smoking crater.','Zombie rammer? Best money you\'ll ever spend.'];
   try{ for(const site of [0,1]){ const S=SITES[site]; if(!S) continue; const x=lotC(S[0]), z=lotC(S[1]); roadPark(x+10,z+24,site?'digger':'bulldozer'); } }catch(e){ console.warn('site vehicles',e); } }
-function emergTick(dt){ garageTick(dt); digTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
+function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
   const c=activeCar;
   if(c&&c.emerg==='fire'&&use){ camera.getWorldDirection(_ewd); let dx=_ewd.x, dy=_ewd.y+.16, dz=_ewd.z; const l=Math.hypot(dx,dy,dz)||1; hoseSpray(nozzleWorld(c),{x:dx/l,y:Math.max(-.35,dy/l),z:dz/l},dt,true); }
   if(c&&c.emerg==='tow'){ if(use&&!c.useW){ if(c.towed){ towRelease(c); flash('Let go of the car'); } else { const h=hookWorld(c); let best=null,bd=4.6;
@@ -3247,7 +3330,7 @@ function applyGrip(c,grip,dt){ const fx=Math.sin(c.yaw), fz=Math.cos(c.yaw), rx=
 const dyn=[];
 function buildDyn(){ dyn.length=0; for(const o of props) dyn.push(o); for(const p of people) if(p.mode!=='drive'&&p.mode!=='held'&&p.mode!=='lift') dyn.push(p); }
 const isWalker=o=>o.isPerson&&(o.mode==='walk'||o.mode==='getup');
-function bounds(p,v){ const XM=(p.z>AIR.z0&&p.z<AIR.z1)?AIR.x1:LIM; if(p.x>XM){p.x=XM; if(v.x>0)v.x*=-.4;} else if(p.x<-LIM){p.x=-LIM; if(v.x<0)v.x*=-.4;} if(p.z>LIM){p.z=LIM; if(v.z>0)v.z*=-.4;} else if(p.z<-LIM){p.z=-LIM; if(v.z<0)v.z*=-.4;} }
+function bounds(p,v){ if(p.x>GZ0.x-150) return; const XM=(p.z>AIR.z0&&p.z<AIR.z1)?AIR.x1:LIM; if(p.x>XM){p.x=XM; if(v.x>0)v.x*=-.4;} else if(p.x<-LIM){p.x=-LIM; if(v.x<0)v.x*=-.4;} if(p.z>LIM){p.z=LIM; if(v.z>0)v.z*=-.4;} else if(p.z<-LIM){p.z=-LIM; if(v.z<0)v.z*=-.4;} }
 const _near=[];
 function collisions(){
   for(const o of dyn){ if(o.sleep||o.lodSkip) continue; const foot=o.mode==='getup'&&o.getFloor!==undefined?o.getFloor:o.pos.y-(isWalker(o)?HIP:o.gr);
@@ -3918,7 +4001,7 @@ function findMenu(){ if(!state.started||state.over||!cfEl.hidden) return; const 
   if(CARYARD.kiosk) add('Vehicles R Us','Buy cars, bikes, trucks and tanks · '+dist(CARYARD.kiosk.x,CARYARD.kiosk.z),go(CARYARD.kiosk.x,CARYARD.kiosk.z,'Vehicles R Us is marked. Follow the arrow'));
   if(MOTOR.door) add('Tumbleton Motors','Mods and repairs for your car · '+dist(MOTOR.door.x,MOTOR.door.z),go(MOTOR.door.x,MOTOR.door.z,'Tumbleton Motors is marked. Follow the arrow'));
   const mine=SALE.filter(S=>GAR.h[S.i]&&GAR.h[S.i].own);
-  for(const S of mine) add('Your home: '+S.D.name,'Your garage · '+dist(S.padP.x,S.padP.z),go(S.padP.x,S.padP.z,'Your garage is marked. Follow the arrow'));
+  for(const S of mine) add('Your home: '+S.D.name,'Garage entrance · '+dist(S.portal.x,S.portal.z),go(S.portal.x,S.portal.z,'Your garage is marked. Follow the arrow'));
   for(const S of SALE) if(!(GAR.h[S.i]&&GAR.h[S.i].own)) add('For sale: '+S.D.name,money(S.D.price)+' · garage for '+S.D.cap+' · '+dist(S.signP.x,S.signP.z),go(S.signP.x,S.signP.z,S.D.name+' is marked. Follow the arrow to the FOR SALE sign'));
   add('Close','',()=>menuDone()); }
 function findStore(){ if(!STORE||!state.started) return; state.wpDest=null; state.shopWpUntil=perfT+45; flash('The Hardware & Arms store is marked. Follow the arrow'); }
@@ -4533,7 +4616,7 @@ function updateWorld(dt){
   trafficTimer-=dt;
   if(trafficTimer<=0){ trafficTimer=2;
     if(!mpClient()&&cars.filter(c=>c.mode==='traffic').length<20) spawnTraffic(70);
-    if(cars.length>36){ let far=null,fd=60; for(const c of cars){ if(c===activeCar||c.spawned||c.mode!=='free'||c.boat||c.story||c.parked||c.gid||c.display) continue; const d=Math.hypot(c.pos.x-f.x,c.pos.z-f.z); if(d>fd){fd=d;far=c;} } if(far){ scene.remove(far.g); cars.splice(cars.indexOf(far),1); } } }
+    if(cars.length>36){ let far=null,fd=60; for(const c of cars){ if(c===activeCar||c.spawned||c.mode!=='free'||c.boat||c.story||c.parked||c.gid||c.display||c.inGarage) continue; const d=Math.hypot(c.pos.x-f.x,c.pos.z-f.z); if(d>fd){fd=d;far=c;} } if(far){ scene.remove(far.g); cars.splice(cars.indexOf(far),1); } } }
 }
 
 
@@ -5395,7 +5478,7 @@ const LL={
   home:['Hey! Get out of my house!','Um... can I help you?','Who let you in?!','Do you mind?! This is my house!']};
 const pickA=a=>a[Math.floor(Math.random()*a.length)];
 function lifeSay(p,txt){ say(p,txt,false); if(Math.hypot(p.pos.x-player.pos.x,p.pos.z-player.pos.z)<8) speak(txt,p); p.gestT=1.6; }
-function lifeRecs(){ if(LIFE.recs) return LIFE.recs; LIFE.recs=[]; for(const col of cells) for(const c of col) for(const r of c.ints) if(r.kind&&r.spots&&r.spots.length){ r.cx=(r.x0+r.x1)/2; r.cz=(r.z0+r.z1)/2; r.pop=[]; LIFE.recs.push(r); } return LIFE.recs; }
+function lifeRecs(){ if(LIFE.recs) return LIFE.recs; LIFE.recs=[]; for(const col of cells) for(const c of col) for(const r of c.ints) if(r.kind&&!r.owned&&r.spots&&r.spots.length){ r.cx=(r.x0+r.x1)/2; r.cz=(r.z0+r.z1)/2; r.pop=[]; LIFE.recs.push(r); } return LIFE.recs; }
 // walkable grid of a ground floor (furniture blocked, grown by a body radius)
 function lifeGrid(r){ if(r.grid) return r.grid; const R=.4, X0=r.x0+WT, Z0=r.z0+WT, nx=Math.max(2,Math.floor((r.x1-r.x0-2*WT)/R)), nz=Math.max(2,Math.floor((r.z1-r.z0-2*WT)/R)), occ=new Uint8Array(nx*nz), g=.34;
   for(const b of r.cell.b){ if(b.y0>1.2||b.h<.25||b.x1<X0-1||b.x0>r.x1||b.z1<Z0-1||b.z0>r.z1) continue;
