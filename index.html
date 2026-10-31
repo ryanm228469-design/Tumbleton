@@ -404,7 +404,7 @@ body.touch .dlg .nx kbd{display:none}
   <div class="hud limit" aria-live="off"><div class="name">TUMBLETON</div><div class="pop">POP. <span id="pop">0</span></div></div>
 
   <div class="hud hp" id="hp" hidden><div class="row"><span>HEALTH</span><b id="hpn">100</b></div><div class="track"><div class="fill" id="hpf"></div></div></div>
-  <button class="hud wallet" id="wallet" hidden aria-label="Open the shop"><b id="cash">$0</b><span class="gain" id="gain">+$10</span><span class="lbl">FIND STORE</span><kbd>B</kbd></button>
+  <button class="hud wallet" id="wallet" hidden aria-label="Find a place"><b id="cash">$0</b><span class="gain" id="gain">+$10</span><span class="lbl">FIND PLACES</span><kbd>B</kbd></button>
   <div class="hud surv" id="surv" hidden><span>LAST STAND</span><span>WAVE<b id="sw">1</b></span><span>TIME<b id="st">0:00</b></span><span>BEATEN<b id="sk">0</b></span></div>
   <div class="hurt" id="hurt"></div>
   <div class="hud zplate" id="zplate" hidden><span>ZOMBIES<b id="zc">0</b></span><span>DEFEATED<b id="zd">0</b></span></div>
@@ -456,7 +456,7 @@ body.touch .dlg .nx kbd{display:none}
       <dt><kbd>E</kbd></dt><dd>At the airport (east of the city): fly a bomber jet. <kbd>W</kbd>/<kbd>S</kbd> throttle, mouse steers (look up to climb), <kbd>Space</kbd> or <kbd>Click</kbd> drops a bomb, <kbd>E</kbd> bails out</dd>
       <dt><kbd>E</kbd></dt><dd>At a tower crane's base: drive the wrecking ball (<kbd>A</kbd><kbd>D</kbd> swing, <kbd>W</kbd><kbd>S</kbd> trolley, <kbd>Space</kbd>/<kbd>Shift</kbd> cable)</dd>
       <dt><kbd>X</kbd></dt><dd>Crouch down on one knee (Space stands up) · with the build bar open, pick up a block you placed</dd>
-      <dt><kbd>B</kbd></dt><dd>Show the way to the Hardware &amp; Arms store (walk in to buy)</dd>
+      <dt><kbd>B</kbd></dt><dd>Find places: the Hardware &amp; Arms store, Vehicles R Us, Tumbleton Motors, houses for sale and your garage. An arrow shows the way</dd>
       <dt><kbd>C</kbd></dt><dd>Clear dropped items and zombies</dd>
       <dt><kbd>Q</kbd></dt><dd>Switch weapon · horn in a car</dd>
       <dt><kbd>M</kbd></dt><dd>Sound on or off</dd>
@@ -490,7 +490,7 @@ body.touch .dlg .nx kbd{display:none}
         <dt><kbd>T</kbd></dt><dd>Restart</dd>
         <dt><kbd>Z</kbd></dt><dd>Zombie wave</dd>
         <dt><kbd>L</kbd></dt><dd>Last stand mode</dd>
-        <dt><kbd>B</kbd></dt><dd>Find the store for weapons and blocks</dd>
+        <dt><kbd>B</kbd></dt><dd>Find places: shops, houses for sale and your garage</dd>
         <dt><kbd>Q</kbd></dt><dd>Switch weapon</dd>
         <dt><kbd>Tab</kbd></dt><dd>First or third person</dd>
         <dt><kbd>V</kbd></dt><dd>Toys or build bar</dd>
@@ -3911,6 +3911,16 @@ function storeE(){ const n=storeNear(); if(!n) return false; if(n.counter){ open
   if(A){ const a=ammoOf(id); if(a.mag+a.res>=A.tot){ flash('Your '+W.name+' ammo is already full'); return true; } if(state.money<A.price){ Snd.dry(); flash('You need '+fmt$(A.price-state.money)+' more for ammo'); return true; }
     state.money-=A.price; a.res=A.tot-a.mag; save(); Snd.pop(); showGain('-'+fmt$(A.price),true); flash(W.name+' ammo refilled'); return true; }
   equip(id); flash(W.name+' ready'); return true; }
+// B: pick a place and an arrow shows the way
+function findMenu(){ if(!state.started||state.over||!cfEl.hidden) return; const p=player.pos, dist=(x,z)=>Math.round(Math.hypot(x-p.x,z-p.z))+' m away', go=(x,z,msg)=>()=>{ menuDone(msg); state.wpDest={x,z}; state.shopWpUntil=perfT+120; };
+  const add=menuOpen('Find a place · the arrow shows the way');
+  if(STORE) add('Hardware & Arms store','Weapons, ammo and building blocks · '+dist(STORE.door.x,STORE.door.z),()=>{ menuDone(); findStore(); });
+  if(CARYARD.kiosk) add('Vehicles R Us','Buy cars, bikes, trucks and tanks · '+dist(CARYARD.kiosk.x,CARYARD.kiosk.z),go(CARYARD.kiosk.x,CARYARD.kiosk.z,'Vehicles R Us is marked. Follow the arrow'));
+  if(MOTOR.door) add('Tumbleton Motors','Mods and repairs for your car · '+dist(MOTOR.door.x,MOTOR.door.z),go(MOTOR.door.x,MOTOR.door.z,'Tumbleton Motors is marked. Follow the arrow'));
+  const mine=SALE.filter(S=>GAR.h[S.i]&&GAR.h[S.i].own);
+  for(const S of mine) add('Your home: '+S.D.name,'Your garage · '+dist(S.padP.x,S.padP.z),go(S.padP.x,S.padP.z,'Your garage is marked. Follow the arrow'));
+  for(const S of SALE) if(!(GAR.h[S.i]&&GAR.h[S.i].own)) add('For sale: '+S.D.name,money(S.D.price)+' · garage for '+S.D.cap+' · '+dist(S.signP.x,S.signP.z),go(S.signP.x,S.signP.z,S.D.name+' is marked. Follow the arrow to the FOR SALE sign'));
+  add('Close','',()=>menuDone()); }
 function findStore(){ if(!STORE||!state.started) return; state.wpDest=null; state.shopWpUntil=perfT+45; flash('The Hardware & Arms store is marked. Follow the arrow'); }
 function equip(id){ if(!state.owned[id]) return; if(state.weapon!==id) cancelReload(); state.weapon=id; if(AMMO[id]) ammoOf(id); for(const k in weaponMeshes) weaponMeshes[k].visible=k===id; const n=document.getElementById('wname'); if(n) n.textContent=WEAPONS[id].name.toUpperCase(); }
 function startReload(){ const id=state.weapon, A=AMMO[id]; if(!A||player.reloadT>0) return false; const a=ammoOf(id); if(a.mag>=A.mag||a.res<=0) return false; player.reloadT=A.rt; player.reloadW=id; Snd.clk(); return true; }
@@ -4062,7 +4072,7 @@ addEventListener('keydown',e=>{
   else if(c==='KeyZ'){ if(mpClient()) flash('Only the server\'s host can start zombie waves'); else if(!state.surv.on) toggle('zwave'); }
   else if(c==='KeyP'){ if(state.resetArm>0){ hardRestart(); } else { state.resetArm=3; flash('Press P again to restart from nothing. All cash, weapons and builds will be lost'); } }
   else if(c==='KeyK') toggleGfx();
-  else if(c==='KeyB') findStore();
+  else if(c==='KeyB') findMenu();
   else if(c==='KeyX'){ if(state.bar==='build') removeBuild(); else if(!activeCar&&!activeHeli&&player.mode==='walk'&&!player.chute) player.crouch=!player.crouch; }
   else if(c==='KeyQ'){ if(activeCar){ if(activeCar.emerg){ activeCar.sirenOn=!activeCar.sirenOn; flash(activeCar.sirenOn?'Siren on':'Siren off'); } else if(activeCar.variant==='icecream') Snd.jingle(activeCar.pos.x,activeCar.pos.z); else Snd.horn(activeCar.pos.x,activeCar.pos.z,true); } else cycleWeapon(); }
   else if(c==='KeyM') toggleSound();
@@ -4105,7 +4115,7 @@ function touchSetup(){ if(TOUCH.ready) return; TOUCH.ready=true;
     el.addEventListener('touchstart',down,{passive:false}); el.addEventListener('touchend',up,{passive:false}); el.addEventListener('touchcancel',up,{passive:false});
     el.addEventListener('mousedown',e=>{ if(!TOUCH.on) return; down(e); }); el.addEventListener('mouseup',e=>{ if(!TOUCH.on) return; up(e); }); }
   // top buttons: menu (modes), camera view, store, build bar, restart/switch mode, online, full screen
-  const T=[['☰','Menu',()=>{ document.body.classList.toggle('tmenu'); tb0.classList.toggle('on',document.body.classList.contains('tmenu')); }],['🎥','Camera',()=>tKey('Tab',true)],['🏪','Store',()=>findStore()],['🧱','Build',()=>setBar(state.bar==='build'?'toys':'build')],['⟲','Restart',()=>openRestart()],['🌐','Online',()=>mpOpen()],['⚙','Settings',()=>openSettings()],['⛶','Full screen',()=>{ try{ const d=document.documentElement; if(document.fullscreenElement) document.exitFullscreen(); else (d.requestFullscreen||d.webkitRequestFullscreen).call(d); if(screen.orientation&&screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{}); }catch(e){} }]];
+  const T=[['☰','Menu',()=>{ document.body.classList.toggle('tmenu'); tb0.classList.toggle('on',document.body.classList.contains('tmenu')); }],['🎥','Camera',()=>tKey('Tab',true)],['🏪','Find',()=>findMenu()],['🧱','Build',()=>setBar(state.bar==='build'?'toys':'build')],['⟲','Restart',()=>openRestart()],['🌐','Online',()=>mpOpen()],['⚙','Settings',()=>openSettings()],['⛶','Full screen',()=>{ try{ const d=document.documentElement; if(document.fullscreenElement) document.exitFullscreen(); else (d.requestFullscreen||d.webkitRequestFullscreen).call(d); if(screen.orientation&&screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{}); }catch(e){} }]];
   let tb0=null, ti=0; for(const [ic,lb,fn] of T){ const b=document.createElement('button'); b.type='button'; b.textContent=ic; b.setAttribute('aria-label',lb); if(ti++>1) b.className='tx'; b.addEventListener('click',e=>{ e.preventDefault(); Snd.init(); fn(); }); top.appendChild(b); if(!tb0) tb0=b; }
   // tap the dialogue box or the cutscene "skip" to move on
   $('dlg').addEventListener('touchstart',e=>{ e.preventDefault(); dlgNext(); },{passive:false});
@@ -4149,7 +4159,7 @@ function select(i,user){ const list=curList(), build=state.bar==='build';
   selEl.innerHTML=build?'<b>'+it.name.toUpperCase()+'</b>'+inv[it.id]+' left · F to place · X to pick up':(state.surv.on?'<b>TOYS ARE OFF</b>in Last Stand · V for your Build bar':it.id==='zombie'?'<b>ZOMBIE · '+ZNAMES[state.zKind].toUpperCase()+'</b>Press 9 again to change type · F to drop':it.id==='person'?'<b>'+(state.pKind==='police'?'POLICE OFFICER':'PERSON')+'</b>Press 4 again to switch between people and police · F to drop':'<b>'+it.name.toUpperCase()+'</b>Press F to drop'); }
 function setBar(b){ state.bar=b; renderBar(); }
 $('tab-toys').addEventListener('click',()=>{ setBar('toys'); canvas.focus(); }); $('tab-build').addEventListener('click',()=>{ setBar('build'); canvas.focus(); });
-$('wallet').addEventListener('click',()=>findStore());
+$('wallet').addEventListener('click',()=>findMenu());
 equip(state.weapon);
 renderBar();
 const modeBtns={slow:$('m-slow'),low:$('m-grav'),night:$('m-night'),zwave:$('m-wave'),infection:$('m-inf')};
@@ -4188,7 +4198,7 @@ $('tosand').addEventListener('click',()=>{ removeAllZombies(); freshPlayer(); $(
 function start(){ if(state.started) return; state.started=true; $('start').hidden=true; helpEl.hidden=!state.help; $('hp').hidden=false; $('wallet').hidden=false; Snd.init(); canvas.focus(); requestLock(); }
 
 /* ---------- settings panel: everything here is saved and applied straight away ---------- */
-const BINDABLE=[['KeyW','Move forward'],['KeyS','Move back'],['KeyA','Move left'],['KeyD','Move right'],['Space','Jump / handbrake / up'],['ShiftLeft','Sprint / down'],['KeyE','Use · get in and out'],['KeyF','Drop toy / place block'],['KeyQ','Switch weapon / horn'],['KeyR','Reload'],['KeyX','Kneel / pick up block'],['Tab','First / third person'],['KeyV','Toys or build bar'],['KeyB','Find the store'],['KeyH','Controls panel']];
+const BINDABLE=[['KeyW','Move forward'],['KeyS','Move back'],['KeyA','Move left'],['KeyD','Move right'],['Space','Jump / handbrake / up'],['ShiftLeft','Sprint / down'],['KeyE','Use · get in and out'],['KeyF','Drop toy / place block'],['KeyQ','Switch weapon / horn'],['KeyR','Reload'],['KeyX','Kneel / pick up block'],['Tab','First / third person'],['KeyV','Toys or build bar'],['KeyB','Find places (store, car yard, houses)'],['KeyH','Controls panel']];
 const keyName=c=>!c?'—':c.startsWith('Key')?c.slice(3):c.startsWith('Digit')?c.slice(5):c==='Space'?'Space':c==='ShiftLeft'?'Left Shift':c==='ShiftRight'?'Right Shift':c==='ControlLeft'?'Left Ctrl':c==='AltLeft'?'Left Alt':c.replace('Arrow','')+(c.startsWith('Arrow')?' arrow':'');
 let REMAP={}, BOUNDDEF=new Set();
 function rebuildRemap(){ REMAP={}; BOUNDDEF=new Set(); for(const [act] of BINDABLE){ const k=SET.bind[act]; if(k&&k!==act){ REMAP[k]=act; BOUNDDEF.add(act); } } }
