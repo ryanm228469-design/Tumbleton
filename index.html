@@ -2353,7 +2353,8 @@ function playerDown(){
   knock(player,R(-2,2),5,R(-2,2),5);
   if(state.surv.on) endSurvival();
 }
-function hurt(p,d){ if(p.net){ mpNetHit(p,0,0,0,0,d); return; } if(p.npc){ mpNPHit(p,0,0,0,0,d); return; } if(p.isPlayer||p.dead) return; if(!p.zombie){ civHurt(p,d); return; } p.hp-=d; if(p.hp<=0){ p.dead=true; p.deadT=0; } }
+function hurt(p,d){ if(p.net){ mpNetHit(p,0,0,0,0,d); return; } if(p.npc){ mpNPHit(p,0,0,0,0,d); return; } if(p.isPlayer||p.dead) return; if(!p.zombie){ civHurt(p,d); return; } p.hp-=d; if(p.hp<=0){ p.dead=true; p.deadT=0; deadFall(p); } }
+function deadFall(p){ if(p.mode==='ragdoll'||p.mode==='drive'||p.mode==='lift'||!p.vel) return; p.heldBy=null; p.mode='ragdoll'; p.rd=null; p.vel.y=Math.max(p.vel.y||0,2.5); if(p.angVel) p.angVel.set(R(-3,3),R(-1,1),R(-3,3)); p.restT=0; p.ground=false; p.punchT=0; }
 // free the GPU memory of a body that's gone for good (otherwise long zombie waves slowly fill up memory)
 function disposeTree(o){ if(!o) return; o.traverse(m=>{ if(m.isMesh&&m.geometry&&!m.geometry.userData.keep) m.geometry.dispose(); }); }
 function removePerson(p){ const i=people.indexOf(p); if(i>=0) people.splice(i,1); scene.remove(p.g); disposeTree(p.g); }
@@ -3009,6 +3010,7 @@ function updatePerson(p,dt){
   if(p.net){ mpNZUpdate(p,dt); return; }
   if(p.npc){ mpNPUpdate(p,dt); return; }
   if(p.mode==='drive'||p.mode==='lift') return;
+  if(p.dead&&p.zombie&&p.mode!=='ragdoll') deadFall(p);
   if(p.soldier&&!p.zombie&&!p.dead&&p.mode==='walk'){ soldierTick(p,dt); return; }
   if(p.work&&p.mode==='walk'&&!p.g.visible&&!p.zombie&&!p.react){ p.lodSkip=true; return; }
   p.launchCD-=dt; if(p.immune>0) p.immune-=dt;
@@ -3455,7 +3457,7 @@ const VNAME={}; for(const [v,n] of VEH_SHOP) VNAME[v]=n; VNAME.jetski='Jet ski';
 const HOUSES=[{name:'Kōwhai Cottage',price:4000,cap:2},{name:'Rimu Family Home',price:12000,cap:3},{name:'Tōtara House',price:30000,cap:4},{name:'Pōhutukawa Mansion',price:75000,cap:6}];
 const MODS=[['ram','Zombie rammer',2500,'Spiked plough on the front. People and zombies go flying and the car hardly slows down'],['bump','Crash bumpers',1500,'Steel bars front and back. Crashes do 60% less damage'],['armor','Armour plating',4000,'Metal plates and window bars. Bullets, blasts and bites do half damage'],['nitro','Nitro boost',3000,'Hold Shift for a burst of speed (refills by itself)'],['gun','Roof gun',8000,'A machine gun on the roof. Aim with the mouse, click or F to shoot']];
 const GAR={h:{},cars:[],n:1}; const GAR_KEY='tumbleton-garage';
-try{ const q=JSON.parse(localStorage.getItem(GAR_KEY)||'null'); if(q){ if(q.h&&typeof q.h==='object') for(const k in q.h){ const o=q.h[k]; if(o&&o.own) GAR.h[k]={own:true,cap:clamp(o.cap|0,1,12),arm:!!o.arm,med:!!o.med}; }
+try{ const q=JSON.parse(localStorage.getItem(GAR_KEY)||'null'); if(q){ if(q.h&&typeof q.h==='object') for(const k in q.h){ const o=q.h[k]; if(o&&o.own) GAR.h[k]={own:true,cap:clamp(o.cap|0,1,12),arm:!!o.arm,med:!!o.med,sentry:!!o.sentry,heli:!!o.heli,tramp:!!o.tramp,fence:!!o.fence}; }
   if(Array.isArray(q.cars)) for(const e of q.cars.slice(0,40)) if(e&&VNAME[e.v]) GAR.cars.push({id:GAR.n++,v:e.v,col:/^#[0-9a-fA-F]{6}$/.test(e.col)?e.col:'#3a86ff',mods:Object.assign({},e.mods||{}),out:false}); } }catch(e){}
 function garSave(){ try{ localStorage.setItem(GAR_KEY,JSON.stringify({h:GAR.h,cars:GAR.cars.map(e=>({v:e.v,col:e.col,mods:e.mods}))})); }catch(e){} }
 const garCap=()=>{ let n=0; for(const k in GAR.h) if(GAR.h[k].own) n+=GAR.h[k].cap; return n; };
@@ -3546,6 +3548,9 @@ function portalMenu(S){ const h=GAR.h[S.i], add=menuOpen(S.D.name+' · garage '+
   else add('Armoury · '+money(5000),'Refill all your ammo here for free, any time',()=>{ if(state.money<5000){ menuDone('Not enough cash'); return; } state.money-=5000; save(); h.arm=true; garSave(); menuDone('Armoury built. Open the garage menu to refill ammo'); },'',state.money<5000);
   if(h.med) add('Medical bay: heal','Back to full health',()=>{ state.hp=100; menuDone('Fully healed'); });
   else add('Medical bay · '+money(2500),'Heal to full health here, any time',()=>{ if(state.money<2500){ menuDone('Not enough cash'); return; } state.money-=2500; save(); h.med=true; garSave(); menuDone('Medical bay built'); },'',state.money<2500);
+  menuHead('Yard upgrades');
+  const UP=[['sentry','Sentry gun',12000,'Shoots zombies that come near your house'],['fence','Electric fence',6000,'Zombies that get onto your property get zapped back out'],['tramp','Trampoline',1500,'Bounce sky high in your yard'],['heli','Helipad and helicopter',25000,'Your own helicopter, waiting in the yard (comes back if it gets wrecked)']];
+  for(const [k,n,pr,d] of UP){ if(h[k]){ add(n+' ✓',d+' · built',()=>menuDone(n+' is already built'),''); continue; } const spot=k==='fence'||homeSpot(S,k); add(n+' · '+money(pr),spot?d:'No room for it on this property',()=>{ if(state.money<pr){ menuDone('Not enough cash'); return; } state.money-=pr; save(); h[k]=true; garSave(); homeUpBuild(S); menuDone(n+' built!'); },'',state.money<pr||!spot); }
   add('Close','',()=>menuDone()); }
 function garFind(){ let best=null,bd=1e9; for(const S of SALE){ if(!(GAR.h[S.i]&&GAR.h[S.i].own)) continue; const d=Math.hypot(S.padP.x-player.pos.x,S.padP.z-player.pos.z); if(d<bd){ bd=d; best=S; } } return best; }
 function spawnOwned(e,x,z,yaw,mode){ const c=new Car(x,z,yaw,mode||'free',{variant:e.v,color:e.col}); c.gid=e.id; e.out=true; c.mods={}; applyMods(c,e.mods||{}); return c; }
@@ -3859,6 +3864,38 @@ function setupJobs(){ for(const b of JOB.boards){ const g=new THREE.Group(); for
   const sg=new THREE.Mesh(new THREE.PlaneGeometry(4.4,1.2),signMat([['TIME TRIAL · stop here',40]],'#1e6b3a','#ffffff',512,128)); sg.position.set(TT.ring.x-4.2,3,TT.ring.z); sg.rotation.y=PI/2; scene.add(sg);
   try{ const q=JSON.parse(localStorage.getItem('tumbleton-tt')||'null'); if(q){ TT.best=+q.best||null; TT.medal=clamp(q.medal|0,0,3); } }catch(e){} JOB.built=true; }
 function jobPrompt(){ const b=jobBoardNear(); return b?'<kbd>E</kbd> Courier jobs'+(JOB.on?' (one in progress)':''):''; }
+
+/* ---------- Stage 9: yard upgrades for your houses: sentry gun, electric fence, trampoline, helipad with your own helicopter ---------- */
+const HOMEUP={sz:{sentry:[2.4,2.4,7],tramp:[4.4,4.4,6],heli:[13,13,12]}};
+function homeSpot(S,k){ S.spots=S.spots||{}; if(S.spots[k]!==undefined) return S.spots[k]; const [w,d,hy]=HOMEUP.sz[k], E=BLOCK/2-.5, cx=S.cx, cz=S.cz, taken=Object.values(S.spots).filter(Boolean);
+  const bad=(x,z)=>{ if(Math.abs(groundHeight(x,z))>.2) return true; for(const y of [.3,1.2,2.5,4,hy]) if(solidAt(x,y,z)) return true; if(Math.hypot(x-S.padP.x,z-S.padP.z)<5.5||Math.hypot(x-S.signP.x,z-S.signP.z)<3) return true;
+    const lx=x-cx, lz=z-cz; if(Math.abs(lx)<6&&lz>E-16) return true; const px=S.padP.x-cx, pz=S.padP.z-cz; if(lx>Math.min(0,px)-5&&lx<Math.max(0,px)+5&&lz>pz-5) return true; if(S.portal&&Math.hypot(x-S.portal.x,z-S.portal.z)<6) return true;
+    for(const t of taken) if(Math.abs(x-t.x)<(w+t.w)/2+1&&Math.abs(z-t.z)<(d+t.d)/2+1) return true; return false; };
+  let res=null; for(let gz=-E+1.5+d/2;gz<=E-1.5-d/2&&!res;gz+=1) for(let gx=-E+1.5+w/2;gx<=E-1.5-w/2&&!res;gx+=1){ const x=cx+gx, z=cz+gz; let ok=true; for(let a=-w/2;a<=w/2&&ok;a+=w/4) for(let b=-d/2;b<=d/2&&ok;b+=d/4) if(bad(x+a,z+b)) ok=false; if(ok) res={x,z,w,d}; }
+  S.spots[k]=res; return res; }
+function homeUpBuild(S){ const h=GAR.h[S.i]; if(S.upG){ scene.remove(S.upG); disposeTree(S.upG); } if(!h||!h.own) return; const g=new THREE.Group(); S.upG=g; scene.add(g);
+  const E=BLOCK/2-.5; if(h.fence){ const parts=[]; for(const [x0,x1,z0,z1] of [[-E,E,-E,-E+.5],[-E,-E+.5,-E,E],[E-.5,E,-E,E],[-E,-6,E-.5,E],[6,E,E-.5,E]]) for(const y of [1.9,2.3]) parts.push({g:new THREE.BoxGeometry(x1-x0,.05,z1-z0).translate(S.cx+(x0+x1)/2,y,S.cz+(z0+z1)/2),c:'#ffd166'});
+    for(let k=-E;k<=E;k+=6) for(const [x,z] of [[k,-E+.25],[-E+.25,k],[E-.25,k]]) parts.push({g:new THREE.BoxGeometry(.12,1.4,.12).translate(S.cx+x,1.7,S.cz+z),c:'#2b2d31'}); g.add(new THREE.Mesh(mergeGeos(parts,true),VC));
+    const sg=new THREE.Mesh(new THREE.PlaneGeometry(2.2,.8),signMat([['⚡ ELECTRIC FENCE',40]],'#ffd166','#111111',512,128)); sg.position.set(S.cx+8,1.3,S.cz+E+.05); g.add(sg); }
+  if(h.tramp){ const p=homeSpot(S,'tramp'); if(p){ const parts=[{g:new THREE.CylinderGeometry(2,2,.08,24).translate(0,.95,0),c:'#1c1d20'},{g:new THREE.TorusGeometry(2.05,.12,6,24).rotateX(PI/2).translate(0,.95,0),c:'#2f80ed'}]; for(let k=0;k<6;k++){ const a=k/6*TAU; parts.push({g:new THREE.CylinderGeometry(.06,.06,.95,6).translate(Math.cos(a)*1.9,.47,Math.sin(a)*1.9),c:'#9aa0a6'}); }
+    const m=new THREE.Mesh(mergeGeos(parts,true),VC); m.position.set(p.x,0,p.z); g.add(m); S.tramp=p; } }
+  if(h.sentry){ const p=homeSpot(S,'sentry'); if(p){ const base=new THREE.Mesh(mergeGeos([{g:new THREE.CylinderGeometry(.5,.7,2.6,10).translate(0,1.3,0),c:'#5b6168'},{g:new THREE.BoxGeometry(1.4,.2,1.4).translate(0,.1,0),c:'#3b3d42'}],true),VC); base.position.set(p.x,0,p.z); g.add(base);
+    const head=new THREE.Group(); head.add(new THREE.Mesh(mergeGeos([{g:new THREE.BoxGeometry(1,.7,1.2).translate(0,0,0),c:'#3d4a2a'},{g:new THREE.CylinderGeometry(.09,.09,1.5,8).rotateX(PI/2).translate(.18,0,.9),c:'#1b1b1b'},{g:new THREE.CylinderGeometry(.09,.09,1.5,8).rotateX(PI/2).translate(-.18,0,.9),c:'#1b1b1b'},{g:new THREE.BoxGeometry(.3,.2,.1).translate(0,.2,.62),c:'#e5484d'}],true),VC)); head.position.set(p.x,2.95,p.z); g.add(head);
+    S.sentry={x:p.x,z:p.z,head,pos:new V3(p.x,2.5,p.z),yaw:0,shootCD:0}; AIR.boxes.push({x0:p.x-.7,x1:p.x+.7,z0:p.z-.7,z1:p.z+.7,y0:0,h:2.6}); } }
+  if(h.heli){ const p=homeSpot(S,'heli'); if(p){ g.add(new THREE.Mesh(new THREE.CylinderGeometry(6,6,.1,28).translate(p.x,.08,p.z),lam('#8d9093',{roughness:.9}))); const H=lam('#ffd166'); g.add(new THREE.Mesh(new THREE.BoxGeometry(.9,.06,4.6).translate(p.x-1.4,.14,p.z),H),new THREE.Mesh(new THREE.BoxGeometry(.9,.06,4.6).translate(p.x+1.4,.14,p.z),H),new THREE.Mesh(new THREE.BoxGeometry(2,.06,.9).translate(p.x,.14,p.z),H));
+    S.pad={x:p.x,z:p.z}; if(!S.heli||!helis.includes(S.heli)) homeHeli(S); } } }
+function homeHeli(S){ try{ const H=new Heli(S.pad.x,0,S.pad.z,0,'#c9a24a'); H.homeOwned=true; S.heli=H; S.heliT=0; }catch(e){ console.warn('home heli',e); } }
+function homeTick(dt){ if(!SALE.length) return; const px=player.pos.x, pz=player.pos.z;
+  for(const S of SALE){ const h=GAR.h[S.i]; if(!h||!h.own) continue; const dS=Math.hypot(px-S.cx,pz-S.cz), E=BLOCK/2-.5;
+    // sentry: shoots zombies within 38 m
+    const T=S.sentry; if(T&&dS<160){ if((T.scan-=dt)>0&&T.tgt&&!T.tgt.dead&&people.includes(T.tgt)){} else { T.scan=.4; T.tgt=null; let bd=38*38; for(const z of people){ if(!z.zombie||z.dead||z.pos.y<-4.2) continue; const e=(z.pos.x-T.x)**2+(z.pos.z-T.z)**2; if(e<bd&&losClear(T.x,3,T.z,z.pos.x,z.pos.y+.4,z.pos.z)){ bd=e; T.tgt=z; } } }
+      if(T.tgt){ T.yaw=lerpA(T.yaw,Math.atan2(T.tgt.pos.x-T.x,T.tgt.pos.z-T.z),Math.min(1,dt*10)); T.head.rotation.y=T.yaw; T.shootCD-=dt; if(T.shootCD<=0){ T.shootCD=.3; copShoot(T,T.tgt); T.shootCD=.3; } } else { T.yaw+=dt*.4; T.head.rotation.y=T.yaw; } }
+    // electric fence: zombies on the property get zapped back out over the fence
+    if(h.fence&&dS<160){ for(const z of people){ if(!z.zombie||z.dead||z.mode!=='walk') continue; const lx=z.pos.x-S.cx, lz=z.pos.z-S.cz; if(Math.abs(lx)<E-.8&&Math.abs(lz)<E-.8){ const ax=E-Math.abs(lx), az=E-Math.abs(lz), dx=ax<az?Math.sign(lx||1):0, dz=ax<az?0:Math.sign(lz||1); knock(z,dx*9,6,dz*9,5,.5); if(Math.random()<.5) puff(z.pos.x,z.pos.y+.5,z.pos.z,0xffe066,.6,false); if((S.zapT||0)<perfT){ S.zapT=perfT+1; Snd.tink(z.pos.x,z.pos.z); } } } }
+    // trampoline
+    const tp=S.tramp; if(tp){ for(const q of [player,...people]){ if(q.mode!=='walk'||(q.isPlayer&&(activeCar||activeHeli))) continue; if(Math.hypot(q.pos.x-tp.x,q.pos.z-tp.z)<1.9&&q.pos.y-HIP<1.3&&q.vel.y<=.5){ q.vel.y=q.isPlayer?17:12; q.pos.y=1+HIP+.05; q.ground=false; if(q.isPlayer) Snd.launch(tp.x,tp.z); } } }
+    // the helicopter comes back if it's wrecked or gone, once you're away from the house
+    if(h.heli&&S.pad){ if(!S.heli||!helis.includes(S.heli)||S.heli.dead){ S.heliT=(S.heliT||0)+dt; if(S.heliT>30&&dS>60&&activeHeli!==S.heli) homeHeli(S); } } } }
 let rescueI=0;
 function underOK(x,z,y){ if(Math.abs(x)<HALF+12&&Math.abs(z)<HALF+12) return true; if(x>1150) return true; if(z<-LIM&&Math.abs(x)<290){ const r=roadNear(x,z); if(r&&r.tun&&r.d<6) return true; } return false; }
 function rescueTick(dt){ const n=people.length+cars.length; if(!n) return; const per=Math.max(4,Math.ceil(n*dt*4));
@@ -3866,7 +3903,7 @@ function rescueTick(dt){ const n=people.length+cars.length; if(!n) return; const
     if(o.isPerson){ if(o.mode==='drive'||o.mode==='lift'||o.mode==='sit'||o.net||o.npc) continue; const x=o.pos.x, z=o.pos.z; if(underOK(x,z)) continue; const top=groundHeight(x,z), foot=o.pos.y-HIP; if(foot<top-1.4){ o.pos.y=top+HIP+.05; if(o.vel) o.vel.y=Math.max(0,o.vel.y); } }
     else { if(o.boat||o.display||o.ride) continue; const x=o.pos.x, z=o.pos.z; if(underOK(x,z)) continue; const top=groundHeight(x,z); if(o.pos.y<top-1.4){ o.pos.y=top+.1; o.vy=0; o.air=true; } } }
   if(!activeCar&&player.mode==='walk'){ const x=player.pos.x, z=player.pos.z; if(!underOK(x,z)){ const top=groundHeight(x,z); if(player.pos.y-HIP<top-1.4){ player.pos.y=top+HIP+.05; player.vel.y=0; } } } }
-function setupCountry(){ try{ setupJobs(); }catch(e){ console.warn('jobs',e); } try{ setupBases(); }catch(e){ console.warn('bases',e); } try{ setupEast(); }catch(e){ console.warn('east',e); } try{ setupNorth(); }catch(e){ console.warn('north',e); } try{ setupSouth(); try{ SOUTH.got=localStorage.getItem('tumbleton-island')==='1'; }catch(e){} if(!SOUTH.got){ const ch=new THREE.Mesh(new THREE.BoxGeometry(1.2,.8,.8),lam('#8b5a2b',{emissive:new THREE.Color('#ffcc33'),emissiveIntensity:.25})); ch.position.set(ISLE.x-20,.4,ISLE.z+22); scene.add(ch); SOUTH.chest=ch; } }catch(e){ console.warn('south',e); } try{ trainSetup(); }catch(e){ console.warn('train',e); } try{ setupPlanes(); }catch(e){ console.warn('planes',e); } for(const P of COUNTRY.paddocks) for(let k=0;k<P.n;k++){ const g=animalMesh(P.kind), a={kind:P.kind,P,g,pos:g.position,vel:new V3(),yaw:Math.random()*TAU,t:Math.random()*4,tx:0,tz:0,air:false,down:0,spin:0};
+function setupCountry(){ try{ for(const S of SALE) homeUpBuild(S); }catch(e){ console.warn('homeup',e); } try{ setupJobs(); }catch(e){ console.warn('jobs',e); } try{ setupBases(); }catch(e){ console.warn('bases',e); } try{ setupEast(); }catch(e){ console.warn('east',e); } try{ setupNorth(); }catch(e){ console.warn('north',e); } try{ setupSouth(); try{ SOUTH.got=localStorage.getItem('tumbleton-island')==='1'; }catch(e){} if(!SOUTH.got){ const ch=new THREE.Mesh(new THREE.BoxGeometry(1.2,.8,.8),lam('#8b5a2b',{emissive:new THREE.Color('#ffcc33'),emissiveIntensity:.25})); ch.position.set(ISLE.x-20,.4,ISLE.z+22); scene.add(ch); SOUTH.chest=ch; } }catch(e){ console.warn('south',e); } try{ trainSetup(); }catch(e){ console.warn('train',e); } try{ setupPlanes(); }catch(e){ console.warn('planes',e); } for(const P of COUNTRY.paddocks) for(let k=0;k<P.n;k++){ const g=animalMesh(P.kind), a={kind:P.kind,P,g,pos:g.position,vel:new V3(),yaw:Math.random()*TAU,t:Math.random()*4,tx:0,tz:0,air:false,down:0,spin:0};
       a.pos.set(P.x0+Math.random()*(P.x1-P.x0),0,P.z0+Math.random()*(P.z1-P.z0)); a.tx=a.pos.x; a.tz=a.pos.z; scene.add(g); ANIMALS.push(a); }
   GREET.country=['Kia ora! Not much happens out here.','Watch out for the sheep on the road.','Zombies are worse past the town, mate.','Best pies in the district, these.'];
   for(const S of COUNTRY.shops.slice(0,6)){ try{ const q=new Person(S.x+(Math.random()-.5)*4,S.z,{}); q.work={x:q.pos.x,z:S.z,y:0,yaw:Math.random()*TAU,kind:'shop',greet:'country'}; q.phase0=Math.random()*5; dressWorker(q,q.work); }catch(e){} }
@@ -3904,7 +3941,7 @@ function setupMotor(){ try{ setupSale(); }catch(e){ console.warn('houses',e); } 
   GREET.cars=['G\'day! Every vehicle comes with a free garage delivery.','Tanks are on special this week. Well, not really.','Have a look around, they don\'t bite.','Need a house first? Check the FOR SALE signs in the suburbs.'];
   GREET.motor=['Drive into a bay and press F.','Left bay for mods, right bay for repairs.','We fix anything that isn\'t a smoking crater.','Zombie rammer? Best money you\'ll ever spend.'];
   try{ for(const site of [0,1]){ const S=SITES[site]; if(!S) continue; const x=lotC(S[0]), z=lotC(S[1]); roadPark(x+10,z+24,site?'digger':'bulldozer'); } }catch(e){ console.warn('site vehicles',e); } }
-function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); southTick(dt); northTick(dt); eastTick(dt); basesTick(dt); rescueTick(dt); keepTick(dt); jobsTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
+function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); southTick(dt); northTick(dt); eastTick(dt); basesTick(dt); rescueTick(dt); keepTick(dt); jobsTick(dt); homeTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
   const c=activeCar;
   if(c&&c.emerg==='fire'&&use){ camera.getWorldDirection(_ewd); let dx=_ewd.x, dy=_ewd.y+.16, dz=_ewd.z; const l=Math.hypot(dx,dy,dz)||1; hoseSpray(nozzleWorld(c),{x:dx/l,y:Math.max(-.35,dy/l),z:dz/l},dt,true); }
   if(c&&c.emerg==='tow'){ if(use&&!c.useW){ if(c.towed){ towRelease(c); flash('Let go of the car'); } else { const h=hookWorld(c); let best=null,bd=4.6;
