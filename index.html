@@ -951,6 +951,8 @@ const N=9, BLOCK=44, ROAD=14, P=BLOCK+ROAD, HALF=N*P/2, LIM=HALF+18, LANE=3.2;
 const lineC=i=>-HALF+i*P, lotC=i=>-HALF+i*P+P/2;
 const RIVER_J=6, RIVER_Z=lotC(RIVER_J), WATER_Y=-2.6, RIV_IN=12, RIV_OUT=16, RIV_BED=-3.6;
 const JS=[...Array(N).keys()].filter(q=>q!==RIVER_J);
+const ISLE={x:40,z:640,r:48};
+function seaH(x,z){ if(z<382) return 0; const di=Math.hypot(x-ISLE.x,z-ISLE.z); if(di<ISLE.r) return 0; let h=(x>95&&x<272)?(z<400?0:RIV_BED):Math.max(RIV_BED,-(z-382)*.2); if(di<ISLE.r+18) h=Math.max(h,RIV_BED*(di-ISLE.r)/18); return h; }
 function riverH(z){ const w=Math.abs(z-RIVER_Z); return w>=RIV_OUT?0:w<=RIV_IN?RIV_BED:RIV_BED*(RIV_OUT-w)/(RIV_OUT-RIV_IN); }
 const cells=[]; for(let i=0;i<N;i++){cells[i]=[]; for(let j=0;j<N;j++) cells[i][j]={b:[],c:[],r:[],ints:[]};}
 function cellAt(x,z){ const i=Math.floor((x+HALF)/P), j=Math.floor((z+HALF)/P); if(i<0||j<0||i>=N||j>=N) return null; return cells[i][j]; }
@@ -965,10 +967,10 @@ const AIR={x0:268,x1:592,z0:-142,z1:94,boxes:[]};
 const sewT=(x,z)=>{ const i=Math.floor(x-SEW.X0), j=Math.floor(z-SEW.Z0); return (i<0||j<0||i>=SEW.NG||j>=SEW.NG)?0:SEWG[j*SEW.NG+i]; };
 function groundHeight(x,z,yb){
   if(SEWG&&yb!==undefined&&yb<-4.2) return sewT(x,z)===2?SEW.y-.4:SEW.y;
-  let h=riverH(z); const cell0=cellAt(x,z); if(cell0&&cell0.r.length) h=rampH(cell0.r,x,z,yb,h);
+  let h=Math.min(riverH(z),seaH(x,z)); const cell0=cellAt(x,z); if(cell0&&cell0.r.length) h=rampH(cell0.r,x,z,yb,h);
   for(let i=0;i<ramps.length;i++){ const r=ramps[i]; if(r.y>.01&&(yb===undefined||yb<r.y-.6)) continue; const dx=x-r.x, dz=z-r.z; const lx=dx*r.c-dz*r.s, lz=dx*r.s+dz*r.c;
     if(lx>-r.L/2&&lx<r.L/2&&lz>-r.W/2&&lz<r.W/2){ const hh=r.y+r.H*(lx+r.L/2)/r.L; if(hh>h) h=hh; } }
-  if(yb!==undefined&&(x>AIR.x0-6||x<-LIM)&&!cellAt(x,z)){ for(const b of outBoxes(x,z)) if(x>b.x0&&x<b.x1&&z>b.z0&&z<b.z1&&yb>=b.h-0.6&&yb>=(b.y0||0)-.05&&b.h>h) h=b.h; }
+  if(yb!==undefined&&(x>AIR.x0-6||x<-LIM||z>LIM)&&!cellAt(x,z)){ for(const b of outBoxes(x,z)) if(x>b.x0&&x<b.x1&&z>b.z0&&z<b.z1&&yb>=b.h-0.6&&yb>=(b.y0||0)-.05&&b.h>h) h=b.h; }
   if(yb!==undefined){ const cell=cellAt(x,z); if(cell){ const LB=cell.gb?cell.gb[gKey(cell,x,z)]:cell.b;
     for(let pass=0;pass<2;pass++){ const bs=pass?cell.b:LB; for(let i=pass?(cell.gb?cell.sb:bs.length):0;i<bs.length;i++){ const b=bs[i];
     if(x>b.x0&&x<b.x1&&z>b.z0&&z<b.z1&&yb>=b.h-0.6&&yb>=(b.y0||0)-.05&&b.h>h) h=b.h; } } } }
@@ -985,7 +987,7 @@ const gKey=(c,x,z)=>clamp(Math.floor((x-c.ox)/GB),0,GNB-1)*GNB+clamp(Math.floor(
 let ceilHit=Infinity;
 function collideStatics(p,r,yb,yt){
   ceilHit=Infinity; if(yt===undefined) yt=yb+2;
-  const cell=cellAt(p.x,p.z); if(!cell) return (p.x>AIR.x0-6||p.x<-LIM)?airCollide(p,r,yb,yt):null; let hit=null;
+  const cell=cellAt(p.x,p.z); if(!cell) return (p.x>AIR.x0-6||p.x<-LIM||p.z>LIM)?airCollide(p,r,yb,yt):null; let hit=null;
   const gk=cell.gb?gKey(cell,p.x,p.z):0, LB=cell.gb?cell.gb[gk]:cell.b;
   for(let pass=0;pass<2;pass++){ const list=pass?cell.b:LB; for(let qi=pass?(cell.gb?cell.sb:list.length):0;qi<list.length;qi++){ const b=list[qi]; const by0=b.y0||0; if((yb>=b.h-0.6&&yb>=by0-.05)||yt<=by0+.05) continue;
     if(p.x<b.x0-r||p.x>b.x1+r||p.z<b.z0-r||p.z>b.z1+r) continue;
@@ -1003,7 +1005,7 @@ function collideStatics(p,r,yb,yt){
 }
 
 /* ground, roads, crossings */
-for(const [a,b] of [[-800,RIVER_Z-RIV_OUT],[RIVER_Z+RIV_OUT,800]]){ const g=PL(1600,b-a,0,0,(a+b)/2), uv=g.attributes.uv; for(let k=0;k<uv.count;k++) uv.setY(k,uv.getY(k)*(b-a)/1600); addS(g,matGrass); }
+for(const [a,b] of [[-800,RIVER_Z-RIV_OUT],[RIVER_Z+RIV_OUT,340]]){ const g=PL(1600,b-a,0,0,(a+b)/2), uv=g.attributes.uv; for(let k=0;k<uv.count;k++) uv.setY(k,uv.getY(k)*(b-a)/1600); addS(g,matGrass); }
 const LEN=N*P+ROAD;
 matRoad.map.repeat.set(1,LEN/(POLY?48:12));
 for(let i=0;i<=N;i++){ const c=lineC(i);
@@ -1334,6 +1336,59 @@ function buildProperty(tier,cx,cz,cell){ const keep=_rngF; _rngF=mulberry32(9100
 
 /* ---------- Stage 3: the west countryside: State Highway 1, Rangiwai township, two farms ---------- */
 const COUNTRY={stations:[],town:{x:-515,z:-87},farmA:{x:-420,z:-160},farmB:{x:-440,z:208},paddocks:[],shops:[]};
+
+/* ---------- Stage 4: the south coast: Marine Parade, industry, Tumbleton Beach, the harbour, the ferry and Mōtu Island ---------- */
+const SOUTH={beach:{x:-90,z:365},harbour:{x:180,z:370},crusher:{x:185,z:305},ferry:{x:262,z:398},isle:{x:40,z:615},power:{x:-215,z:305},factory:{x:-85,z:305}};
+function buildSouth(){ const keep=_rngF; _rngF=mulberry32(7373); try{
+  const B=AIR.boxes, box=(x0,x1,y0,y1,z0,z1,m,col)=>{ addS(BX(x1-x0,y1-y0,z1-z0,(x0+x1)/2,(y0+y1)/2,(z0+z1)/2),m); if(col!==false) B.push({x0,x1,z0,z1,y0,h:y1}); };
+  const white=lam('#f2f2f2',{roughness:.6}), dark=lam('#2b2d31',{roughness:.6}), conc=lam('#b8bab6',{roughness:.9}), sand=flat(lam('#e8d5a3',{roughness:1})), wood=lam('#8b6b4a',{roughness:.95}), steel=lam('#7d8288',{metalness:.6,roughness:.4});
+  // roads: two from the city, and Marine Parade along the coast
+  const road=(x0,x1,z0,z1)=>addS(PL(x1-x0,z1-z0,(x0+x1)/2,.04,(z0+z1)/2),matAsphalt);
+  for(const x of [-145,87]){ road(x-5,x+5,266,325); for(let z=268;z<322;z+=9) addS(PL(.18,4.5,x,.05,z+2.25),white); }
+  road(-268,268,325,335); for(let x=-266;x<266;x+=9) if(Math.abs(x+145)>7&&Math.abs(x-87)>7) addS(PL(4.5,.18,x+2.25,.05,330),white);
+  addS(PL(536,4,0,.05,338),matWalk); addS(PL(536,2,0,.05,323),matWalk);
+  // the ground south of the parade: sand, a sloping beach, the sea floor and the sea
+  addS(PL(1600,42,0,.02,361),sand); { const g=new THREE.PlaneGeometry(1600,Math.hypot(18,3.6)).rotateX(-PI/2+Math.atan2(3.6,18)).translate(0,-1.8,391); addS(g,sand); }
+  addS(PL(1600,400,0,RIV_BED,600),flat(lam('#c9b27a',{roughness:1}))); const sea=new THREE.Mesh(PL(1600,410,0,WATER_Y,600),matWater); sea.receiveShadow=true; sea.renderOrder=2; scene.add(sea);
+  // the harbour: concrete wharf, quay wall, containers, gantry cranes, a cargo ship and the ferry terminal
+  addS(PL(177,62,183.5,.035,369),flat(lam('#9a9c98',{roughness:.95}))); box(95,272,RIV_BED,0,399.5,400.5,conc,false); for(let x=100;x<270;x+=6) addS(new THREE.CylinderGeometry(.3,.3,.6,8).translate(x,.3,399),dark);
+  const ccol=['#c0392b','#1d6fb8','#2e8b57','#f39c12','#8e44ad','#16a085','#d35400','#5b6068'];
+  for(let r=0;r<4;r++) for(let k=0;k<7;k++){ const x0=110+k*7.2, z0=345+r*7, hgt=1+Math.floor(rng()*3); for(let l=0;l<hgt;l++) box(x0,x0+6.1,l*2.6,l*2.6+2.5,z0,z0+2.5,lam(ccol[Math.floor(rng()*8)],{roughness:.8}),true); }
+  for(const gx of [150,205]){ const ym=lam('#ffb703',{roughness:.6}); for(const [dx,dz] of [[-5,-3],[5,-3],[-5,3],[5,3]]) box(gx+dx-.5,gx+dx+.5,0,24,394+dz-.5,394+dz+.5,ym,true); box(gx-6,gx+6,24,26,380,433,ym,false); box(gx-2,gx+2,21,24,412,416,dark,false); box(gx-.1,gx+.1,8,21,413.9,414.1,steel,false); }
+  { const hull=lam('#2b3a55',{roughness:.7}), red=lam('#a4302a',{roughness:.8}); box(120,232,RIV_BED,WATER_Y+1,408,426,red,true); box(120,232,WATER_Y+1,4.5,408,426,hull,true); box(120,232,4.5,5,408,426,lam('#7d8288'),false);
+    box(214,230,5,17,410,424,white,false); box(216,228,17,19,411,423,lam('#2c3e50'),false); box(222,225,19,26,415,419,red,false);
+    for(let k=0;k<12;k++) for(let l=0;l<2;l++) box(126+k*7,132.5+k*7,5+l*2.6,7.5+l*2.6,410+(l%2)*7,416.5+(l%2)*7,lam(ccol[(k+l*3)%8]),false);
+    addS(BX(30,2.2,.1,176,3,407.9),signMat([['MV KŌTUKU · TUMBLETON',60]],'#2b3a55','#ffffff',1024,72)); }
+  box(240,270,0,8,344,372,lam('#c9cbcd'),true); addS(BX(26,1.6,.1,255,7,372.1),signMat([['TUMBLETON PORT',80]],'#1d3a8a','#ffffff',768,96));
+  box(252,270,0,5,380,397,lam('#e9e6df'),true); addS(BX(16,1.2,.1,261,4.4,397.1),signMat([['FERRY → MŌTU ISLAND',60]],'#2a9d8f','#ffffff',768,72));
+  // Tumbleton Beach: surf club, lifeguard tower, umbrellas, a pier and pōhutukawa trees
+  box(-215,-185,0,6.5,341,356,lam('#f6d860',{roughness:.8}),true); box(-216,-184,6.5,7,340,357,lam('#d62828'),false); addS(BX(24,1.4,.1,-200,5.2,356.1),signMat([['TUMBLETON SURF LIFE SAVING',52]],'#d62828','#f6d860',1024,80));
+  { const tx=-60, tz=372; for(const [dx,dz] of [[-1,-1],[1,-1],[-1,1],[1,1]]) box(tx+dx*1.1-.1,tx+dx*1.1+.1,0,3.2,tz+dz*1.1-.1,tz+dz*1.1+.1,white,false); box(tx-1.5,tx+1.5,3.2,3.4,tz-1.5,tz+1.5,white,true); box(tx-1.4,tx+1.4,3.4,4.8,tz-1.4,tz+1.4,lam('#d62828'),false); box(tx-1.7,tx+1.7,4.8,5,tz-1.7,tz+1.7,lam('#f6d860'),false); }
+  const umc=['#e63946','#2a9d8f','#f4a261','#457b9d','#e9c46a','#8338ec'];
+  for(let k=0;k<16;k++){ const x=-250+k*21+rng()*8, z=352+rng()*24; addS(new THREE.CylinderGeometry(.05,.05,2.4,6).translate(x,1.2,z),white); addS(new THREE.ConeGeometry(1.6,.7,8).translate(x,2.6,z),lam(umc[k%6])); addS(PL(1.1,2,x+1.3,.04,z+.6),flat(lam(umc[(k+2)%6])));  }
+  box(17,23,0,.4,374.5,377.2,wood,true); box(17,23,0,.8,377.2,380,wood,true);
+  for(let z=380;z<474;z+=1.2) box(17,23,1.0,1.2,z,z+1.05,wood,false); B.push({x0:17,x1:23,z0:380,z1:475,y0:.9,h:1.2}); for(let z=384;z<474;z+=6) for(const x of [17.3,22.7]) box(x-.2,x+.2,RIV_BED,1,z-.2,z+.2,wood,false);
+  for(const x of [17.1,22.9]) box(x-.08,x+.08,1.2,2.2,380,475,wood,true); box(18,22,1.2,4,470,474,lam('#e9e6df'),false);
+  for(let k=0;k<14;k++){ const x=-262+k*24+rng()*10; if(Math.abs(x-20)<6) continue; addTree(x,346+rng()*4,1.1,null); }
+  // industry north of the parade: the power station, Tumbleton Steel and the scrapyard with the car crusher
+  box(-255,-218,0,15,289,321,lam('#a7a9ac'),true); box(-256,-217,15,15.5,288,322,dark,false); addS(BX(28,2,.1,-236,12,321.1),signMat([['TUMBLETON POWER',72]],'#2b2d31','#ffd166',768,96));
+  addS(new THREE.CylinderGeometry(1.8,2.6,48,14).translate(-208,24,296),lam('#b0b2b4')); for(const y of [40,44]) addS(new THREE.CylinderGeometry(1.95,1.95,.8,14).translate(-208,y,296),lam('#d62828')); B.push({x0:-210.6,x1:-205.4,z0:293.4,z1:298.6,y0:0,h:48});
+  addS(new THREE.CylinderGeometry(7.5,10.5,26,24,1,true).translate(-180,13,307),lam('#cfcfcb',{side:THREE.DoubleSide})); B.push({x0:-190,x1:-170,z0:297,z1:317,y0:0,h:26});
+  box(-128,-56,0,11,289,321,lam('#8d99ae'),true); for(let k=0;k<6;k++){ const x0=-128+k*12; const g=new THREE.BoxGeometry(12,3,32).translate(0,1.5,0); g.rotateZ(.25); g.translate(x0+6,12,305); addS(g,lam('#6c7a89')); }
+  addS(BX(34,2.2,.1,-92,8.5,321.1),signMat([['TUMBLETON STEEL',80]],'#1d3a8a','#ffffff',768,96)); for(const x of [-118,-104,-90]) box(x-3,x+3,0,4.5,320.9,321.1,lam('#3a3d42'),false);
+  { const yx=185, yz=305, fm=lam('#7d8288',{metalness:.5,roughness:.5}); for(const [a,b,c,d] of [[120,250,287,287.3],[120,120.3,287,324],[249.7,250,287,324],[120,170,323.7,324],[200,250,323.7,324]]) box(a,b,0,2.6,c,d,fm,true);
+    for(let k=0;k<9;k++){ const x=127+k*13+rng()*3, z=292+rng()*4; for(let l=0;l<2+Math.floor(rng()*2);l++) box(x,x+4.2,l*1.2,l*1.2+1.15,z,z+2,lam(['#5b4636','#6b5a4a','#4a4e55','#7a3b2e'][(k+l)%4],{roughness:1}),true); }
+    box(yx-5,yx+5,0,.4,yz-4,yz+4,lam('#3a3d42'),false); for(const [dx,dz] of [[-5,-4],[5,-4],[-5,4],[5,4]]) box(yx+dx-.4,yx+dx+.4,0,9,yz+dz-.4,yz+dz+.4,lam('#ffb703'),true); box(yx-5.4,yx+5.4,9,10,yz-4.4,yz+4.4,lam('#ffb703'),false);
+    addS(BX(14,2,.1,yx,12,yz-4.5),signMat([['CRUSH-A-CAR',72],['$100 for your scrap · park and get out',34]],'#ffb703','#1b1b1b',768,128)); box(yx-.15,yx+.15,10,11,yz-4.6,yz-4.4,dark,false);
+    addS(BX(12,1.6,.1,240,2.8,323.6),signMat([['GAZZA\'S SCRAP & METAL',56]],'#5b6168','#ffffff',768,96)); }
+  // Mōtu Island: grass, a jetty and the lighthouse
+  { const I=ISLE; addS(new THREE.CylinderGeometry(I.r,I.r+18,-RIV_BED+.05,40,1,true).translate(I.x,RIV_BED/2+.02,I.z),sand); addS(new THREE.CircleGeometry(I.r,40).rotateX(-PI/2).translate(I.x,.03,I.z),sand); addS(new THREE.CircleGeometry(I.r-6,40).rotateX(-PI/2).translate(I.x,.05,I.z),matPark);
+    for(let z=576;z<594;z+=1.2) box(36,44,-.15,.05,z,z+1.05,wood,false); B.push({x0:36,x1:44,z0:575,z1:594,y0:-1,h:.05}); for(const x of [36.3,43.7]) for(let z=578;z<594;z+=5) box(x-.2,x+.2,RIV_BED,.05,z-.2,z+.2,wood,false);
+    addS(new THREE.CylinderGeometry(2,2.6,18,16).translate(I.x+18,9,I.z+18),white); for(const y of [4,10]) addS(new THREE.CylinderGeometry(2.25,2.4,1.2,16).translate(I.x+18,y,I.z+18),lam('#d62828'));
+    addS(new THREE.CylinderGeometry(1.7,1.7,2.4,12).translate(I.x+18,19.2,I.z+18),lam('#fff3c4',{emissive:new THREE.Color('#ffd27a'),emissiveIntensity:.7})); addS(new THREE.ConeGeometry(2.2,1.6,12).translate(I.x+18,21.2,I.z+18),lam('#d62828'));
+    B.push({x0:I.x+15.5,x1:I.x+20.5,z0:I.z+15.5,z1:I.z+20.5,y0:0,h:22}); for(let k=0;k<10;k++){ const a=rng()*TAU, r=8+rng()*30; addTree(I.x+Math.cos(a)*r,I.z+Math.sin(a)*r,1+rng()*.5,null); }
+    for(const [x,z] of [[I.x-12,I.z-6],[I.x-6,I.z+10]]){ box(x-1.2,x+1.2,.7,.8,z-.5,z+.5,wood,true); box(x-1.2,x+1.2,.35,.42,z-1.1,z-.8,wood,false); box(x-1.2,x+1.2,.35,.42,z+.8,z+1.1,wood,false); } }
+} finally { _rngF=keep; } }
 function buildCountry(){ const keep=_rngF; _rngF=mulberry32(4242); try{
   const B=AIR.boxes, box=(x0,x1,y0,y1,z0,z1,m,col)=>{ addS(BX(x1-x0,y1-y0,z1-z0,(x0+x1)/2,(y0+y1)/2,(z0+z1)/2),m); if(col!==false) B.push({x0,x1,z0,z1,y0,h:y1}); };
   const white=lam('#f2f2f2',{roughness:.6}), yel=lam('#ffcc33',{roughness:.6}), dirt=flat(lam('#a68a64',{roughness:1})), gravel=flat(lam('#b9b2a4',{roughness:1})), conc=lam('#b8bab6',{roughness:.9}), dark=lam('#2b2d31',{roughness:.6});
@@ -1877,15 +1932,15 @@ for(let i=0;i<N;i++) for(let j=0;j<N;j++){
   }
 }
 /* edge hedge, border trees, hills, clouds */
-for(const s of [-1,1]){ addS(BX(2*LIM+3.2,1.3,1.4,0,.65,s*(LIM+1.6)),matHedge); for(const [a,b] of (s>0?[[-LIM-3.2,-40],[-18,RIVER_Z-RIV_OUT],[RIVER_Z+RIV_OUT,LIM+3.2]]:[[-LIM-3.2,-94],[-80,RIVER_Z-RIV_OUT],[RIVER_Z+RIV_OUT,196],[210,LIM+3.2]])) addS(BX(1.4,1.3,b-a,s*(LIM+1.6),.65,(a+b)/2),matHedge); }
-const inCountry=(x,z)=>x<-LIM-2&&z>-LIM-40&&z<LIM+40;
+for(const s of [-1,1]){ if(s<0) addS(BX(2*LIM+3.2,1.3,1.4,0,.65,s*(LIM+1.6)),matHedge); else for(const [a,b] of [[-LIM-1.6,-153],[-137,79],[95,LIM+1.6]]) addS(BX(b-a,1.3,1.4,(a+b)/2,.65,LIM+1.6),matHedge); for(const [a,b] of (s>0?[[-LIM-3.2,-40],[-18,RIVER_Z-RIV_OUT],[RIVER_Z+RIV_OUT,LIM+3.2]]:[[-LIM-3.2,-94],[-80,RIVER_Z-RIV_OUT],[RIVER_Z+RIV_OUT,196],[210,LIM+3.2]])) addS(BX(1.4,1.3,b-a,s*(LIM+1.6),.65,(a+b)/2),matHedge); }
+const inCountry=(x,z)=>(x<-LIM-2&&z>-LIM-40&&z<LIM+40)||z>LIM+2;
 const inAir=(x,z,m)=>x>AIR.x0-m&&x<AIR.x1+m&&z>AIR.z0-m&&z<AIR.z1+m;
 for(let k=0;k<220;k++){ const x=rr(-HALF-130,HALF+130), z=rr(-HALF-130,HALF+130); if(Math.max(Math.abs(x),Math.abs(z))<LIM+5||Math.abs(z-RIVER_Z)<RIV_OUT+3) continue; if(inAir(x,z,4)||inCountry(x,z)){ suppressS=true; addTree(x,z,rr(.9,1.6),null); suppressS=false; continue; } addTree(x,z,rr(.9,1.6),null); }
 for(let k=0;k<46;k++){ const a=k/46*TAU+rr(-.05,.05), rad=rr(LIM+70,LIM+130), w=rr(30,70), h=rr(10,34); if(Math.abs(Math.sin(a)*rad-RIVER_Z)<RIV_OUT+40) continue; if(inAir(Math.cos(a)*rad,Math.sin(a)*rad,40)||inCountry(Math.cos(a)*rad,Math.sin(a)*rad)){ rr(0,1); rr(0,1); continue; } addS(new THREE.BoxGeometry(w,h,rr(25,50)).rotateY(a).translate(Math.cos(a)*rad,h/2-1,Math.sin(a)*rad),pick(matHill)); }
 buildRiver();
 airportBuild();
 if(POLY){ detailPass(); aoPass(); }
-buildCountry();
+buildCountry(); buildSouth();
 flushS(); SEW.surf=scene.children.filter(m=>m.isMesh&&m!==skyDome);
 sealCells(); staticSealed=true;
 
@@ -2546,7 +2601,7 @@ function updateBoat(c,dt){ let fx=Math.sin(c.yaw), fz=Math.cos(c.yaw);
     c.yaw+=-steer*c.steer*clamp((Math.abs(vf)+.6)/4,0,1)*(vf<-.3?-1:1)*dt; if(keys.Space) c.vel.multiplyScalar(Math.exp(-dt*2)); } else c.steerIn=0;
   c.yaw+=c.spin*dt; c.spin*=Math.exp(-2*dt); fx=Math.sin(c.yaw); fz=Math.cos(c.yaw);
   { let vf=c.vel.x*fx+c.vel.z*fz, vs=c.vel.x*fz-c.vel.z*fx; vf*=Math.exp(-.35*dt); vs*=Math.exp(-2.5*dt); c.vel.x=fx*vf+fz*vs; c.vel.z=fz*vf-fx*vs; }
-  const blk=(x,z)=>{ for(const a of [-2.8,0,2.8]) for(const sd of [-.9,.9]){ const px=x+fx*a+fz*sd, pz=z+fz*a-fx*sd; if(riverH(pz)>WATER_Y-.45||solidAt(px,WATER_Y-.15,pz)) return true; } return false; };
+  const blk=(x,z)=>{ for(const a of [-2.8,0,2.8]) for(const sd of [-.9,.9]){ const px=x+fx*a+fz*sd, pz=z+fz*a-fx*sd; if(Math.min(riverH(pz),seaH(px,pz))>WATER_Y-.45||solidAt(px,WATER_Y-.15,pz)) return true; } return false; };
   const nx=clamp(c.pos.x+c.vel.x*dt,-HALF-8,HALF+8), nz=c.pos.z+c.vel.z*dt;
   if(!blk(nx,nz)){ c.pos.x=nx; c.pos.z=nz; }
   else { const sp=Math.hypot(c.vel.x,c.vel.z); if(!blk(nx,c.pos.z)){ c.pos.x=nx; c.vel.z*=-.3; } else if(!blk(c.pos.x,nz)){ c.pos.z=nz; c.vel.x*=-.3; } else c.vel.multiplyScalar(-.3);
@@ -3357,7 +3412,36 @@ function trainTick(dt){ const T=TRAIN; if(!T.cars.length) return;
     const fl=near&&Math.floor(perfT*3)%2===0; C.lights.forEach((l,i)=>l.material.color.setHex(near&&((i%2===0)===fl)?0xff2a2a:0x551111));
     if(near&&(T.bellT-=dt)<=0&&Math.hypot(player.pos.x+330,player.pos.z-TR_Z)<90){ T.bellT=.6; Snd.tink(-330,TR_Z); } } }
 function trainPrompt(){ if(TRAIN.ride==='drive') return '<kbd>W</kbd> go · <kbd>S</kbd> brake / reverse · <kbd>Q</kbd> horn · <kbd>E</kbd> get off'; if(TRAIN.ride) return '<kbd>E</kbd> Get off the train'; const c=trainNear(); return c?(c.loco?'<kbd>E</kbd> Drive the train':'<kbd>E</kbd> Ride the train'):''; }
-function setupCountry(){ try{ trainSetup(); }catch(e){ console.warn('train',e); } try{ setupPlanes(); }catch(e){ console.warn('planes',e); } for(const P of COUNTRY.paddocks) for(let k=0;k<P.n;k++){ const g=animalMesh(P.kind), a={kind:P.kind,P,g,pos:g.position,vel:new V3(),yaw:Math.random()*TAU,t:Math.random()*4,tx:0,tz:0,air:false,down:0,spin:0};
+
+/* ---------- south coast at runtime: the ferry, the car crusher, the island treasure and beachgoers ---------- */
+const FERRY={x:262,z:410,yaw:0,mode:'dock',at:0,t:8,ride:null,g:null,stops:[{x:262,z:412,out:{x:262,z:396}},{x:40,z:568,out:{x:40,z:584}}]};
+const CRUSH={t:0,car:null,plate:null};
+function setupSouth(){ const g=new THREE.Group(), W='#f6f4ef', parts=[{g:BX(6,2.4,20,0,1.2,0),c:W},{g:BX(6.05,.6,20.05,0,.4,0),c:'#2a9d8f'},{g:BX(5.4,2.6,8,0,3.6,-1),c:W},{g:BX(5.45,.8,8.05,0,4.1,-1),c:'#2c3e50'},{g:BX(3,1.4,3,0,5.6,-3),c:W},{g:BX(1.2,2.6,1.2,1.5,6.5,-4),c:'#2a9d8f'},{g:new THREE.ConeGeometry(3,5,4).rotateY(PI/4).rotateX(PI/2).scale(1,.48,1).translate(0,1.2,12.3),c:W}];
+  const m=new THREE.Mesh(mergeGeos(parts,true),VC); m.castShadow=true; g.add(m); g.rotation.order='YXZ'; scene.add(g); FERRY.g=g; ferryPlace();
+  const pl=new THREE.Mesh(new THREE.BoxGeometry(9.6,1,8.6),lam('#5b6068',{metalness:.5,roughness:.4})); pl.position.set(SOUTH.crusher.x,8.4,SOUTH.crusher.z); pl.castShadow=true; scene.add(pl); CRUSH.plate=pl;
+  try{ for(const [x,z] of [[-110,412],[-100,415]]){ const j=new Car(x,z,0,'free',{variant:'jetski',color:x<-105?'#e63946':'#2a9d8f'}); Object.assign(j,{boat:true,baseY:WATER_Y-.12,ph:Math.random()*6}); j.pos.y=j.baseY; } }catch(e){}
+  GREET.beach=['Sweet as, the water\'s lovely!','Did you see the zombie surfing?','Slip, slop, slap, mate.','The ferry goes out to Mōtu Island.'];
+  for(const [x,z] of [[-150,365],[-120,372],[-30,360],[60,368],[150,360],[240,355],[-210,360]]){ try{ const q=new Person(x,z,{}); q.work={x,z,y:0,yaw:PI,kind:'shop',greet:x>100?'country':'beach'}; q.phase0=Math.random()*5; dressWorker(q,q.work); }catch(e){} }
+  for(const [x,z,yaw,v] of [[160,338,PI/2,'pickup'],[230,350,0,'van'],[-200,338,PI/2,'sedan'],[-60,338,-PI/2,'sports'],[-95,338,PI/2,'pickup']]){ const c=new Car(x,z,yaw,'free',{variant:v}); c.parked=true; } }
+function ferryPlace(){ const F=FERRY; F.g.position.set(F.x,WATER_Y+.2+Math.sin(perfT*1.1)*.08,F.z); F.g.rotation.set(0,F.yaw,Math.sin(perfT*.8)*.025); }
+function ferryNear(){ if(FERRY.mode!=='dock'||activeCar||activeHeli||activeJet||player.mode!=='walk') return false; const st=FERRY.stops[FERRY.at]; return Math.hypot(player.pos.x-st.out.x,player.pos.z-st.out.z)<6; }
+function ferryOn(){ FERRY.ride=true; player.mode='drive'; player.g.visible=false; player.crouch=false; cancelReload(); flash('All aboard for '+(FERRY.at?'Tumbleton Port':'Mōtu Island')+'! E to get off at the next stop'); }
+function ferryOff(){ const F=FERRY; F.ride=null; player.mode='walk'; player.g.visible=true; if(F.mode==='dock'){ const o=F.stops[F.at].out; player.pos.set(o.x,HIP+.1,o.z); } else { player.pos.set(F.x+Math.cos(F.yaw)*4,WATER_Y+HIP,F.z-Math.sin(F.yaw)*4); flash('Splash! You jumped off the ferry'); } player.vel.set(0,0,0); camTarget.copy(player.pos); }
+function southTick(dt){ if(!FERRY.g) return; const F=FERRY;
+  if(F.mode==='dock'){ F.t-=dt; if(F.t<=0){ F.mode='go'; F.at=1-F.at; if(F.ride) flash('Off we go to '+(F.at?'Mōtu Island':'Tumbleton Port')); } }
+  else { const st=F.stops[F.at], dx=st.x-F.x, dz=st.z-F.z, d=Math.hypot(dx,dz), want=Math.atan2(dx,dz); F.yaw+=wrapA(want-F.yaw)*Math.min(1,dt*.8); const v=Math.min(9,.6+d*.35); F.x+=Math.sin(F.yaw)*v*dt; F.z+=Math.cos(F.yaw)*v*dt;
+    if(d<1.2){ F.mode='dock'; F.t=15; if(F.ride) flash('Arrived at '+(F.at?'Mōtu Island':'Tumbleton Port')+'. E to get off'); } if(Math.random()<dt*6) puff(F.x-Math.sin(F.yaw)*10,WATER_Y+.2,F.z-Math.cos(F.yaw)*10,0xdff3ff,.8,false); }
+  ferryPlace(); if(F.ride){ player.pos.set(F.x,4.5,F.z); }
+  for(const c of cars){ if(!c.boat||c===activeCar) continue; const dx=c.pos.x-F.x, dz=c.pos.z-F.z; if(dx*dx+dz*dz<121){ const d=Math.hypot(dx,dz)||1; c.pos.x=F.x+dx/d*11; c.pos.z=F.z+dz/d*11; } }
+  if(activeCar&&activeCar.boat){ const c=activeCar, dx=c.pos.x-F.x, dz=c.pos.z-F.z; if(dx*dx+dz*dz<100){ const d=Math.hypot(dx,dz)||1; c.pos.x=F.x+dx/d*10; c.pos.z=F.z+dz/d*10; c.vel.multiplyScalar(.5); } }
+  // the car crusher: leave a car on the plate and it gets squashed for scrap money
+  const P=CRUSH.plate, cz=SOUTH.crusher; if(!CRUSH.car){ P.position.y+=(8.4-P.position.y)*Math.min(1,dt*2); for(const c of cars){ if(c===activeCar||c.boat||c.display||c.inGarage||c.wreck&&c.crushed) continue; if(Math.abs(c.pos.x-cz.x)<4.2&&Math.abs(c.pos.z-cz.z)<3.4&&Math.hypot(c.vel.x,c.vel.z)<.6){ c.crushT=(c.crushT||0)+dt; if(c.crushT>1.5){ CRUSH.car=c; CRUSH.t=0; } } } }
+  else { const c=CRUSH.car; CRUSH.t+=dt; const k=Math.min(1,CRUSH.t/1.2); P.position.y=8.4-k*(8.4-(c.top||1.8)*.3-.5); if(k>.5) c.g.scale.y=Math.max(.25,1-(k-.5)*1.6); if(CRUSH.t>1.25&&!c.crushedFx){ c.crushedFx=true; Snd.crash(cz.x,cz.z,14); state.shake=Math.max(state.shake,Math.hypot(player.pos.x-cz.x,player.pos.z-cz.z)<30?.3:0); }
+    if(CRUSH.t>2.6||!cars.includes(c)||c===activeCar){ if(cars.includes(c)&&c!==activeCar){ cars.splice(cars.indexOf(c),1); scene.remove(c.g); disposeTree(c.g); const b=burning.indexOf(c); if(b>=0) burning.splice(b,1); if(c.gid){ const e=GAR.cars.find(e=>e.id===c.gid); if(e) e.out=false; } if(Math.hypot(player.pos.x-cz.x,player.pos.z-cz.z)<40){ earn(100); flash('Crushed! +$100 for the scrap'); } } CRUSH.car=null; } }
+  // Mōtu Island's buried treasure: once per save
+  if(!SOUTH.got&&Math.hypot(player.pos.x-(ISLE.x-20),player.pos.z-(ISLE.z+22))<2.5&&player.mode==='walk'){ SOUTH.got=true; try{ localStorage.setItem('tumbleton-island','1'); }catch(e){} earn(2000); flash('You found the island treasure! +$2,000'); if(SOUTH.chest) SOUTH.chest.visible=false; } }
+function ferryPrompt(){ if(FERRY.ride) return FERRY.mode==='dock'?'<kbd>E</kbd> Get off the ferry':'Riding the ferry · <kbd>E</kbd> jump off'; return ferryNear()?'<kbd>E</kbd> Board the ferry to '+(FERRY.at?'Tumbleton Port':'Mōtu Island'):''; }
+function setupCountry(){ try{ setupSouth(); try{ SOUTH.got=localStorage.getItem('tumbleton-island')==='1'; }catch(e){} if(!SOUTH.got){ const ch=new THREE.Mesh(new THREE.BoxGeometry(1.2,.8,.8),lam('#8b5a2b',{emissive:new THREE.Color('#ffcc33'),emissiveIntensity:.25})); ch.position.set(ISLE.x-20,.4,ISLE.z+22); scene.add(ch); SOUTH.chest=ch; } }catch(e){ console.warn('south',e); } try{ trainSetup(); }catch(e){ console.warn('train',e); } try{ setupPlanes(); }catch(e){ console.warn('planes',e); } for(const P of COUNTRY.paddocks) for(let k=0;k<P.n;k++){ const g=animalMesh(P.kind), a={kind:P.kind,P,g,pos:g.position,vel:new V3(),yaw:Math.random()*TAU,t:Math.random()*4,tx:0,tz:0,air:false,down:0,spin:0};
       a.pos.set(P.x0+Math.random()*(P.x1-P.x0),0,P.z0+Math.random()*(P.z1-P.z0)); a.tx=a.pos.x; a.tz=a.pos.z; scene.add(g); ANIMALS.push(a); }
   GREET.country=['Kia ora! Not much happens out here.','Watch out for the sheep on the road.','Zombies are worse past the town, mate.','Best pies in the district, these.'];
   for(const S of COUNTRY.shops.slice(0,6)){ try{ const q=new Person(S.x+(Math.random()-.5)*4,S.z,{}); q.work={x:q.pos.x,z:S.z,y:0,yaw:Math.random()*TAU,kind:'shop',greet:'country'}; q.phase0=Math.random()*5; dressWorker(q,q.work); }catch(e){} }
@@ -3374,10 +3458,10 @@ function countryTick(dt){ if(!state.started) return; const px=player.pos.x, pz=p
     else if(a.t<=0){ const P=a.P; if(Math.random()<.5){ a.tx=clamp(a.pos.x+(Math.random()-.5)*16,P.x0,P.x1); a.tz=clamp(a.pos.z+(Math.random()-.5)*16,P.z0,P.z1); } else { a.tx=a.pos.x; a.tz=a.pos.z; } a.t=3+Math.random()*5; }
     const dx=a.tx-a.pos.x, dz=a.tz-a.pos.z, d=Math.hypot(dx,dz); if(d>.3){ const v=(flee?4.5:1.1)*(a.kind==='cow'?.8:1), want=Math.atan2(dx,dz); a.yaw+=wrapA(want-a.yaw)*Math.min(1,dt*5); a.pos.x+=Math.sin(a.yaw)*v*dt; a.pos.z+=Math.cos(a.yaw)*v*dt; a.g.position.y=Math.abs(Math.sin(perfT*9+a.t))*.06; }
     a.g.rotation.set(0,a.yaw,0); }
-  ctryT-=dt; if(ctryT>0) return; ctryT=5; if(!out||story.on||mpClient()||state.over) return;
-  const lim=Math.min(14,4+Math.floor((-px-LIM)/70)); let n=0; for(const q of people) if(q.zombie&&!q.dead&&q.pos.x<-LIM&&Math.hypot(q.pos.x-px,q.pos.z-pz)<90) n++;
-  for(let k=0;k<2&&n<lim;k++,n++){ const a=Math.random()*TAU, r=35+Math.random()*25, x=clamp(px+Math.cos(a)*r,-785,-LIM-6), z=clamp(pz+Math.sin(a)*r,-LIM+6,LIM-6); if(Math.abs(z-RIVER_Z)<RIV_OUT+2) continue;
-    const zb=new Person(x,z,{spawned:true,zombie:true,kind:pickZKind(1+Math.floor((-px-LIM)/120))}); zb.aggro=8; } }
+  ctryT-=dt; if(ctryT>0) return; ctryT=5; const south=pz>LIM+15&&Math.abs(px)<LIM+5; if((!out&&!south)||story.on||mpClient()||state.over||FERRY.ride) return;
+  const lim=south?Math.min(8,3+Math.floor((pz-LIM)/120)):Math.min(14,4+Math.floor((-px-LIM)/70)); let n=0; for(const q of people) if(q.zombie&&!q.dead&&q.pos.x<-LIM&&Math.hypot(q.pos.x-px,q.pos.z-pz)<90) n++;
+  for(let k=0;k<2&&n<lim;k++,n++){ const a=Math.random()*TAU, r=35+Math.random()*25, x=south?clamp(px+Math.cos(a)*r,-LIM+6,LIM-6):clamp(px+Math.cos(a)*r,-785,-LIM-6), z=south?clamp(pz+Math.sin(a)*r,LIM+8,375):clamp(pz+Math.sin(a)*r,-LIM+6,LIM-6); if(Math.abs(z-RIVER_Z)<RIV_OUT+2) continue;
+    if(south&&(z<0||seaH(x,z)<-.5||Math.abs(x)>LIM)) continue; const zb=new Person(x,z,{spawned:true,zombie:true,kind:pickZKind(1+Math.floor((-px-LIM)/120))}); zb.aggro=8; } }
 function autoPark(dt){ const c=activeCar; if(!c||state.paused||state.cine) return; if(padHere()==='park'&&Math.hypot(c.vel.x,c.vel.z)<.6){ c.parkT=(c.parkT||0)+dt; if(c.parkT>.9){ c.parkT=0; padUse(); } } else if((c.parkT||0)>0) c.parkT=0; }
 function digTick(dt){ for(const c of cars){ if(!c.arm) continue; const A=c.arm; if(A.t>0){ A.t-=dt; const k=1-Math.max(0,A.t)/1.1, sw=Math.sin(k*PI); A.boom.rotation.x=-.55+sw*.9; A.el.rotation.x=1.5-sw*.4;
       if(!A.hit&&k>.45){ A.hit=true; const fx=Math.sin(c.yaw), fz=Math.cos(c.yaw), hx=c.pos.x+fx*4.6, hz=c.pos.z+fz*4.6; puff(hx,c.pos.y+.4,hz,0x9a8a6a,1.1,false); Snd.thud(hx,hz,10); state.shake=Math.max(state.shake,.25);
@@ -3395,7 +3479,7 @@ function setupMotor(){ try{ setupSale(); }catch(e){ console.warn('houses',e); } 
   GREET.cars=['G\'day! Every vehicle comes with a free garage delivery.','Tanks are on special this week. Well, not really.','Have a look around, they don\'t bite.','Need a house first? Check the FOR SALE signs in the suburbs.'];
   GREET.motor=['Drive into a bay and press F.','Left bay for mods, right bay for repairs.','We fix anything that isn\'t a smoking crater.','Zombie rammer? Best money you\'ll ever spend.'];
   try{ for(const site of [0,1]){ const S=SITES[site]; if(!S) continue; const x=lotC(S[0]), z=lotC(S[1]); roadPark(x+10,z+24,site?'digger':'bulldozer'); } }catch(e){ console.warn('site vehicles',e); } }
-function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
+function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); southTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
   const c=activeCar;
   if(c&&c.emerg==='fire'&&use){ camera.getWorldDirection(_ewd); let dx=_ewd.x, dy=_ewd.y+.16, dz=_ewd.z; const l=Math.hypot(dx,dy,dz)||1; hoseSpray(nozzleWorld(c),{x:dx/l,y:Math.max(-.35,dy/l),z:dz/l},dt,true); }
   if(c&&c.emerg==='tow'){ if(use&&!c.useW){ if(c.towed){ towRelease(c); flash('Let go of the car'); } else { const h=hookWorld(c); let best=null,bd=4.6;
@@ -3508,7 +3592,7 @@ function applyGrip(c,grip,dt){ const fx=Math.sin(c.yaw), fz=Math.cos(c.yaw), rx=
 const dyn=[];
 function buildDyn(){ dyn.length=0; for(const o of props) dyn.push(o); for(const p of people) if(p.mode!=='drive'&&p.mode!=='held'&&p.mode!=='lift') dyn.push(p); }
 const isWalker=o=>o.isPerson&&(o.mode==='walk'||o.mode==='getup');
-function bounds(p,v){ if(p.x>GZ0.x-150) return; const XM=(p.z>AIR.z0&&p.z<AIR.z1)?AIR.x1:LIM; if(p.x>XM){p.x=XM; if(v.x>0)v.x*=-.4;} else if(p.x<((p.z>-LIM&&p.z<LIM)?-790:-LIM)){p.x=((p.z>-LIM&&p.z<LIM)?-790:-LIM); if(v.x<0)v.x*=-.4;} if(p.z>LIM){p.z=LIM; if(v.z>0)v.z*=-.4;} else if(p.z<-LIM){p.z=-LIM; if(v.z<0)v.z*=-.4;} }
+function bounds(p,v){ if(p.x>GZ0.x-150) return; const XM=(p.z>AIR.z0&&p.z<AIR.z1)?AIR.x1:LIM; if(p.x>XM){p.x=XM; if(v.x>0)v.x*=-.4;} else if(p.x<((p.z>-LIM&&p.z<LIM)?-790:-LIM)){p.x=((p.z>-LIM&&p.z<LIM)?-790:-LIM); if(v.x<0)v.x*=-.4;} if(p.z>((p.x>-LIM-5&&p.x<LIM+5)?770:LIM)){p.z=((p.x>-LIM-5&&p.x<LIM+5)?770:LIM); if(v.z>0)v.z*=-.4;} else if(p.z<-LIM){p.z=-LIM; if(v.z<0)v.z*=-.4;} }
 const _near=[];
 function collisions(){
   for(const o of dyn){ if(o.sleep||o.lodSkip) continue; const foot=o.mode==='getup'&&o.getFloor!==undefined?o.getFloor:o.pos.y-(isWalker(o)?HIP:o.gr);
@@ -3941,6 +4025,8 @@ function gunnerTick(dt){ const av=MP.av.get(MPG.id); if(!MP.on||!av||av.veh!==MP
   if(A.hitO){ const o=A.hitO; if(o instanceof Car){ vehDmg(o,2.5); Snd.tink(o.pos.x,o.pos.z); } else { nailHit(o,dir.clone().multiplyScalar(30),2.2,'shot'); if(o.isPerson&&o.zombie&&o.mode==='walk'&&o.hp<=1) knock(o,dir.x*10,4,dir.z*10,6,1); } } else puff(ex,ey,ez,0xb8b0a0,.3,false); }
 function enterExit(){
   if(TRAIN.ride){ trainOff(); return; }
+  if(FERRY.ride){ ferryOff(); return; }
+  if(ferryNear()&&!nearestCar()){ ferryOn(); return; }
   if(MPG.id!==null){ gunnerExit(); return; }
   { const tc=trainNear(); if(tc&&!nearestCar()){ trainOn(tc); return; } }
   if(walkUse()) return;
@@ -4182,6 +4268,10 @@ function findMenu(){ if(!state.started||state.over||!cfEl.hidden) return; const 
   if(MOTOR.door) add('Tumbleton Motors','Mods and repairs for your car · '+dist(MOTOR.door.x,MOTOR.door.z),go(MOTOR.door.x,MOTOR.door.z,'Tumbleton Motors is marked. Follow the arrow'));
   const mine=SALE.filter(S=>GAR.h[S.i]&&GAR.h[S.i].own);
   for(const S of mine) add('Your home: '+S.D.name,'Garage entrance · '+dist(S.portal.x,S.portal.z),go(S.portal.x,S.portal.z,'Your garage is marked. Follow the arrow'));
+  add('Tumbleton Beach','Sand, surf club, pier and jet skis · '+dist(SOUTH.beach.x,SOUTH.beach.z),go(SOUTH.beach.x,SOUTH.beach.z,'Tumbleton Beach is marked. Head south'));
+  add('Tumbleton Port','Containers, cranes and a cargo ship · '+dist(SOUTH.harbour.x,SOUTH.harbour.z),go(SOUTH.harbour.x,SOUTH.harbour.z,'The port is marked'));
+  add('Ferry to Mōtu Island','Ride out to the island and its lighthouse · '+dist(SOUTH.ferry.x,SOUTH.ferry.z),go(SOUTH.ferry.x,SOUTH.ferry.z,'The ferry terminal is marked'));
+  add('Car crusher','Leave a car on the plate for $100 · '+dist(SOUTH.crusher.x,SOUTH.crusher.z),go(SOUTH.crusher.x,SOUTH.crusher.z,'The car crusher is marked'));
   add('Rangiwai township','Country town out west past State Highway 1 · '+dist(COUNTRY.town.x,COUNTRY.town.z),go(COUNTRY.town.x,COUNTRY.town.z,'Rangiwai is marked. Head west out of the city'));
   add('Hillcrest Farm','Sheep, a big red barn and silos · '+dist(COUNTRY.farmA.x,COUNTRY.farmA.z),go(COUNTRY.farmA.x,COUNTRY.farmA.z,'Hillcrest Farm is marked'));
   add('Riverside Dairy','Cows and maize south of the river · '+dist(COUNTRY.farmB.x,COUNTRY.farmB.z),go(COUNTRY.farmB.x,COUNTRY.farmB.z,'Riverside Dairy is marked'));
@@ -4535,7 +4625,7 @@ function updateHUD(){
   if(zs!==lastZ||state.defeated!==lastD){ lastZ=zs; lastD=state.defeated; zcEl.textContent=zs; zdEl.textContent=state.defeated; zplateEl.hidden=!(zs||state.defeated); }
   let pr='';
   if(state.msgT>0&&state.started&&!state.over) pr=state.msg; else
-  if(state.started){ const stp=jetPrompt()||cranePrompt()||storyPrompt()||storePrompt()||motorPrompt()||trainPrompt()||sewerPrompt(); if(stp) pr=stp; else if(activeHeli) pr='<kbd>E</kbd> Get out · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>Click</kbd> guns · <kbd>Right-click</kbd> rockets';  else if(player.chute) pr='<kbd>WASD</kbd> steer · <kbd>Space</kbd> cut away';
+  if(state.started){ const stp=jetPrompt()||cranePrompt()||storyPrompt()||storePrompt()||motorPrompt()||trainPrompt()||ferryPrompt()||sewerPrompt(); if(stp) pr=stp; else if(activeHeli) pr='<kbd>E</kbd> Get out · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>Click</kbd> guns · <kbd>Right-click</kbd> rockets';  else if(player.chute) pr='<kbd>WASD</kbd> steer · <kbd>Space</kbd> cut away';
     else if(player.mode==='walk'&&!player.ground&&player.vel.y<-2&&player.pos.y-HIP-groundHeight(player.pos.x,player.pos.z,player.pos.y-HIP)>3.5) pr='<kbd>Space</kbd> Open parachute';
     else if(activeCar) pr=activeCar.boat?'<kbd>W</kbd><kbd>S</kbd> throttle · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>E</kbd> Get out':'<kbd>E</kbd> Get out'; else if(state.downT>0) pr='Knocked out. Heading back to the plaza…'; else if(state.over) pr=''; else if(player.mode==='held') pr=player.heldBy&&!player.heldBy.zombie?'They grabbed you! Brace for the throw…':'A grabber has you! Brace for the throw…'; else if(player.mode==='ragdoll'||player.mode==='getup') pr='Ouch. Getting back up…'; else if(player.immune>0&&people.some(q=>q.zombie)) pr='Back on your feet. Run!'; else if(player.mode==='walk'&&liftNear()){ const n=liftNear(); pr=n.L.v!==0?(n.inside?'Going '+(n.L.v>0?'up':'down')+'…':'Lift is moving…'):Math.abs(n.L.y-n.lvl)>.05?'<kbd>E</kbd> Call the lift':n.inside?'<kbd>E</kbd> Ride the lift '+(n.lvl===0?'up':'down'):'Step into the lift'; } else if(player.mode==='walk'&&nearestHeli()) pr='<kbd>E</kbd> Fly the helicopter'; else if(nearestCar()) pr=nearestCar().boat?'<kbd>E</kbd> Drive this boat':'<kbd>E</kbd> Drive this car'; }
   if(pr!==lastPrompt){ lastPrompt=pr; promptEl.innerHTML=pr; promptEl.hidden=!pr; }
@@ -4671,8 +4761,8 @@ function updateViewModel(dt){
       else { mag.position.copy(wl); mag.visible=W.id==='shotgun'?false:W.id==='launcher'?!!(a&&a.mag>0):true; } } }
   vmHemi.intensity=hemi.intensity*1.15; vmSun.intensity=sun.intensity*.65; vmScene.environment=scene.environment;
 }
-function insideBuilding(x,y,z){ const cell=cellAt(x,z); if(!cell) return (x>AIR.x0-6||x<-LIM)&&outBoxes(x,z).some(b=>x>b.x0-.3&&x<b.x1+.3&&z>b.z0-.3&&z<b.z1+.3&&y<b.h+.3&&y>(b.y0||0)-.3); const LB=cell.gb?cell.gb[gKey(cell,x,z)]:cell.b; for(let pass=0;pass<2;pass++){ const bs=pass?cell.b:LB; for(let i=pass?(cell.gb?cell.sb:bs.length):0;i<bs.length;i++){ const b=bs[i]; if(x>b.x0-.3&&x<b.x1+.3&&z>b.z0-.3&&z<b.z1+.3&&y<b.h+.3&&y>(b.y0||0)-.3) return true; } } return false; }
-function solidAt(x,y,z){ const cell=cellAt(x,z); if(!cell) return (x>AIR.x0-6||x<-LIM)&&outBoxes(x,z).some(b=>x>b.x0&&x<b.x1&&z>b.z0&&z<b.z1&&y<b.h&&y>(b.y0||0)); const LB=cell.gb?cell.gb[gKey(cell,x,z)]:cell.b; for(let pass=0;pass<2;pass++){ const bs=pass?cell.b:LB; for(let i=pass?(cell.gb?cell.sb:bs.length):0;i<bs.length;i++){ const b=bs[i]; if(x>b.x0&&x<b.x1&&z>b.z0&&z<b.z1&&y<b.h&&y>(b.y0||0)) return true; } } return false; }
+function insideBuilding(x,y,z){ const cell=cellAt(x,z); if(!cell) return (x>AIR.x0-6||x<-LIM||z>LIM)&&outBoxes(x,z).some(b=>x>b.x0-.3&&x<b.x1+.3&&z>b.z0-.3&&z<b.z1+.3&&y<b.h+.3&&y>(b.y0||0)-.3); const LB=cell.gb?cell.gb[gKey(cell,x,z)]:cell.b; for(let pass=0;pass<2;pass++){ const bs=pass?cell.b:LB; for(let i=pass?(cell.gb?cell.sb:bs.length):0;i<bs.length;i++){ const b=bs[i]; if(x>b.x0-.3&&x<b.x1+.3&&z>b.z0-.3&&z<b.z1+.3&&y<b.h+.3&&y>(b.y0||0)-.3) return true; } } return false; }
+function solidAt(x,y,z){ const cell=cellAt(x,z); if(!cell) return (x>AIR.x0-6||x<-LIM||z>LIM)&&outBoxes(x,z).some(b=>x>b.x0&&x<b.x1&&z>b.z0&&z<b.z1&&y<b.h&&y>(b.y0||0)); const LB=cell.gb?cell.gb[gKey(cell,x,z)]:cell.b; for(let pass=0;pass<2;pass++){ const bs=pass?cell.b:LB; for(let i=pass?(cell.gb?cell.sb:bs.length):0;i<bs.length;i++){ const b=bs[i]; if(x>b.x0&&x<b.x1&&z>b.z0&&z<b.z1&&y<b.h&&y>(b.y0||0)) return true; } } return false; }
 function updateCamera(dt){
   heliCockpitOff();
   { const W=WEAPONS[state.weapon], on=state.started&&!state.over&&!state.paused&&!activeCar&&!activeHeli&&!!W.ranged&&player.mode==='walk';
@@ -4715,6 +4805,7 @@ function updateCamera(dt){
   if(!state.started){ tx=player.pos.x+8; ty=player.pos.y+1; tz=player.pos.z-8; dist=24; pitch=.5; if(!reduceMotion) camYaw+=dt*.05; }
   else if(activeHeli){ const H=activeHeli; tx=H.pos.x-Math.cos(camYaw)*3.2; ty=H.pos.y+4.2; tz=H.pos.z+Math.sin(camYaw)*3.2; dist=17; }
   else if(TRAIN.ride){ tx=player.pos.x; ty=5.5; tz=TR_Z; dist=19; }
+  else if(FERRY.ride){ tx=FERRY.x; ty=4; tz=FERRY.z; dist=24; }
   else if(activeCar&&activeCar.tur){ const c=activeCar; tx=c.pos.x; ty=c.pos.y+(c.top||1.9)+(c.tank?1.5:1.25); tz=c.pos.z; dist=c.tank?11:9.5; if(perfT-lastLook>1.1) camPitch+=(.1-camPitch)*Math.min(1,dt*1.5); }
   else if(activeCar){ const c=activeCar; tx=c.pos.x; ty=c.pos.y+1.7; tz=c.pos.z; dist=10;
     if(perfT-lastLook>1.1){ const vf=c.vel.x*Math.sin(c.yaw)+c.vel.z*Math.cos(c.yaw); if(Math.abs(vf)>1.5) camYaw=lerpA(camYaw,c.yaw+(vf<-4?PI:0),Math.min(1,dt*2.6)); camPitch+=(.3-camPitch)*Math.min(1,dt*1.5); } }
