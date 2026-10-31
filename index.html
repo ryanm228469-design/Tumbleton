@@ -1333,7 +1333,7 @@ function buildProperty(tier,cx,cz,cell){ const keep=_rngF; _rngF=mulberry32(9100
   } finally { _rngF=keep; } }
 
 /* ---------- Stage 3: the west countryside: State Highway 1, Rangiwai township, two farms ---------- */
-const COUNTRY={town:{x:-515,z:-87},farmA:{x:-420,z:-160},farmB:{x:-440,z:208},paddocks:[],shops:[]};
+const COUNTRY={stations:[],town:{x:-515,z:-87},farmA:{x:-420,z:-160},farmB:{x:-440,z:208},paddocks:[],shops:[]};
 function buildCountry(){ const keep=_rngF; _rngF=mulberry32(4242); try{
   const B=AIR.boxes, box=(x0,x1,y0,y1,z0,z1,m,col)=>{ addS(BX(x1-x0,y1-y0,z1-z0,(x0+x1)/2,(y0+y1)/2,(z0+z1)/2),m); if(col!==false) B.push({x0,x1,z0,z1,y0,h:y1}); };
   const white=lam('#f2f2f2',{roughness:.6}), yel=lam('#ffcc33',{roughness:.6}), dirt=flat(lam('#a68a64',{roughness:1})), gravel=flat(lam('#b9b2a4',{roughness:1})), conc=lam('#b8bab6',{roughness:.9}), dark=lam('#2b2d31',{roughness:.6});
@@ -1389,9 +1389,32 @@ function buildCountry(){ const keep=_rngF; _rngF=mulberry32(4242); try{
   fence(-620,-512,214,268,true); COUNTRY.paddocks.push({x0:-618,x1:-514,z0:216,z1:266,kind:'cow',n:12});
   rows(-620,-430,140,190,'#57a33a','#6b5a3a'); fence(-622,-428,138,192,false);
   for(let k=0;k<8;k++) addS(new THREE.CylinderGeometry(.9,.9,1.4,14).rotateZ(PI/2).translate(-445+k*2.1,.9,214-((k%2)*2)),lam('#d8b25a',{roughness:1}));
+
+
+  // the railway: Tumbleton West to Rangiwai, with a level crossing on the highway
+  { const TZ=-45, X0=-283, X1=-767, steel=lam('#7d8288',{metalness:.7,roughness:.35}), sleeper=lam('#5a4636',{roughness:1});
+    addS(PL(X0-X1,4.4,(X0+X1)/2,.03,TZ),gravel); for(const dz of [-.72,.72]) addS(BX(X0-X1,.16,.12,(X0+X1)/2,.16,TZ+dz),steel);
+    for(let x=X1+.5;x<X0;x+=1.1) if(Math.abs(x+330)>10.5) addS(BX(.26,.1,2.4,x,.06,TZ),sleeper);
+    for(const x of [X0,X1]){ box(x-.6,x+.6,0,1.2,TZ-1.5,TZ+1.5,lam('#e5484d'),true); }
+    for(const [x0,x1,name] of [[-415,-343,'Tumbleton West'],[-590,-518,'Rangiwai']]){ box(x0,x1,0,.9,TZ+2.2,TZ+6,conc,true); box(x0-3,x0,0,.45,TZ+2.2,TZ+6,conc,true); box(x1,x1+3,0,.45,TZ+2.2,TZ+6,conc,true);
+      addS(PL(x1-x0,.3,(x0+x1)/2,.92,TZ+2.45),flat(lam('#ffcc33',{roughness:.8})));
+      const mx=(x0+x1)/2; box(mx-6,mx+6,3.6,3.8,TZ+3.4,TZ+6.2,lam('#3d4452'),false); for(const x of [mx-5.6,mx+5.6]) box(x-.1,x+.1,.9,3.6,TZ+5.8,TZ+6,dark,false); box(mx-6,mx+6,.9,3.6,TZ+5.95,TZ+6.05,lam('#bfe4f6',{transparent:true,opacity:.35,depthWrite:false}),false);
+      addS(BX(7,1,.1,mx,3.1,TZ+3.3),signMat([[name.toUpperCase(),72]],'#1d3a8a','#ffffff',512,72)); addS(BX(7,1,.1,mx,3.1,TZ+3.4),signMat([[name.toUpperCase(),72]],'#1d3a8a','#ffffff',512,72));
+      COUNTRY.stations.push({name,x:mx,z:TZ+4}); }
+    for(const [x,z] of [[-342,TZ-6],[-318,TZ+6]]){ box(x-.15,x+.15,0,3.2,z-.15,z+.15,lam('#f2f2f2'),true); addS(BX(1.4,.18,.06,x,2.9,z),lam('#2b2d31')); }
+    addS(BX(6,1.4,.1,-300,2.6,TZ-6),signMat([['RAILWAY CROSSING',52],['Look out for trains',40]],'#ffffff','#d62828',512,128)); box(-300.1,-299.9,0,1.9,TZ-6.1,TZ-5.9,dark,false); }
+  // Rangiwai Airstrip: a short sealed runway with a hangar, windsock and fuel tank
+  { const RX=-715; addS(PL(18,160,RX,.045,-195),matAsphalt); for(let z=-268;z<-125;z+=10) addS(PL(.5,5,RX,.055,z),white); for(const dx of [-8.6,8.6]) addS(PL(.25,160,RX+dx,.055,-195),white);
+    for(const zz of [-271,-119]) for(let k=-3;k<=3;k++) addS(PL(1,4,RX+k*2.2,.055,zz),white);
+    addS(PL(12,30,RX-15,.045,-150),matAsphalt); addS(PL(6,34,RX,.045,-104),matAsphalt);
+    const hm=lam('#9aa3ab',{metalness:.4,roughness:.5}); box(-768,-748,0,7,-172,-171.6,hm,true); box(-768,-748,0,7,-150.4,-150,hm,true); box(-768.4,-768,0,7,-172,-150,hm,true); box(-768.4,-747.6,7,7.4,-172.4,-149.6,lam('#6b7178'),false);
+    addS(BX(8,1.2,.1,-758,8.3,-149.5),signMat([['RANGIWAI AIRSTRIP',60]],'#1d3a8a','#ffffff',512,80));
+    box(-742,-736,0,3,-128,-122,lam('#f1faee'),true); roofGable(-742,-736,-128,-122,3,1.2,lam('#f1faee'),matRoofT[0],true);
+    addS(new THREE.CylinderGeometry(2,2,4,14).rotateZ(PI/2).translate(-742,2.2,-185),lam('#e9e9e9',{metalness:.3})); B.push({x0:-744.5,x1:-739.5,z0:-187.2,z1:-182.8,y0:0,h:4.2});
+    box(-726.1,-725.9,0,7,-130.1,-129.9,dark,false); addS(new THREE.ConeGeometry(.7,2.6,10,1,true).rotateZ(PI/2).translate(-727.3,6.6,-130),lam('#ff7a1a',{side:THREE.DoubleSide})); }
   // trees and hedgerows across the countryside
-  const clear=(x,z)=>{ if(Math.abs(z+87)<16||Math.abs(z-203)<14||Math.abs(x-HX)<16) return false; if(Math.abs(z-RIVER_Z)<RIV_OUT+3) return false;
-    for(const p of [[-600,-470,-270,-110],[-625,-420,135,270],[-470,-395,-190,-140],[-620,-410,-112,-60],[-640,-560,-110,-60]]) if(x>p[0]-3&&x<p[1]+3&&z>p[2]-3&&z<p[3]+3) return false; return true; };
+  const clear=(x,z)=>{ if(Math.abs(z+45)<9) return false; if(Math.abs(z+87)<16||Math.abs(z-203)<14||Math.abs(x-HX)<16) return false; if(Math.abs(z-RIVER_Z)<RIV_OUT+3) return false;
+    for(const p of [[-768,-662,-282,-100],[-600,-470,-270,-110],[-625,-420,135,270],[-470,-395,-190,-140],[-620,-410,-112,-60],[-640,-560,-110,-60]]) if(x>p[0]-3&&x<p[1]+3&&z>p[2]-3&&z<p[3]+3) return false; return true; };
   for(let k=0;k<170;k++){ const x=-285-rng()*495, z=-270+rng()*540; if(!clear(x,z)) continue; addTree(x,z,.9+rng()*.8,null); }
   for(let k=0;k<26;k++){ const a=PI*.6+rng()*PI*.8, rad=560+rng()*120, x=Math.cos(a)*rad-160, z=Math.sin(a)*rad*.55, w=30+rng()*50, h=14+rng()*30; if(x>-760) continue; addS(new THREE.BoxGeometry(w,h,25+rng()*30).rotateY(a).translate(x-40,h/2-1,z),pick(matHill)); }
 } finally { _rngF=keep; } }
@@ -3274,7 +3297,67 @@ function animalMesh(kind){ const g=new THREE.Group(), cow=kind==='cow', bodyC=co
   if(cow){ bx(1.1,1.0,2.2,0,1.25,0,bodyC); if(bodyC==='#f2f2f2'){ bx(1.12,.5,.7,0,1.4,.3,'#222'); bx(1.12,.45,.5,0,1.2,-.6,'#222'); } bx(.6,.6,.7,0,1.55,1.35,bodyC==='#f2f2f2'?'#222':'#5b3a2a'); bx(.62,.3,.25,0,1.35,1.72,'#e8b4a0'); for(const [x,z] of [[-.38,.75],[.38,.75],[-.38,-.75],[.38,-.75]]) bx(.22,.8,.22,x,.4,z,'#2a2a2a'); bx(.12,.12,.12,-.3,1.95,1.3,'#eee'); bx(.12,.12,.12,.3,1.95,1.3,'#eee'); }
   else { bx(.9,.75,1.2,0,.85,0,bodyC); bx(.95,.6,1.25,0,.95,0,'#fbf9f2'); bx(.38,.42,.42,0,1.0,.75,'#2a2a2a'); for(const [x,z] of [[-.25,.4],[.25,.4],[-.25,-.4],[.25,-.4]]) bx(.14,.5,.14,x,.25,z,'#2a2a2a'); }
   return g; }
-function setupCountry(){ for(const P of COUNTRY.paddocks) for(let k=0;k<P.n;k++){ const g=animalMesh(P.kind), a={kind:P.kind,P,g,pos:g.position,vel:new V3(),yaw:Math.random()*TAU,t:Math.random()*4,tx:0,tz:0,air:false,down:0,spin:0};
+
+/* ---------- small planes at the airstrip: they fly like the bomber jet, just slower and nimbler, with no bombs ---------- */
+function smallPlaneMesh(col){ const g=new THREE.Group(), W='#f6f4ef', C=col, D='#2b2d31', parts=[
+    {g:BX(1.2,1.2,5.2,0,0,0),c:W},{g:BX(1.0,.9,1.4,0,.75,.6),c:'#2c3e50'},{g:BX(10.5,.14,1.6,0,1.25,.5),c:W},{g:BX(10.6,.1,.3,0,1.33,1.2),c:C},
+    {g:BX(.12,1.6,1.1,0,1.0,-2.6),c:C},{g:BX(3.4,.1,.9,0,.25,-2.6),c:W},{g:BX(1.22,.18,5.2,0,-.1,0),c:C},{g:BX(.8,.8,.5,0,0,2.75),c:D},
+    {g:BX(.08,1.0,.08,-.6,.75,.6),c:D},{g:BX(.08,1.0,.08,.6,.75,.6),c:D},{g:BX(.08,.7,.08,-.7,-.75,.8),c:D},{g:BX(.08,.7,.08,.7,-.75,.8),c:D},
+    {g:new THREE.CylinderGeometry(.28,.28,.2,12).rotateZ(PI/2).translate(-.75,-1.0,.8),c:D},{g:new THREE.CylinderGeometry(.28,.28,.2,12).rotateZ(PI/2).translate(.75,-1.0,.8),c:D},{g:new THREE.CylinderGeometry(.2,.2,.15,10).rotateZ(PI/2).translate(0,-1.05,-2.3),c:D}];
+  const body=new THREE.Mesh(mergeGeos(parts,true),VC); body.castShadow=true; g.add(body);
+  const prop=new THREE.Group(); prop.position.set(0,0,3.05); const bl=new THREE.Mesh(new THREE.BoxGeometry(2.3,.18,.06),lam('#2b2d31')); prop.add(bl); g.add(prop);
+  g.rotation.order='YXZ'; return {g,glow:prop,bombs:[]}; }
+function setupPlanes(){ for(const [x,z,col] of [[-715,-124,'#d62828'],[-736,-160,'#2f80ed']]){ const m=smallPlaneMesh(col); scene.add(m.g);
+    const J={col,g:m.g,glow:m.glow,bm:m.bombs,pos:m.g.position,vel:new V3(),yaw:PI,pitch:0,roll:0,spd:0,thr:0,ground:true,home:{x,z,yaw:PI},bombs:0,bombCD:0,dead:0,arm:0,small:true};
+    J.pos.set(x,1.25,z); J.g.rotation.set(0,PI,0); jets.push(J); } }
+
+/* ---------- the train: runs Tumbleton West ↔ Rangiwai on its own; ride a carriage or drive the locomotive ---------- */
+const TRAIN={xa:-413,v:0,dir:-1,wait:6,ride:null,cars:[],len:0,cross:null,bellT:0};
+const TR_Z=-45, TR_STOP={E:-413,W:-588}, TR_MAX=17;
+function trainSetup(){ const units=[{loco:true,L:15},{L:16},{L:16},{L:16}]; let off=0;
+  for(const u of units){ const g=new THREE.Group(), red='#c8102e', parts=[];
+    if(u.loco){ parts.push({g:BX(2.9,3.2,u.L-1.2,0,2.2,0),c:red},{g:BX(2.95,.5,u.L-1.2,0,1.0,0),c:'#2b2d31'},{g:BX(2.95,.35,u.L-1.2,0,3.7,0),c:'#f2f2f2'},{g:BX(2.6,1.0,2.4,0,2.9,-(u.L/2-1.8)),c:'#2c3e50'},{g:BX(3,1.6,.9,0,1.8,-(u.L/2-.5)),c:'#ffcc33'},{g:BX(1.8,.5,6,0,3.95,1),c:'#5b6068'}); }
+    else { parts.push({g:BX(2.9,3.0,u.L-.8,0,2.1,0),c:'#e9e6df'},{g:BX(2.95,.9,u.L-.8,0,2.5,0),c:'#2c3e50'},{g:BX(2.95,.3,u.L-.8,0,1.3,0),c:red},{g:BX(2.6,.3,u.L-.8,0,3.75,0),c:'#9aa0a6'}); }
+    for(const z of [-(u.L/2-2.5),u.L/2-2.5]) for(const x of [-.7,.7]) parts.push({g:new THREE.CylinderGeometry(.45,.45,.25,12).rotateZ(PI/2).translate(x,.45,z),c:'#2b2d31'});
+    parts.push({g:BX(2.2,.4,u.L-3,0,.7,0),c:'#3a3d42'});
+    const m=new THREE.Mesh(mergeGeos(parts,true),VC); m.castShadow=true; m.receiveShadow=true; g.add(m); g.rotation.y=PI/2; scene.add(g);
+    TRAIN.cars.push({g,L:u.L,off,loco:!!u.loco}); off+=u.L+1; }
+  TRAIN.len=off-1;
+  const arm=()=>{ const a=new THREE.Group(); const bar=new THREE.Mesh(new THREE.BoxGeometry(9,.22,.22).translate(4.5,0,0),lam('#f2f2f2')); a.add(bar); for(let k=0;k<4;k++){ const st=new THREE.Mesh(new THREE.BoxGeometry(1,.24,.24).translate(1.5+k*2,0,0),lam('#e5484d')); a.add(st); } scene.add(a); return a; };
+  const lt=()=>{ const m=new THREE.Mesh(new THREE.SphereGeometry(.22,10,8),new THREE.MeshBasicMaterial({color:0x551111})); scene.add(m); return m; };
+  TRAIN.cross={arms:[arm(),arm()],lights:[lt(),lt(),lt(),lt()]};
+  TRAIN.cross.arms[0].position.set(-341,1.1,TR_Z-6); TRAIN.cross.arms[0].rotation.y=0; TRAIN.cross.arms[1].position.set(-319,1.1,TR_Z+6); TRAIN.cross.arms[1].rotation.y=PI;
+  [[-342.5,TR_Z-6],[-341.5,TR_Z-6],[-318.5,TR_Z+6],[-317.5,TR_Z+6]].forEach(([x,z],i)=>TRAIN.cross.lights[i].position.set(x,2.9,z+(i<2?-.1:.1)));
+  trainPlace(); }
+function trainPlace(){ for(const c of TRAIN.cars){ const cx=TRAIN.xa+c.off+c.L/2; c.g.position.set(cx,0,TR_Z); c.x0=cx-c.L/2; c.x1=cx+c.L/2; } }
+function trainNear(){ if(activeCar||activeHeli||activeJet||player.mode!=='walk'||state.over||!TRAIN.cars.length) return null; const p=player.pos; if(Math.abs(p.z-TR_Z)>4.6||Math.abs(TRAIN.v)>2.5) return null;
+  for(const c of TRAIN.cars) if(p.x>c.x0-1&&p.x<c.x1+1) return c; return null; }
+function trainOn(c){ TRAIN.ride=c.loco?'drive':'pass'; TRAIN.seat=c; player.mode='drive'; player.g.visible=false; player.crouch=false; player.punchT=0; cancelReload(); camYaw=-PI/2; camPitch=.25;
+  flash(c.loco?'Driving the train: W to go, S to brake or reverse, Q for the horn, E to get off':'All aboard! The train leaves the station soon. E to get off'); }
+function trainOff(){ const c=TRAIN.seat; TRAIN.ride=null; TRAIN.seat=null; player.mode='walk'; player.g.visible=true; const x=c?(c.x0+c.x1)/2:player.pos.x; player.pos.set(x,HIP+(Math.abs(x-TR_STOP.E-30)<40||Math.abs(x-TR_STOP.W-30)<40?.9:0),TR_Z+3.6); player.vel.set(0,0,0);
+  if(Math.abs(TRAIN.v)>7){ knock(player,TRAIN.v*.6,4,3,8); damagePlayer(Math.min(25,Math.abs(TRAIN.v))); flash('You jumped off a moving train!'); } camTarget.copy(player.pos); }
+function trainTick(dt){ const T=TRAIN; if(!T.cars.length) return;
+  if(T.ride==='drive'&&!state.cine){ const thr=K('KeyW')-K('KeyS'); if(thr>0) T.v=Math.max(-TR_MAX,Math.min(TR_MAX,T.v+T.dir*2.2*dt)); else if(thr<0){ if(Math.abs(T.v)>.3) T.v-=Math.sign(T.v)*5*dt; else { T.dir=-T.dir; T.v=0; flash(T.dir<0?'Heading west to Rangiwai':'Heading east to Tumbleton West'); } } else T.v-=Math.sign(T.v)*Math.min(Math.abs(T.v),.4*dt); }
+  else { const tgt=T.dir<0?TR_STOP.W:TR_STOP.E, rem=(tgt-T.xa)*T.dir;
+    if(T.wait>0){ T.wait-=dt; T.v=0; if(T.wait<=0&&T.ride==='pass') flash('Doors closing. Next stop: '+(T.dir<0?'Rangiwai':'Tumbleton West')); }
+    else if(rem<=.05){ T.v=0; T.xa=tgt; T.wait=14; T.dir=-T.dir; if(T.ride==='pass') flash('Arrived at '+(T.dir>0?'Rangiwai':'Tumbleton West')+'. E to get off'); }
+    else { const vmax=Math.min(TR_MAX,Math.sqrt(2*1.4*rem)+.5); const sp=Math.min(vmax,Math.abs(T.v)+1.6*dt); T.v=T.dir*sp; } }
+  const nx=clamp(T.xa+T.v*dt,-765,-283-T.len); if(nx!==T.xa+T.v*dt) T.v=0; T.xa=nx; trainPlace();
+  if(Math.abs(T.v)>.5&&(T.hornT=(T.hornT||0)-dt)<=0&&Math.abs(T.xa+T.len/2-player.pos.x)<160&&Math.abs(player.pos.z-TR_Z)<120){ T.hornT=(Math.abs(T.xa+(T.dir<0?0:T.len)+330)<60)?3:20; Snd.horn(T.xa+T.len/2,TR_Z,true); }
+  if(T.ride){ const c=T.seat; player.pos.set((c.x0+c.x1)/2,2.6,TR_Z); if(T.ride==='drive'&&keys.KeyQ&&!T.qH) Snd.horn(player.pos.x,TR_Z,true); T.qH=!!keys.KeyQ; }
+  // the train shoves aside or launches anything on the tracks
+  const xa=T.xa-1, xb=T.xa+T.len+1, sp=Math.abs(T.v);
+  for(const c of cars){ if(Math.abs(c.pos.z-TR_Z)>(c.cr||1)+1.6||c.pos.x<xa-(c.off||1)*1.2||c.pos.x>xb+(c.off||1)*1.2) continue; const side=Math.sign(c.pos.z-TR_Z)||1;
+    if(sp>3){ c.air=true; c.vy=4+sp*.35; c.vel.set(T.v*1.3,0,side*(4+sp*.4)); c.spin+=R(-2,2); vehDmg(c,sp*3.2); if(c.mode==='traffic') c.mode='free'; Snd.crash(c.pos.x,c.pos.z,sp*1.5); if(c===activeCar) state.shake=Math.max(state.shake,.5); }
+    else { c.pos.z=TR_Z+side*((c.cr||1)+1.65); if(c.vel.z*side<0) c.vel.z=0; } }
+  for(const q of people){ if(q.mode==='drive'||Math.abs(q.pos.z-TR_Z)>2||q.pos.x<xa||q.pos.x>xb||q.pos.y>4.5) continue; const side=Math.sign(q.pos.z-TR_Z)||1;
+    if(sp>2.5){ knock(q,T.v*1.2,5+sp*.3,side*6,10,3); if(q.isPlayer) damagePlayer(Math.min(60,sp*4)); else hurt(q,sp>8?4:2); } else q.pos.z=TR_Z+side*2.05; }
+  // the level crossing on SH1: barrier arms come down and lights flash while a train is near
+  const C=T.cross; if(C){ const near=T.xa<-330+40&&T.xa+T.len>-330-40, k=near?1:0; C.k=(C.k||0)+(k-(C.k||0))*Math.min(1,dt*1.5); C.arms[0].rotation.z=(1-C.k)*1.45; C.arms[1].rotation.z=-(1-C.k)*1.45;
+    const fl=near&&Math.floor(perfT*3)%2===0; C.lights.forEach((l,i)=>l.material.color.setHex(near&&((i%2===0)===fl)?0xff2a2a:0x551111));
+    if(near&&(T.bellT-=dt)<=0&&Math.hypot(player.pos.x+330,player.pos.z-TR_Z)<90){ T.bellT=.6; Snd.tink(-330,TR_Z); } } }
+function trainPrompt(){ if(TRAIN.ride==='drive') return '<kbd>W</kbd> go · <kbd>S</kbd> brake / reverse · <kbd>Q</kbd> horn · <kbd>E</kbd> get off'; if(TRAIN.ride) return '<kbd>E</kbd> Get off the train'; const c=trainNear(); return c?(c.loco?'<kbd>E</kbd> Drive the train':'<kbd>E</kbd> Ride the train'):''; }
+function setupCountry(){ try{ trainSetup(); }catch(e){ console.warn('train',e); } try{ setupPlanes(); }catch(e){ console.warn('planes',e); } for(const P of COUNTRY.paddocks) for(let k=0;k<P.n;k++){ const g=animalMesh(P.kind), a={kind:P.kind,P,g,pos:g.position,vel:new V3(),yaw:Math.random()*TAU,t:Math.random()*4,tx:0,tz:0,air:false,down:0,spin:0};
       a.pos.set(P.x0+Math.random()*(P.x1-P.x0),0,P.z0+Math.random()*(P.z1-P.z0)); a.tx=a.pos.x; a.tz=a.pos.z; scene.add(g); ANIMALS.push(a); }
   GREET.country=['Kia ora! Not much happens out here.','Watch out for the sheep on the road.','Zombies are worse past the town, mate.','Best pies in the district, these.'];
   for(const S of COUNTRY.shops.slice(0,6)){ try{ const q=new Person(S.x+(Math.random()-.5)*4,S.z,{}); q.work={x:q.pos.x,z:S.z,y:0,yaw:Math.random()*TAU,kind:'shop',greet:'country'}; q.phase0=Math.random()*5; dressWorker(q,q.work); }catch(e){} }
@@ -3312,7 +3395,7 @@ function setupMotor(){ try{ setupSale(); }catch(e){ console.warn('houses',e); } 
   GREET.cars=['G\'day! Every vehicle comes with a free garage delivery.','Tanks are on special this week. Well, not really.','Have a look around, they don\'t bite.','Need a house first? Check the FOR SALE signs in the suburbs.'];
   GREET.motor=['Drive into a bay and press F.','Left bay for mods, right bay for repairs.','We fix anything that isn\'t a smoking crater.','Zombie rammer? Best money you\'ll ever spend.'];
   try{ for(const site of [0,1]){ const S=SITES[site]; if(!S) continue; const x=lotC(S[0]), z=lotC(S[1]); roadPark(x+10,z+24,site?'digger':'bulldozer'); } }catch(e){ console.warn('site vehicles',e); } }
-function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
+function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
   const c=activeCar;
   if(c&&c.emerg==='fire'&&use){ camera.getWorldDirection(_ewd); let dx=_ewd.x, dy=_ewd.y+.16, dz=_ewd.z; const l=Math.hypot(dx,dy,dz)||1; hoseSpray(nozzleWorld(c),{x:dx/l,y:Math.max(-.35,dy/l),z:dz/l},dt,true); }
   if(c&&c.emerg==='tow'){ if(use&&!c.useW){ if(c.towed){ towRelease(c); flash('Let go of the car'); } else { const h=hookWorld(c); let best=null,bd=4.6;
@@ -3857,7 +3940,9 @@ function gunnerTick(dt){ const av=MP.av.get(MPG.id); if(!MP.on||!av||av.veh!==MP
   const dir=new V3(ex-m.x,ey-m.y,ez-m.z).normalize();
   if(A.hitO){ const o=A.hitO; if(o instanceof Car){ vehDmg(o,2.5); Snd.tink(o.pos.x,o.pos.z); } else { nailHit(o,dir.clone().multiplyScalar(30),2.2,'shot'); if(o.isPerson&&o.zombie&&o.mode==='walk'&&o.hp<=1) knock(o,dir.x*10,4,dir.z*10,6,1); } } else puff(ex,ey,ez,0xb8b0a0,.3,false); }
 function enterExit(){
+  if(TRAIN.ride){ trainOff(); return; }
   if(MPG.id!==null){ gunnerExit(); return; }
+  { const tc=trainNear(); if(tc&&!nearestCar()){ trainOn(tc); return; } }
   if(walkUse()) return;
   if(!activeCar&&!activeHeli&&!activeJet&&player.mode==='walk'&&!state.over){ const av=gunnerFind(); if(av&&!nearestCar()){ gunnerEnter(av); return; } }
   if(activeHeli){ exitHeli(); return; }
@@ -4100,6 +4185,8 @@ function findMenu(){ if(!state.started||state.over||!cfEl.hidden) return; const 
   add('Rangiwai township','Country town out west past State Highway 1 · '+dist(COUNTRY.town.x,COUNTRY.town.z),go(COUNTRY.town.x,COUNTRY.town.z,'Rangiwai is marked. Head west out of the city'));
   add('Hillcrest Farm','Sheep, a big red barn and silos · '+dist(COUNTRY.farmA.x,COUNTRY.farmA.z),go(COUNTRY.farmA.x,COUNTRY.farmA.z,'Hillcrest Farm is marked'));
   add('Riverside Dairy','Cows and maize south of the river · '+dist(COUNTRY.farmB.x,COUNTRY.farmB.z),go(COUNTRY.farmB.x,COUNTRY.farmB.z,'Riverside Dairy is marked'));
+  for(const st of COUNTRY.stations) add(st.name+' station','Catch the train between the city and Rangiwai · '+dist(st.x,st.z),go(st.x,st.z,st.name+' station is marked'));
+  add('Rangiwai Airstrip','Small planes you can fly · '+dist(-720,-130),go(-720,-130,'The airstrip is marked. It\'s past Rangiwai, north of the road'));
   for(const S of SALE) if(!(GAR.h[S.i]&&GAR.h[S.i].own)) add('For sale: '+S.D.name,money(S.D.price)+' · garage for '+S.D.cap+' · '+dist(S.signP.x,S.signP.z),go(S.signP.x,S.signP.z,S.D.name+' is marked. Follow the arrow to the FOR SALE sign'));
   add('Close','',()=>menuDone()); }
 function findStore(){ if(!STORE||!state.started) return; state.wpDest=null; state.shopWpUntil=perfT+45; flash('The Hardware & Arms store is marked. Follow the arrow'); }
@@ -4448,7 +4535,7 @@ function updateHUD(){
   if(zs!==lastZ||state.defeated!==lastD){ lastZ=zs; lastD=state.defeated; zcEl.textContent=zs; zdEl.textContent=state.defeated; zplateEl.hidden=!(zs||state.defeated); }
   let pr='';
   if(state.msgT>0&&state.started&&!state.over) pr=state.msg; else
-  if(state.started){ const stp=jetPrompt()||cranePrompt()||storyPrompt()||storePrompt()||motorPrompt()||sewerPrompt(); if(stp) pr=stp; else if(activeHeli) pr='<kbd>E</kbd> Get out · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>Click</kbd> guns · <kbd>Right-click</kbd> rockets';  else if(player.chute) pr='<kbd>WASD</kbd> steer · <kbd>Space</kbd> cut away';
+  if(state.started){ const stp=jetPrompt()||cranePrompt()||storyPrompt()||storePrompt()||motorPrompt()||trainPrompt()||sewerPrompt(); if(stp) pr=stp; else if(activeHeli) pr='<kbd>E</kbd> Get out · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>Click</kbd> guns · <kbd>Right-click</kbd> rockets';  else if(player.chute) pr='<kbd>WASD</kbd> steer · <kbd>Space</kbd> cut away';
     else if(player.mode==='walk'&&!player.ground&&player.vel.y<-2&&player.pos.y-HIP-groundHeight(player.pos.x,player.pos.z,player.pos.y-HIP)>3.5) pr='<kbd>Space</kbd> Open parachute';
     else if(activeCar) pr=activeCar.boat?'<kbd>W</kbd><kbd>S</kbd> throttle · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>E</kbd> Get out':'<kbd>E</kbd> Get out'; else if(state.downT>0) pr='Knocked out. Heading back to the plaza…'; else if(state.over) pr=''; else if(player.mode==='held') pr=player.heldBy&&!player.heldBy.zombie?'They grabbed you! Brace for the throw…':'A grabber has you! Brace for the throw…'; else if(player.mode==='ragdoll'||player.mode==='getup') pr='Ouch. Getting back up…'; else if(player.immune>0&&people.some(q=>q.zombie)) pr='Back on your feet. Run!'; else if(player.mode==='walk'&&liftNear()){ const n=liftNear(); pr=n.L.v!==0?(n.inside?'Going '+(n.L.v>0?'up':'down')+'…':'Lift is moving…'):Math.abs(n.L.y-n.lvl)>.05?'<kbd>E</kbd> Call the lift':n.inside?'<kbd>E</kbd> Ride the lift '+(n.lvl===0?'up':'down'):'Step into the lift'; } else if(player.mode==='walk'&&nearestHeli()) pr='<kbd>E</kbd> Fly the helicopter'; else if(nearestCar()) pr=nearestCar().boat?'<kbd>E</kbd> Drive this boat':'<kbd>E</kbd> Drive this car'; }
   if(pr!==lastPrompt){ lastPrompt=pr; promptEl.innerHTML=pr; promptEl.hidden=!pr; }
@@ -4627,6 +4714,7 @@ function updateCamera(dt){
   let tx,ty,tz,dist,pitch=camPitch;
   if(!state.started){ tx=player.pos.x+8; ty=player.pos.y+1; tz=player.pos.z-8; dist=24; pitch=.5; if(!reduceMotion) camYaw+=dt*.05; }
   else if(activeHeli){ const H=activeHeli; tx=H.pos.x-Math.cos(camYaw)*3.2; ty=H.pos.y+4.2; tz=H.pos.z+Math.sin(camYaw)*3.2; dist=17; }
+  else if(TRAIN.ride){ tx=player.pos.x; ty=5.5; tz=TR_Z; dist=19; }
   else if(activeCar&&activeCar.tur){ const c=activeCar; tx=c.pos.x; ty=c.pos.y+(c.top||1.9)+(c.tank?1.5:1.25); tz=c.pos.z; dist=c.tank?11:9.5; if(perfT-lastLook>1.1) camPitch+=(.1-camPitch)*Math.min(1,dt*1.5); }
   else if(activeCar){ const c=activeCar; tx=c.pos.x; ty=c.pos.y+1.7; tz=c.pos.z; dist=10;
     if(perfT-lastLook>1.1){ const vf=c.vel.x*Math.sin(c.yaw)+c.vel.z*Math.cos(c.yaw); if(Math.abs(vf)>1.5) camYaw=lerpA(camYaw,c.yaw+(vf<-4?PI:0),Math.min(1,dt*2.6)); camPitch+=(.3-camPitch)*Math.min(1,dt*1.5); } }
@@ -6104,40 +6192,41 @@ function jetMesh(col){ const g=new THREE.Group(), D='#1c1e22', S2=new THREE.Shap
   airRadar=new THREE.Mesh(mergeGeos([{g:BX(3.2,.9,.2,0,.4,0),c:'#e8e8e8'},{g:BX(.2,.6,.6,0,0,-.2),c:'#5b6068'}],true),VC); airRadar.position.set(348.5,32.4,-77.5); scene.add(airRadar);
 })();
 function jetNear(){ if(activeJet||activeCar||activeHeli||activeCrane||player.mode!=='walk'||state.over) return null; for(const J of jets) if(J.dead<=0&&J.ground&&Math.hypot(player.pos.x-J.pos.x,player.pos.z-J.pos.z)<4.6&&Math.abs(player.pos.y-J.pos.y)<3) return J; return null; }
-function jetPrompt(){ if(activeJet) return activeJet.ground?'<kbd>W</kbd> throttle up · <kbd>A</kbd>/<kbd>D</kbd> taxi · look up past 120 km/h to take off · <kbd>E</kbd> get out':'💣 '+activeJet.bombs+'/'+JET_BOMBS+' · Mouse steers · <kbd>W</kbd>/<kbd>S</kbd> throttle · <kbd>Space</kbd>/<kbd>Click</kbd> bomb (red ring = where it lands) · <kbd>E</kbd> bail out';
-  return jetNear()?'<kbd>E</kbd> Climb into the bomber jet':''; }
+function jetPrompt(){ if(activeJet&&activeJet.small) return activeJet.ground?'<kbd>W</kbd> throttle up · <kbd>A</kbd>/<kbd>D</kbd> taxi · look up past 70 km/h to take off · <kbd>E</kbd> get out':'Mouse steers · <kbd>W</kbd>/<kbd>S</kbd> throttle · land gently · <kbd>E</kbd> bail out';
+  if(activeJet) return activeJet.ground?'<kbd>W</kbd> throttle up · <kbd>A</kbd>/<kbd>D</kbd> taxi · look up past 120 km/h to take off · <kbd>E</kbd> get out':'💣 '+activeJet.bombs+'/'+JET_BOMBS+' · Mouse steers · <kbd>W</kbd>/<kbd>S</kbd> throttle · <kbd>Space</kbd>/<kbd>Click</kbd> bomb (red ring = where it lands) · <kbd>E</kbd> bail out';
+  const jn=jetNear(); return jn?(jn.small?'<kbd>E</kbd> Climb into the plane':'<kbd>E</kbd> Climb into the bomber jet'):''; }
 function jetE(){ if(activeJet){ exitJet(); return true; } const J=jetNear(); if(!J) return false;
-  activeJet=J; player.mode='drive'; player.g.visible=false; player.crouch=false; player.punchT=0; cancelReload(); closeChute(false); camYaw=J.yaw; camPitch=.22; J.unmanned=false; J.arm=0; flash('Push W to throttle up. Look up once you pass 120 km/h to take off'); return true; }
+  activeJet=J; player.mode='drive'; player.g.visible=false; player.crouch=false; player.punchT=0; cancelReload(); closeChute(false); camYaw=J.yaw; camPitch=.22; J.unmanned=false; J.arm=0; flash(J.small?'Push W to throttle up. Look up once you pass 70 km/h to take off':'Push W to throttle up. Look up once you pass 120 km/h to take off'); return true; }
 function exitJet(){ const J=activeJet; if(!J) return; activeJet=null; if(bombMark) bombMark.visible=false; player.mode='walk'; player.g.visible=true;
   if(J.ground&&J.spd<10){ const rx=-Math.cos(J.yaw), rz=Math.sin(J.yaw), q=freeSpot(J.pos.x+rx*4,J.pos.z+rz*4,5); player.pos.set(q.x,q.y+HIP,q.z); player.vel.set(0,0,0); J.thr=0; }
   else { player.pos.set(J.pos.x,J.pos.y-1.6,J.pos.z); player.vel.copy(J.vel).multiplyScalar(.35); player.ground=false; J.unmanned=true; flash('You bailed out! Press Space to open your parachute'); }
   camTarget.copy(player.pos); camPitch=.3; }
-function jetBomb(J){ if(!J||J.dead>0) return; if(J.ground){ flash('Take off first!'); return; } if(J.bombCD>0) return; if(J.bombs<=0){ Snd.dry(); flash('Out of bombs. Land and stop to re-arm'); return; }
+function jetBomb(J){ if(!J||J.dead>0||J.small) return; if(J.ground){ flash('Take off first!'); return; } if(J.bombCD>0) return; if(J.bombs<=0){ Snd.dry(); flash('Out of bombs. Land and stop to re-arm'); return; }
   J.bombs--; J.bombCD=.28; const m=new THREE.Mesh(new THREE.CylinderGeometry(.2,.2,1.2,8).rotateX(PI/2),lam('#3b3e44',{roughness:.5})); m.position.set(J.pos.x,J.pos.y-1,J.pos.z); m.rotation.y=J.yaw; scene.add(m);
   BOMBS.push({m,v:J.vel.clone().multiplyScalar(.4).add(_jc.set(0,-6,0)),t:0}); Snd.swing(); }
 function updateBombs(dt){ for(let i=BOMBS.length-1;i>=0;i--){ const b=BOMBS[i], p=b.m.position; b.t+=dt; b.v.y-=G*dt; p.addScaledVector(b.v,dt); b.m.rotation.x=Math.min(1.3,b.t*.8);
     const gh=groundHeight(p.x,p.z,p.y+.5); if(p.y<=gh+.3||solidAt(p.x,p.y,p.z)||b.t>12){ scene.remove(b.m); BOMBS.splice(i,1); explode(p.x,Math.max(p.y,gh+.3),p.z,1.7); mpBoom(p.x,Math.max(p.y,gh+.3),p.z,1.7); state.shake=Math.max(state.shake,.3); } } }
 function jetCrash(J){ explode(J.pos.x,J.pos.y,J.pos.z,1.6); if(activeJet===J) mpBoom(J.pos.x,J.pos.y,J.pos.z,1.6); J.g.visible=false; J.dead=10; J.unmanned=false; J.spd=0;
   if(activeJet===J){ activeJet=null; if(bombMark) bombMark.visible=false; player.mode='walk'; player.g.visible=true; player.pos.set(J.pos.x,Math.max(J.pos.y,groundHeight(J.pos.x,J.pos.z,J.pos.y+2)+1.2),J.pos.z); knock(player,J.vel.x*.25,10,J.vel.z*.25,10); damagePlayer(35); camTarget.copy(player.pos); flash('Crashed! A new jet will be waiting in the hangar'); } }
-function jetRespawn(J){ J.pos.set(J.home.x,1.25,J.home.z); J.yaw=0; J.pitch=0; J.roll=0; J.spd=0; J.thr=0; J.ground=true; J.bombs=JET_BOMBS; J.vel.set(0,0,0); J.g.visible=true; }
+function jetRespawn(J){ J.pos.set(J.home.x,1.25,J.home.z); J.yaw=J.home.yaw||0; J.pitch=0; J.roll=0; J.spd=0; J.thr=0; J.ground=true; J.bombs=JET_BOMBS; J.vel.set(0,0,0); J.g.visible=true; }
 function updateJet(J,dt){ if(J.dead>0){ J.dead-=dt; if(J.dead<=0) jetRespawn(J); return; }
   const op=activeJet===J&&!state.cine;
   if(op){ J.thr=clamp(J.thr+(K('KeyW')-K('KeyS'))*dt*.55,0,1); } else if(J.unmanned) J.thr=.75; else if(J.ground) J.thr=Math.max(0,J.thr-dt*.5);
   if(!J.ground) J.thr=Math.max(J.thr,.38);
-  const tgt=J.thr*88; J.spd+=(tgt-J.spd)*Math.min(1,dt*(J.spd<tgt?.42:.3)); if(J.ground&&op&&K('KeyS')&&J.spd>0) J.spd=Math.max(0,J.spd-dt*16);
+  const tgt=J.thr*(J.small?52:88); J.spd+=(tgt-J.spd)*Math.min(1,dt*(J.spd<tgt?.42:.3)); if(J.ground&&op&&K('KeyS')&&J.spd>0) J.spd=Math.max(0,J.spd-dt*16);
   if(J.ground){ J.yaw+=(op?K('KeyA')-K('KeyD'):0)*dt*Math.min(1,.3+J.spd/18)*(J.spd>.5?1:0); J.pitch=0; J.roll*=1-Math.min(1,dt*4);
     if(op) camYaw=lerpA(camYaw,J.yaw,Math.min(1,dt*1.5));
-    if(op&&J.spd>33&&camPitch<.02){ J.ground=false; J.pitch=.12; flash('Airborne! Space or click drops a bomb'); } }
+    if(op&&J.spd>(J.small?19:33)&&camPitch<.02){ J.ground=false; J.pitch=.12; flash(J.small?'Airborne! Steer with the mouse. Land gently on a flat road or field':'Airborne! Space or click drops a bomb'); } }
   else { let dy, dp; if(op){ camYaw+=(K('KeyA')-K('KeyD'))*dt*.8; dy=wrapA(camYaw-J.yaw); dp=clamp(-(camPitch-.22)*1.2,-.8,.8)-J.pitch; } else { dy=.15; dp=-.3-J.pitch; }
-    J.yaw+=clamp(dy,-1,1)*.66*dt; J.pitch=clamp(J.pitch+clamp(dp,-1,1)*.62*dt,-.75,.75); J.roll+=(clamp(dy*1.4,-.8,.8)-J.roll)*Math.min(1,dt*1.8); }
+    const tr=J.small?1.05:.66; J.yaw+=clamp(dy,-1,1)*tr*dt; J.pitch=clamp(J.pitch+clamp(dp,-1,1)*(J.small?.85:.62)*dt,-.75,.75); J.roll+=(clamp(dy*1.4,-.8,.8)-J.roll)*Math.min(1,dt*1.8); }
   _jf.set(Math.sin(J.yaw)*Math.cos(J.pitch),Math.sin(J.pitch),Math.cos(J.yaw)*Math.cos(J.pitch)); J.vel.copy(_jf).multiplyScalar(J.spd); if(J.ground) J.vel.y=0;
   J.pos.addScaledVector(J.vel,dt); const gh=groundHeight(J.pos.x,J.pos.z,J.pos.y)+1.25;
   if(J.ground){ J.pos.y=gh; } else if(J.pos.y<gh){ if(J.vel.y<-9||J.pitch<-.32||J.unmanned){ jetCrash(J); return; } J.ground=true; J.pos.y=gh; J.pitch=0; flash('Touchdown!'); }
   if(J.spd>10&&(solidAt(J.pos.x+_jf.x*4,J.pos.y+_jf.y*4,J.pos.z+_jf.z*4)||solidAt(J.pos.x,J.pos.y+.4,J.pos.z))){ if(J.ground&&J.spd<22){ J.spd=0; J.thr=0; } else { jetCrash(J); return; } }
-  if(J.pos.y>450) J.pitch=Math.min(J.pitch,0); if(Math.abs(J.pos.x-60)>700||Math.abs(J.pos.z)>700){ J.yaw+=dt*1.2; if(op) camYaw+=dt*1.2; }
+  if(J.pos.y>450) J.pitch=Math.min(J.pitch,0); if(!J.ground&&(J.pos.x<-820||J.pos.x>760||Math.abs(J.pos.z)>700)){ J.yaw+=dt*1.2; if(op) camYaw+=dt*1.2; }
   J.bombCD-=dt; if(op&&keys.Space&&!J.spHeld&&!J.ground) jetBomb(J); J.spHeld=!!keys.Space;
-  if(J.ground&&J.spd<3&&!J.unmanned){ J.arm+=dt; if(J.arm>2&&J.bombs<JET_BOMBS){ J.bombs=JET_BOMBS; if(op) flash('Bombs re-armed'); } } else J.arm=0;
-  J.g.rotation.set(-J.pitch,J.yaw,J.roll,'YXZ'); J.glow.scale.set(1,1,.4+J.thr*1.6); J.glow.visible=J.thr>.05; J.bm.forEach((b,k)=>b.visible=k<J.bombs); }
+  if(J.ground&&J.spd<3&&!J.unmanned&&!J.small){ J.arm+=dt; if(J.arm>2&&J.bombs<JET_BOMBS){ J.bombs=JET_BOMBS; if(op) flash('Bombs re-armed'); } } else J.arm=0;
+  J.g.rotation.set(-J.pitch,J.yaw,J.roll,'YXZ'); if(J.small){ J.glow.rotation.z+=dt*(6+J.thr*70); } else { J.glow.scale.set(1,1,.4+J.thr*1.6); J.glow.visible=J.thr>.05; } J.bm.forEach((b,k)=>b.visible=k<J.bombs); }
 let bombMark=null;
 function jetMarker(){ const J=activeJet; if(!bombMark){ bombMark=new THREE.Mesh(new THREE.RingGeometry(3,4.4,28).rotateX(-PI/2),new THREE.MeshBasicMaterial({color:0xff4030,transparent:true,opacity:.8,depthWrite:false})); bombMark.renderOrder=5; scene.add(bombMark); }
   if(!J||J.ground||J.dead>0||state.cine){ bombMark.visible=false; return; } const vx=J.vel.x*.4, vy=J.vel.y*.4-6, vz=J.vel.z*.4; let x=J.pos.x, y=J.pos.y-1, z=J.pos.z, t=0, v=vy;
