@@ -4907,7 +4907,7 @@ addEventListener('keydown',e=>{
   else if(c==='Escape'&&!locked&&performance.now()-unlockT>400) openSettings();
   else if(c==='KeyJ'){ e.preventDefault(); mpOpen(); }
   else if(c==='Enter'&&MP.on){ e.preventDefault(); mpChatStart(); }
-  else if(c==='KeyU'){ for(const k of WORDER) state.owned[k]=true; for(const k in AMMO) state.ammo[k]={mag:AMMO[k].mag,res:AMMO[k].tot-AMMO[k].mag}; if(!activeCar&&!activeHeli) equip('ak47'); save(); flash('Testing: every weapon unlocked and all ammo filled. Press Q to switch'); }
+  else if(c==='KeyU'){ for(const k of WORDER) state.owned[k]=true; for(const k in AMMO) state.ammo[k]={mag:AMMO[k].mag,res:AMMO[k].tot-AMMO[k].mag}; if(!activeCar&&!activeHeli) equip('ak47'); state.money+=1000000; save(); flash('Testing: +$1,000,000, every weapon unlocked and all ammo filled. Press Q to switch'); }
   else if(c==='KeyZ'){ if(mpClient()) flash('Only the server\'s host can start zombie waves'); else if(!state.surv.on) toggle('zwave'); }
   else if(c==='KeyP'){ if(state.resetArm>0){ hardRestart(); } else { state.resetArm=3; flash('Press P again to restart from nothing. All cash, weapons and builds will be lost'); } }
   else if(c==='KeyK') toggleGfx();
