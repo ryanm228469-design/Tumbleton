@@ -3457,7 +3457,7 @@ const VNAME={}; for(const [v,n] of VEH_SHOP) VNAME[v]=n; VNAME.jetski='Jet ski';
 const HOUSES=[{name:'Kōwhai Cottage',price:4000,cap:2},{name:'Rimu Family Home',price:12000,cap:3},{name:'Tōtara House',price:30000,cap:4},{name:'Pōhutukawa Mansion',price:75000,cap:6}];
 const MODS=[['ram','Zombie rammer',2500,'Spiked plough on the front. People and zombies go flying and the car hardly slows down'],['bump','Crash bumpers',1500,'Steel bars front and back. Crashes do 60% less damage'],['armor','Armour plating',4000,'Metal plates and window bars. Bullets, blasts and bites do half damage'],['nitro','Nitro boost',3000,'Hold Shift for a burst of speed (refills by itself)'],['gun','Roof gun',8000,'A machine gun on the roof. Aim with the mouse, click or F to shoot']];
 const GAR={h:{},cars:[],n:1}; const GAR_KEY='tumbleton-garage';
-try{ const q=JSON.parse(localStorage.getItem(GAR_KEY)||'null'); if(q){ if(q.h&&typeof q.h==='object') for(const k in q.h){ const o=q.h[k]; if(o&&o.own) GAR.h[k]={own:true,cap:clamp(o.cap|0,1,12),arm:!!o.arm,med:!!o.med,sentry:!!o.sentry,heli:!!o.heli,tramp:!!o.tramp,fence:!!o.fence}; }
+try{ const q=JSON.parse(localStorage.getItem(GAR_KEY)||'null'); if(q){ if(q.h&&typeof q.h==='object') for(const k in q.h){ const o=q.h[k]; if(o&&o.own) GAR.h[k]={own:true,cap:clamp(o.cap|0,1,12),arm:!!o.arm,med:!!o.med,sentry:!!o.sentry,heli:!!o.heli,tramp:!!o.tramp,fence:!!o.fence,sentryN:clamp((o.sentryN|0)||(o.sentry?1:0),0,4),sentries:Array.isArray(o.sentries)?o.sentries.slice(0,4).filter(p=>p&&isFinite(p.x)&&isFinite(p.z)&&Math.abs(p.x)<22&&Math.abs(p.z)<22).map(p=>({x:+p.x,z:+p.z,y:clamp(+p.y||0,0,30)})):null}; }
   if(Array.isArray(q.cars)) for(const e of q.cars.slice(0,40)) if(e&&VNAME[e.v]) GAR.cars.push({id:GAR.n++,v:e.v,col:/^#[0-9a-fA-F]{6}$/.test(e.col)?e.col:'#3a86ff',mods:Object.assign({},e.mods||{}),out:false}); } }catch(e){}
 function garSave(){ try{ localStorage.setItem(GAR_KEY,JSON.stringify({h:GAR.h,cars:GAR.cars.map(e=>({v:e.v,col:e.col,mods:e.mods}))})); }catch(e){} }
 const garCap=()=>{ let n=0; for(const k in GAR.h) if(GAR.h[k].own) n+=GAR.h[k].cap; return n; };
@@ -3549,8 +3549,13 @@ function portalMenu(S){ const h=GAR.h[S.i], add=menuOpen(S.D.name+' · garage '+
   if(h.med) add('Medical bay: heal','Back to full health',()=>{ state.hp=100; menuDone('Fully healed'); });
   else add('Medical bay · '+money(2500),'Heal to full health here, any time',()=>{ if(state.money<2500){ menuDone('Not enough cash'); return; } state.money-=2500; save(); h.med=true; garSave(); menuDone('Medical bay built'); },'',state.money<2500);
   menuHead('Yard upgrades');
-  const UP=[['sentry','Sentry gun',12000,'Shoots zombies that come near your house'],['fence','Electric fence',6000,'Zombies that get onto your property get zapped back out'],['tramp','Trampoline',1500,'Bounce sky high in your yard'],['heli','Helipad and helicopter',25000,'Your own helicopter, waiting in the yard (comes back if it gets wrecked)']];
-  for(const [k,n,pr,d] of UP){ if(h[k]){ add(n+' ✓',d+' · built',()=>menuDone(n+' is already built'),''); continue; } const spot=k==='fence'||homeSpot(S,k); add(n+' · '+money(pr),spot?d:'No room for it on this property',()=>{ if(state.money<pr){ menuDone('Not enough cash'); return; } state.money-=pr; save(); h[k]=true; garSave(); homeUpBuild(S); menuDone(n+' built!'); },'',state.money<pr||!spot); }
+  { const n=h.sentryN||0, placed=(h.sentries||[]).length;
+    if(n<4) add('Sentry gun ('+n+'/4) · '+money(12000),'Shoots zombies that come near. You choose where it goes',()=>{ if(state.money<12000){ menuDone('Not enough cash'); return; } state.money-=12000; save(); h.sentryN=n+1; garSave(); sentryPlace(S); menuDone('Walk to where you want the sentry gun and press E to put it there'); },'',state.money<12000);
+    else add('Sentry guns (4/4) ✓','You have the most sentry guns allowed',()=>menuDone('That\'s the maximum of 4 sentry guns'),'');
+    if(placed<n) add('Place your sentry gun ('+(n-placed)+' waiting)','Walk to a spot on your property and press E',()=>{ sentryPlace(S); menuDone('Walk to where you want it and press E'); },'pick-go');
+    else if(n>0) add('Move your sentry guns','Pick them all up and put them somewhere new',()=>{ h.sentries=[]; garSave(); homeUpBuild(S); sentryPlace(S); menuDone('Walk to each spot and press E to put the sentry guns down'); },''); }
+  const UP=[['fence','Electric fence',6000,'Zombies that touch the fence get electrocuted'],['tramp','Trampoline',1500,'Bounce sky high in your yard'],['heli','Rooftop helipad and helicopter',25000,'A helipad on your roof with stairs up to it, and your own helicopter']];
+  for(const [k,n,pr,d] of UP){ if(h[k]){ add(n+' ✓',d+' · built',()=>menuDone(n+' is already built'),''); continue; } const spot=k==='fence'||(k==='heli'?roofPlan(S):homeSpot(S,k)); add(n+' · '+money(pr),spot?d:'No room for it on this property',()=>{ if(state.money<pr){ menuDone('Not enough cash'); return; } state.money-=pr; save(); h[k]=true; garSave(); homeUpBuild(S); menuDone(n+' built!'); },'',state.money<pr||!spot); }
   add('Close','',()=>menuDone()); }
 function garFind(){ let best=null,bd=1e9; for(const S of SALE){ if(!(GAR.h[S.i]&&GAR.h[S.i].own)) continue; const d=Math.hypot(S.padP.x-player.pos.x,S.padP.z-player.pos.z); if(d<bd){ bd=d; best=S; } } return best; }
 function spawnOwned(e,x,z,yaw,mode){ const c=new Car(x,z,yaw,mode||'free',{variant:e.v,color:e.col}); c.gid=e.id; e.out=true; c.mods={}; applyMods(c,e.mods||{}); return c; }
@@ -3865,36 +3870,81 @@ function setupJobs(){ for(const b of JOB.boards){ const g=new THREE.Group(); for
   try{ const q=JSON.parse(localStorage.getItem('tumbleton-tt')||'null'); if(q){ TT.best=+q.best||null; TT.medal=clamp(q.medal|0,0,3); } }catch(e){} JOB.built=true; }
 function jobPrompt(){ const b=jobBoardNear(); return b?'<kbd>E</kbd> Courier jobs'+(JOB.on?' (one in progress)':''):''; }
 
-/* ---------- Stage 9: yard upgrades for your houses: sentry gun, electric fence, trampoline, helipad with your own helicopter ---------- */
-const HOMEUP={sz:{sentry:[2.4,2.4,7],tramp:[4.4,4.4,6],heli:[13,13,12]}};
+/* ---------- Stage 9: yard upgrades: up to 4 sentry guns you place yourself, an electric fence, a trampoline, a rooftop helipad with stairs ---------- */
+const HOMEUP={sz:{tramp:[4.4,4.4,6]},place:null,ghost:null};
+const PROPGAP={0:[7,12.5],1:[7,14],2:[7,16.5],3:[9,-16]};
 function homeSpot(S,k){ S.spots=S.spots||{}; if(S.spots[k]!==undefined) return S.spots[k]; const [w,d,hy]=HOMEUP.sz[k], E=BLOCK/2-.5, cx=S.cx, cz=S.cz, taken=Object.values(S.spots).filter(Boolean);
   const bad=(x,z)=>{ if(Math.abs(groundHeight(x,z))>.2) return true; for(const y of [.3,1.2,2.5,4,hy]) if(solidAt(x,y,z)) return true; if(Math.hypot(x-S.padP.x,z-S.padP.z)<5.5||Math.hypot(x-S.signP.x,z-S.signP.z)<3) return true;
     const lx=x-cx, lz=z-cz; if(Math.abs(lx)<6&&lz>E-16) return true; const px=S.padP.x-cx, pz=S.padP.z-cz; if(lx>Math.min(0,px)-5&&lx<Math.max(0,px)+5&&lz>pz-5) return true; if(S.portal&&Math.hypot(x-S.portal.x,z-S.portal.z)<6) return true;
     for(const t of taken) if(Math.abs(x-t.x)<(w+t.w)/2+1&&Math.abs(z-t.z)<(d+t.d)/2+1) return true; return false; };
   let res=null; for(let gz=-E+1.5+d/2;gz<=E-1.5-d/2&&!res;gz+=1) for(let gx=-E+1.5+w/2;gx<=E-1.5-w/2&&!res;gx+=1){ const x=cx+gx, z=cz+gz; let ok=true; for(let a=-w/2;a<=w/2&&ok;a+=w/4) for(let b=-d/2;b<=d/2&&ok;b+=d/4) if(bad(x+a,z+b)) ok=false; if(ok) res={x,z,w,d}; }
-  S.spots[k]=res; return res; }
+  S.spots[k]=res; S.bad=bad; return res; }
+// the house's footprint and height, from its collision boxes
+function houseBox(S){ if(S.hb) return S.hb; const c=cellAt(S.cx,S.cz), E=BLOCK/2-.5; let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9,mh=0; for(let i=0;i<(c.sb||c.b.length);i++){ const b=c.b[i]; if(b.x1-S.cx<-E||b.x0-S.cx>E||b.z1-S.cz<-E||b.z0-S.cz>E||b.h<3.9) continue; x0=Math.min(x0,b.x0); x1=Math.max(x1,b.x1); z0=Math.min(z0,b.z0); z1=Math.max(z1,b.z1); mh=Math.max(mh,b.h); }
+  S.hb={x0,x1,z0,z1,mh}; return S.hb; }
+// rooftop helipad: a deck over the house, a switchback stair tower in the yard, and a walkway between them
+function roofPlan(S){ if(S.roof!==undefined) return S.roof; homeSpot(S,'tramp'); const hb=houseBox(S), H=Math.round((hb.mh+3.2)*2)/2, n=Math.ceil(H/2.4), hs=H/n, L=4, len=L+2.4, wid=5.2, E=BLOCK/2-.5;
+  const pcx=(hb.x0+hb.x1)/2, pcz=(hb.z0+hb.z1)/2; let best=null;
+  for(const ori of ['x','z']) for(let a=-E+1;a<=E-1;a+=1) for(let b=-E+1;b<=E-1;b+=1){ const w=ori==='x'?len:wid, d=ori==='x'?wid:len, x=S.cx+a, z=S.cz+b; if(Math.abs(a)+w/2>E-1||Math.abs(b)+d/2>E-1) continue;
+    let ok=true; for(let u=-w/2;u<=w/2&&ok;u+=w/4) for(let v=-d/2;v<=d/2&&ok;v+=d/4){ const px=x+u, pz=z+v; if(S.bad(px,pz)) ok=false; else for(const y of [6,H-1]) if(solidAt(px,y,pz)) ok=false; } if(!ok) continue;
+    const gx=Math.max(hb.x0-x-w/2,x-w/2-hb.x1,0), gz=Math.max(hb.z0-z-d/2,z-d/2-hb.z1,0), dist=Math.hypot(gx,gz); if(!best||dist<best.dist) best={x,z,ori,w,d,dist}; }
+  if(!best){ S.roof=null; return null; } S.roof={H,n,hs,L,tower:best,pad:{x:pcx,z:pcz}}; return S.roof; }
+function buildRoof(S,g){ const R=roofPlan(S); if(!R) return; const T=R.tower, conc=lam('#9aa0a6',{roughness:.8}), deckM=lam('#5b6168',{roughness:.7}), yel=lam('#ffd166'), rail=lam('#d9d9d9',{metalness:.3});
+  const box=(x0,x1,y0,y1,z0,z1,m,col)=>{ const b=new THREE.Mesh(new THREE.BoxGeometry(x1-x0,y1-y0,z1-z0),m); b.position.set((x0+x1)/2,(y0+y1)/2,(z0+z1)/2); b.castShadow=true; g.add(b); if(col) pushB({x0,x1,z0,z1,y0,h:y1}); };
+  const P=R.pad, H=R.H, h2=6.8; box(P.x-h2,P.x+h2,H-.35,H,P.z-h2,P.z+h2,deckM,true); g.add(new THREE.Mesh(new THREE.CylinderGeometry(6,6,.06,28).translate(P.x,H+.03,P.z),lam('#7d8288')));
+  for(const [w,d,dx] of [[.9,4.6,-1.4],[.9,4.6,1.4],[2,.9,0]]) g.add(new THREE.Mesh(new THREE.BoxGeometry(w,.06,d).translate(P.x+dx,H+.07,P.z),yel));
+  for(const dx of [-h2+.4,h2-.4]) for(const dz of [-h2+.4,h2-.4]) box(P.x+dx-.25,P.x+dx+.25,0,H-.35,P.z+dz-.25,P.z+dz+.25,conc,false);
+  for(const [x0,x1,z0,z1] of [[-h2,h2,-h2,-h2+.1],[-h2,h2,h2-.1,h2],[-h2,-h2+.1,-h2,h2],[h2-.1,h2,-h2,h2]]) box(P.x+x0,P.x+x1,H,H+1,P.z+z0,P.z+z1,rail,false);
+  // the stair tower: flights go back and forth with landings at each end
+  const ux=T.ori==='x', W=(u,v)=>ux?[T.x-T.w/2+u,T.z-T.d/2+v]:[T.x-T.w/2+v,T.z-T.d/2+u], rotUp=ux?0:-PI/2, rotDn=ux?PI:PI/2;
+  for(let k=0;k<R.n;k++){ const even=k%2===0, lane=even?1.3:3.9, [x,z]=W(1.2+R.L/2,lane); addRamp(x,z,even?rotUp:rotDn,R.L,R.hs,2.4,false,k*R.hs,true); }
+  for(let j=1;j<=R.n;j++){ const far=j%2===1, u0=far?1.2+R.L:0, u1=u0+1.2, [ax,az]=W(u0,0), [bx,bz]=W(u1,5.2); box(Math.min(ax,bx),Math.max(ax,bx),j*R.hs-.3,j*R.hs,Math.min(az,bz),Math.max(az,bz),deckM,true); const [cx,cz]=W((u0+u1)/2,2.6); box(cx-.15,cx+.15,0,j*R.hs-.3,cz-.15,cz+.15,conc,false); }
+  // walkway from the top landing to the deck
+  const far=R.n%2===1, [tx,tz]=W(far?1.8+R.L:.6,2.6); const ex=clamp(tx,P.x-h2+1,P.x+h2-1), ez=clamp(tz,P.z-h2+1,P.z+h2-1);
+  { const sx=Math.sign(ex-tx)||1, sz=Math.sign(ez-tz)||1, s1=Math.abs(tx-ex)>.1, s2=Math.abs(tz-ez)>.1, w=1.3, X0=P.x-h2, X1=P.x+h2, Z0=P.z-h2, Z1=P.z+h2;
+    const rl=(x0,x1,z0,z1)=>{ if(x1-x0>z1-z0){ if(z1>Z0&&z0<Z1){ if(x0<X0) x1=Math.min(x1,X0); else if(x1>X1) x0=Math.max(x0,X1); else return; } } else { if(x1>X0&&x0<X1){ if(z0<Z0) z1=Math.min(z1,Z0); else if(z1>Z1) z0=Math.max(z0,Z1); else return; } } if(x1-x0>.3||z1-z0>.3) box(x0,x1,H,H+1.1,z0,z1,rail,true); };
+    if(s1){ box(Math.min(tx,ex)-w,Math.max(tx,ex)+w,H-.3,H,tz-w,tz+w,deckM,true); const zF=tz-sz*w; rl(Math.min(tx,ex)-w,Math.max(tx,ex)+w,zF-.06,zF+.06); if(!s2){ const zN=tz+sz*w; rl(Math.min(tx,ex)-w,Math.max(tx,ex)+w,zN-.06,zN+.06); } }
+    if(s2){ box(ex-w,ex+w,H-.3,H,Math.min(tz,ez)-w,Math.max(tz,ez)+w,deckM,true); const xF=ex+sx*w; rl(xF-.06,xF+.06,Math.min(tz,ez)-w,Math.max(tz,ez)+w); if(!s1){ const xN=ex-sx*w; rl(xN-.06,xN+.06,Math.min(tz,ez)-w,Math.max(tz,ez)+w); } } }
+  S.pad={x:P.x,z:P.z,y:H}; }
 function homeUpBuild(S){ const h=GAR.h[S.i]; if(S.upG){ scene.remove(S.upG); disposeTree(S.upG); } if(!h||!h.own) return; const g=new THREE.Group(); S.upG=g; scene.add(g);
-  const E=BLOCK/2-.5; if(h.fence){ const parts=[]; for(const [x0,x1,z0,z1] of [[-E,E,-E,-E+.5],[-E,-E+.5,-E,E],[E-.5,E,-E,E],[-E,-6,E-.5,E],[6,E,E-.5,E]]) for(const y of [1.9,2.3]) parts.push({g:new THREE.BoxGeometry(x1-x0,.05,z1-z0).translate(S.cx+(x0+x1)/2,y,S.cz+(z0+z1)/2),c:'#ffd166'});
-    for(let k=-E;k<=E;k+=6) for(const [x,z] of [[k,-E+.25],[-E+.25,k],[E-.25,k]]) parts.push({g:new THREE.BoxGeometry(.12,1.4,.12).translate(S.cx+x,1.7,S.cz+z),c:'#2b2d31'}); g.add(new THREE.Mesh(mergeGeos(parts,true),VC));
-    const sg=new THREE.Mesh(new THREE.PlaneGeometry(2.2,.8),signMat([['⚡ ELECTRIC FENCE',40]],'#ffd166','#111111',512,128)); sg.position.set(S.cx+8,1.3,S.cz+E+.05); g.add(sg); }
+  const E=BLOCK/2-.5, gap=PROPGAP[S.i]||[7,12]; S.fenceSegs=[[-E,-E,E,-E],[-E,-E,-E,E],[E,-E,E,E]]; { const ops=[[-gap[0]/2,gap[0]/2],[gap[1]-3,gap[1]+3]].sort((a,b)=>a[0]-b[0]); let x=-E; for(const [a,b] of ops){ if(a>x) S.fenceSegs.push([x,E,a,E]); x=Math.max(x,b); } if(x<E) S.fenceSegs.push([x,E,E,E]); }
+  if(h.fence){ const parts=[]; for(const [ax,az,bx,bz] of S.fenceSegs){ const x0=Math.min(ax,bx), x1=Math.max(ax,bx), z0=Math.min(az,bz), z1=Math.max(az,bz); for(const y of [1.9,2.3]) parts.push({g:new THREE.BoxGeometry(Math.max(.06,x1-x0),.05,Math.max(.06,z1-z0)).translate(S.cx+(x0+x1)/2,y,S.cz+(z0+z1)/2),c:'#ffd166'});
+      const L=Math.hypot(bx-ax,bz-az); for(let t=0;t<=L;t+=5){ const f=L?t/L:0; parts.push({g:new THREE.BoxGeometry(.12,1.4,.12).translate(S.cx+ax+(bx-ax)*f,1.7,S.cz+az+(bz-az)*f),c:'#2b2d31'}); } } g.add(new THREE.Mesh(mergeGeos(parts,true),VC));
+    const sg=new THREE.Mesh(new THREE.PlaneGeometry(2.2,.8),signMat([['⚡ ELECTRIC FENCE',40]],'#ffd166','#111111',512,128)); sg.position.set(S.cx+gap[0]/2+2,1.3,S.cz+E+.3); g.add(sg); }
   if(h.tramp){ const p=homeSpot(S,'tramp'); if(p){ const parts=[{g:new THREE.CylinderGeometry(2,2,.08,24).translate(0,.95,0),c:'#1c1d20'},{g:new THREE.TorusGeometry(2.05,.12,6,24).rotateX(PI/2).translate(0,.95,0),c:'#2f80ed'}]; for(let k=0;k<6;k++){ const a=k/6*TAU; parts.push({g:new THREE.CylinderGeometry(.06,.06,.95,6).translate(Math.cos(a)*1.9,.47,Math.sin(a)*1.9),c:'#9aa0a6'}); }
     const m=new THREE.Mesh(mergeGeos(parts,true),VC); m.position.set(p.x,0,p.z); g.add(m); S.tramp=p; } }
-  if(h.sentry){ const p=homeSpot(S,'sentry'); if(p){ const base=new THREE.Mesh(mergeGeos([{g:new THREE.CylinderGeometry(.5,.7,2.6,10).translate(0,1.3,0),c:'#5b6168'},{g:new THREE.BoxGeometry(1.4,.2,1.4).translate(0,.1,0),c:'#3b3d42'}],true),VC); base.position.set(p.x,0,p.z); g.add(base);
-    const head=new THREE.Group(); head.add(new THREE.Mesh(mergeGeos([{g:new THREE.BoxGeometry(1,.7,1.2).translate(0,0,0),c:'#3d4a2a'},{g:new THREE.CylinderGeometry(.09,.09,1.5,8).rotateX(PI/2).translate(.18,0,.9),c:'#1b1b1b'},{g:new THREE.CylinderGeometry(.09,.09,1.5,8).rotateX(PI/2).translate(-.18,0,.9),c:'#1b1b1b'},{g:new THREE.BoxGeometry(.3,.2,.1).translate(0,.2,.62),c:'#e5484d'}],true),VC)); head.position.set(p.x,2.95,p.z); g.add(head);
-    S.sentry={x:p.x,z:p.z,head,pos:new V3(p.x,2.5,p.z),yaw:0,shootCD:0}; AIR.boxes.push({x0:p.x-.7,x1:p.x+.7,z0:p.z-.7,z1:p.z+.7,y0:0,h:2.6}); } }
-  if(h.heli){ const p=homeSpot(S,'heli'); if(p){ g.add(new THREE.Mesh(new THREE.CylinderGeometry(6,6,.1,28).translate(p.x,.08,p.z),lam('#8d9093',{roughness:.9}))); const H=lam('#ffd166'); g.add(new THREE.Mesh(new THREE.BoxGeometry(.9,.06,4.6).translate(p.x-1.4,.14,p.z),H),new THREE.Mesh(new THREE.BoxGeometry(.9,.06,4.6).translate(p.x+1.4,.14,p.z),H),new THREE.Mesh(new THREE.BoxGeometry(2,.06,.9).translate(p.x,.14,p.z),H));
-    S.pad={x:p.x,z:p.z}; if(!S.heli||!helis.includes(S.heli)) homeHeli(S); } } }
-function homeHeli(S){ try{ const H=new Heli(S.pad.x,0,S.pad.z,0,'#c9a24a'); H.homeOwned=true; S.heli=H; S.heliT=0; }catch(e){ console.warn('home heli',e); } }
+  S.sentries=[]; if(h.sentryN&&!h.sentries) h.sentries=[];
+  for(const p of (h.sentries||[])){ const x=S.cx+p.x, z=S.cz+p.z, y=p.y||0, base=new THREE.Mesh(sentryGeo(),VC); base.position.set(x,y,z); g.add(base); const head=sentryHead(); head.position.set(x,y+2.95,z); g.add(head); S.sentries.push({x,z,y,head,pos:new V3(x,y+2.5,z),yaw:0,shootCD:0,scan:0}); }
+  if(h.heli){ buildRoof(S,g); if(S.pad&&(!S.heli||!helis.includes(S.heli))) homeHeli(S); } }
+let _sgB=null, _sgH=null;
+function sentryGeo(){ if(!_sgB){ _sgB=mergeGeos([{g:new THREE.CylinderGeometry(.5,.7,2.6,10).translate(0,1.3,0),c:'#5b6168'},{g:new THREE.BoxGeometry(1.4,.2,1.4).translate(0,.1,0),c:'#3b3d42'}],true); _sgB.userData.keep=true; } return _sgB; }
+function sentryHead(){ if(!_sgH){ _sgH=mergeGeos([{g:new THREE.BoxGeometry(1,.7,1.2),c:'#3d4a2a'},{g:new THREE.CylinderGeometry(.09,.09,1.5,8).rotateX(PI/2).translate(.18,0,.9),c:'#1b1b1b'},{g:new THREE.CylinderGeometry(.09,.09,1.5,8).rotateX(PI/2).translate(-.18,0,.9),c:'#1b1b1b'},{g:new THREE.BoxGeometry(.3,.2,.1).translate(0,.2,.62),c:'#e5484d'}],true); _sgH.userData.keep=true; } const gr=new THREE.Group(); gr.add(new THREE.Mesh(_sgH,VC)); return gr; }
+// choosing where a sentry gun goes
+function sentryPlace(S){ HOMEUP.place=S; if(!HOMEUP.ghost){ const g=new THREE.Group(), mt=new THREE.MeshBasicMaterial({color:0x3cff8f,transparent:true,opacity:.45,depthWrite:false}); g.add(new THREE.Mesh(new THREE.CylinderGeometry(.6,.7,3.2,10).translate(0,1.6,0),mt)); g.add(new THREE.Mesh(new THREE.RingGeometry(1,1.3,24).rotateX(-PI/2).translate(0,.08,0),mt)); g.userData.mt=mt; scene.add(g); HOMEUP.ghost=g; } HOMEUP.ghost.visible=true; }
+function sentrySpot(){ const S=HOMEUP.place; if(!S) return null; const fx=Math.sin(player.yaw), fz=Math.cos(player.yaw), x=player.pos.x+fx*1.8, z=player.pos.z+fz*1.8, y=Math.max(0,player.pos.y-HIP), lx=x-S.cx, lz=z-S.cz, E=BLOCK/2-.5;
+  let why=''; if(Math.abs(lx)>E-1||Math.abs(lz)>E-1) why='It has to go inside your property'; else if(Math.abs(groundHeight(x,z,y+.5)-y)>.4) why='Put it on flat ground'; else { for(const yy of [y+.5,y+1.5,y+2.8]) if(solidAt(x,yy,z)){ why='Something is in the way'; break; } }
+  if(!why&&Math.hypot(x-S.padP.x,z-S.padP.z)<3.5) why='Keep the blue parking ring clear'; if(!why&&S.portal&&Math.hypot(x-S.portal.x,z-S.portal.z)<4.5) why='Keep the garage entrance clear';
+  if(!why) for(const t of S.sentries) if(Math.hypot(x-t.x,z-t.z)<2.6) { why='Too close to another sentry gun'; break; }
+  return {x,z,y,lx,lz,why}; }
+function sentryPrompt(){ const S=HOMEUP.place; if(!S||activeCar||player.mode!=='walk') return ''; const p=sentrySpot(); return p.why?'Placing a sentry gun: '+p.why:'<kbd>E</kbd> Put the sentry gun here'; }
+function sentryTryPlace(){ const S=HOMEUP.place; if(!S||activeCar||player.mode!=='walk') return false; const h=GAR.h[S.i], p=sentrySpot(); if(Math.hypot(player.pos.x-S.cx,player.pos.z-S.cz)>40) return false; if(p.why){ flash(p.why); return true; }
+  h.sentries=h.sentries||[]; h.sentries.push({x:+p.lx.toFixed(2),z:+p.lz.toFixed(2),y:+p.y.toFixed(2)}); garSave(); homeUpBuild(S); Snd.tink(S.cx,S.cz); if(h.sentries.length>=(h.sentryN||0)){ HOMEUP.place=null; HOMEUP.ghost.visible=false; flash('Sentry gun ready!'); } else flash('Placed! '+((h.sentryN||0)-h.sentries.length)+' more to place'); return true; }
+function homeHeli(S){ try{ const H=new Heli(S.pad.x,S.pad.y||0,S.pad.z,0,'#c9a24a'); H.homeOwned=true; S.heli=H; S.heliT=0; }catch(e){ console.warn('home heli',e); } }
 function homeTick(dt){ if(!SALE.length) return; const px=player.pos.x, pz=player.pos.z;
+  if(HOMEUP.place&&HOMEUP.ghost){ const p=sentrySpot(), show=!activeCar&&player.mode==='walk'&&Math.hypot(px-HOMEUP.place.cx,pz-HOMEUP.place.cz)<45; HOMEUP.ghost.visible=show; if(show){ HOMEUP.ghost.position.set(p.x,p.y,p.z); HOMEUP.ghost.userData.mt.color.set(p.why?0xff4d4d:0x3cff8f); } }
   for(const S of SALE){ const h=GAR.h[S.i]; if(!h||!h.own) continue; const dS=Math.hypot(px-S.cx,pz-S.cz), E=BLOCK/2-.5;
-    // sentry: shoots zombies within 38 m
-    const T=S.sentry; if(T&&dS<160){ if((T.scan-=dt)>0&&T.tgt&&!T.tgt.dead&&people.includes(T.tgt)){} else { T.scan=.4; T.tgt=null; let bd=38*38; for(const z of people){ if(!z.zombie||z.dead||z.pos.y<-4.2) continue; const e=(z.pos.x-T.x)**2+(z.pos.z-T.z)**2; if(e<bd&&losClear(T.x,3,T.z,z.pos.x,z.pos.y+.4,z.pos.z)){ bd=e; T.tgt=z; } } }
-      if(T.tgt){ T.yaw=lerpA(T.yaw,Math.atan2(T.tgt.pos.x-T.x,T.tgt.pos.z-T.z),Math.min(1,dt*10)); T.head.rotation.y=T.yaw; T.shootCD-=dt; if(T.shootCD<=0){ T.shootCD=.3; copShoot(T,T.tgt); T.shootCD=.3; } } else { T.yaw+=dt*.4; T.head.rotation.y=T.yaw; } }
-    // electric fence: zombies on the property get zapped back out over the fence
-    if(h.fence&&dS<160){ for(const z of people){ if(!z.zombie||z.dead||z.mode!=='walk') continue; const lx=z.pos.x-S.cx, lz=z.pos.z-S.cz; if(Math.abs(lx)<E-.8&&Math.abs(lz)<E-.8){ const ax=E-Math.abs(lx), az=E-Math.abs(lz), dx=ax<az?Math.sign(lx||1):0, dz=ax<az?0:Math.sign(lz||1); knock(z,dx*9,6,dz*9,5,.5); if(Math.random()<.5) puff(z.pos.x,z.pos.y+.5,z.pos.z,0xffe066,.6,false); if((S.zapT||0)<perfT){ S.zapT=perfT+1; Snd.tink(z.pos.x,z.pos.z); } } } }
+    // sentry guns: each shoots zombies within 38 m
+    if(dS<160) for(const T of (S.sentries||[])){ if((T.scan-=dt)>0&&T.tgt&&!T.tgt.dead&&people.includes(T.tgt)){} else { T.scan=.4; T.tgt=null; let bd=38*38; for(const z of people){ if(!z.zombie||z.dead||z.pos.y<-4.2) continue; const e=(z.pos.x-T.x)**2+(z.pos.z-T.z)**2; if(e<bd&&losClear(T.x,T.y+3,T.z,z.pos.x,z.pos.y+.4,z.pos.z)){ bd=e; T.tgt=z; } } }
+      if(T.tgt){ T.yaw=lerpA(T.yaw,Math.atan2(T.tgt.pos.x-T.x,T.tgt.pos.z-T.z),Math.min(1,dt*10)); T.head.rotation.y=T.yaw; T.shootCD-=dt; if(T.shootCD<=0){ copShoot(T,T.tgt); T.shootCD=.3; } } else { T.yaw+=dt*.4; T.head.rotation.y=T.yaw; } }
+    // electric fence: zombies that touch it get electrocuted and thrown back; any that get in are zapped back out
+    if(h.fence&&dS<160&&S.fenceSegs){ for(const z of people){ if(!z.zombie||z.dead||z.mode!=='walk') continue; const lx=z.pos.x-S.cx, lz=z.pos.z-S.cz; if(Math.abs(lx)>E+2||Math.abs(lz)>E+2) continue; if((z.zapT||0)>perfT) continue;
+        let hit=null; for(const [ax,az,bx,bz] of S.fenceSegs){ const dx=bx-ax, dz=bz-az, l2=dx*dx+dz*dz||1, t=clamp(((lx-ax)*dx+(lz-az)*dz)/l2,0,1), qx=ax+dx*t, qz=az+dz*t, d=Math.hypot(lx-qx,lz-qz); if(d<(z.r||.45)+.55){ hit={qx,qz,d}; break; } }
+        const inside=Math.abs(lx)<E-.8&&Math.abs(lz)<E-.8;
+        if(hit||inside){ z.zapT=perfT+.45; let nx,nz; if(inside||!hit||hit.d<.05){ const ax=E-Math.abs(lx), az=E-Math.abs(lz); nx=ax<az?Math.sign(lx||1):0; nz=ax<az?0:Math.sign(lz||1); } else { nx=(lx-hit.qx)/hit.d; nz=(lz-hit.qz)/hit.d; }
+          hurt(z,1.2); if(!z.dead) knock(z,nx*8,5,nz*8,9,0); for(let k=0;k<5;k++) puff(z.pos.x+R(-.4,.4),z.pos.y+R(0,1.2),z.pos.z+R(-.4,.4),k%2?0x9fe8ff:0xffe066,.45,false); if((S.zapT||0)<perfT){ S.zapT=perfT+.3; Snd.tink(z.pos.x,z.pos.z); } } } }
     // trampoline
     const tp=S.tramp; if(tp){ for(const q of [player,...people]){ if(q.mode!=='walk'||(q.isPlayer&&(activeCar||activeHeli))) continue; if(Math.hypot(q.pos.x-tp.x,q.pos.z-tp.z)<1.9&&q.pos.y-HIP<1.3&&q.vel.y<=.5){ q.vel.y=q.isPlayer?17:12; q.pos.y=1+HIP+.05; q.ground=false; if(q.isPlayer) Snd.launch(tp.x,tp.z); } } }
-    // the helicopter comes back if it's wrecked or gone, once you're away from the house
+    // the helicopter comes back to the roof if it's wrecked or gone, once you're away from the house
     if(h.heli&&S.pad){ if(!S.heli||!helis.includes(S.heli)||S.heli.dead){ S.heliT=(S.heliT||0)+dt; if(S.heliT>30&&dS>60&&activeHeli!==S.heli) homeHeli(S); } } } }
 let rescueI=0;
 function underOK(x,z,y){ if(Math.abs(x)<HALF+12&&Math.abs(z)<HALF+12) return true; if(x>1150) return true; if(z<-LIM&&Math.abs(x)<290){ const r=roadNear(x,z); if(r&&r.tun&&r.d<6) return true; } return false; }
@@ -4489,6 +4539,7 @@ function gunnerTick(dt){ const av=MP.av.get(MPG.id); if(!MP.on||!av||av.veh!==MP
   if(A.hitO){ const o=A.hitO; if(o instanceof Car){ vehDmg(o,2.5); Snd.tink(o.pos.x,o.pos.z); } else { nailHit(o,dir.clone().multiplyScalar(30),2.2,'shot'); if(o.isPerson&&o.zombie&&o.mode==='walk'&&o.hp<=1) knock(o,dir.x*10,4,dir.z*10,6,1); } } else puff(ex,ey,ez,0xb8b0a0,.3,false); }
 function enterExit(){
   if(RIDE.on) return;
+  if(HOMEUP.place&&sentryTryPlace()) return;
   { const jb=jobBoardNear(); if(jb&&!nearestCar()){ jobMenu(jb); return; } }
   { const rk=rideNear(); if(rk&&!nearestCar()){ rideOn(rk); return; } }
   if(GOND.ride){ gondOff(); return; }
@@ -5106,7 +5157,7 @@ function updateHUD(){
   if(zs!==lastZ||state.defeated!==lastD){ lastZ=zs; lastD=state.defeated; zcEl.textContent=zs; zdEl.textContent=state.defeated; zplateEl.hidden=!(zs||state.defeated); }
   let pr='';
   if(state.msgT>0&&state.started&&!state.over) pr=state.msg; else
-  if(state.started){ const stp=jetPrompt()||cranePrompt()||storyPrompt()||storePrompt()||motorPrompt()||trainPrompt()||ferryPrompt()||gondPrompt()||ridePrompt()||jobPrompt()||sewerPrompt(); if(stp) pr=stp; else if(activeHeli) pr='<kbd>E</kbd> Get out · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>Click</kbd> guns · <kbd>Right-click</kbd> rockets';  else if(player.chute) pr='<kbd>WASD</kbd> steer · <kbd>Space</kbd> cut away';
+  if(state.started){ const stp=jetPrompt()||cranePrompt()||storyPrompt()||storePrompt()||motorPrompt()||trainPrompt()||ferryPrompt()||gondPrompt()||ridePrompt()||jobPrompt()||sentryPrompt()||sewerPrompt(); if(stp) pr=stp; else if(activeHeli) pr='<kbd>E</kbd> Get out · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>Click</kbd> guns · <kbd>Right-click</kbd> rockets';  else if(player.chute) pr='<kbd>WASD</kbd> steer · <kbd>Space</kbd> cut away';
     else if(player.mode==='walk'&&!player.ground&&player.vel.y<-2&&player.pos.y-HIP-groundHeight(player.pos.x,player.pos.z,player.pos.y-HIP)>3.5) pr='<kbd>Space</kbd> Open parachute';
     else if(activeCar) pr=activeCar.boat?'<kbd>W</kbd><kbd>S</kbd> throttle · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>E</kbd> Get out':'<kbd>E</kbd> Get out'+keepHint(activeCar); else if(state.downT>0) pr='Knocked out. Heading back to the plaza…'; else if(state.over) pr=''; else if(player.mode==='held') pr=player.heldBy&&!player.heldBy.zombie?'They grabbed you! Brace for the throw…':'A grabber has you! Brace for the throw…'; else if(player.mode==='ragdoll'||player.mode==='getup') pr='Ouch. Getting back up…'; else if(player.immune>0&&people.some(q=>q.zombie)) pr='Back on your feet. Run!'; else if(player.mode==='walk'&&liftNear()){ const n=liftNear(); pr=n.L.v!==0?(n.inside?'Going '+(n.L.v>0?'up':'down')+'…':'Lift is moving…'):Math.abs(n.L.y-n.lvl)>.05?'<kbd>E</kbd> Call the lift':n.inside?'<kbd>E</kbd> Ride the lift '+(n.lvl===0?'up':'down'):'Step into the lift'; } else if(player.mode==='walk'&&nearestHeli()) pr='<kbd>E</kbd> Fly the helicopter'; else if(nearestCar()) pr=nearestCar().boat?'<kbd>E</kbd> Drive this boat':'<kbd>E</kbd> Drive this car'; }
   if(pr!==lastPrompt){ lastPrompt=pr; promptEl.innerHTML=pr; promptEl.hidden=!pr; }
