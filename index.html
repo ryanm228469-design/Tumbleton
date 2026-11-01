@@ -2397,7 +2397,7 @@ function convertToZombie(p){
   const K=ZK[kind]; p.zombie=true; p.zkind=kind; p.zdmg=K.dmg; p.reward=K.reward; p.hp=K.hp||3; if(K.sp){ p.zspeed=R(K.sp[0],K.sp[1]); p.r=K.r; p.mass=K.mass; } p.zt=null; p.threat=null; p.atkCD=1; if(p.ai) p.ai.pause=0; p.react=null; p.cgrab=false; p.punchT=0;
   puff(p.pos.x,p.pos.y,p.pos.z,0x7bc950,.45,false); Snd.groan(p.pos.x,p.pos.z);
 }
-function poof(p){ if(p.storyM&&story.m&&p.storyM===story.m.id) story.kills++; if(BLOOD.on&&p.zombie&&!story.on){ state.money+=20; BLOOD.kills++; } Snd.pop(p.pos.x,p.pos.z,true); puff(p.pos.x,p.pos.y,p.pos.z,0x9be07a,.6,true); removePerson(p); state.defeated++; if(MP.on&&MP.host&&p.nid){ mpBroadcast({t:'zx',id:p.nid}); MP.zmap.delete(p.nid); } if(MP.on&&MP.host&&p.mpHitBy!==undefined&&perfT-p.mpHitT<8&&MP.pl.has(p.mpHitBy)) mpSendTo(p.mpHitBy,{t:'zk',r:p.reward||10}); else if(!p.copKill) earn(p.reward||10); }
+function poof(p){ if(p.storyM&&story.m&&p.storyM===story.m.id) story.kills++; if(BLOOD.on&&p.zombie&&!story.on){ state.money+=20; BLOOD.kills++; } if(p.zombie) achStat('zk'); Snd.pop(p.pos.x,p.pos.z,true); puff(p.pos.x,p.pos.y,p.pos.z,0x9be07a,.6,true); removePerson(p); state.defeated++; if(MP.on&&MP.host&&p.nid){ mpBroadcast({t:'zx',id:p.nid}); MP.zmap.delete(p.nid); } if(MP.on&&MP.host&&p.mpHitBy!==undefined&&perfT-p.mpHitT<8&&MP.pl.has(p.mpHitBy)) mpSendTo(p.mpHitBy,{t:'zk',r:p.reward||10}); else if(!p.copKill) earn(p.reward||10); }
 function provoke(o){ if(!o||!o.isPerson||!o.zombie||o.dead) return; const was=o.aggro>0; o.aggro=15; o.think=0; if(!was){ Snd.groan(o.pos.x,o.pos.z); o.lunge=Math.max(o.lunge||0,.25); } }
 function thinkAI(p){
   const lv=o=>o.pos.y<-4.2;
@@ -3731,7 +3731,7 @@ function setupNorth(){ const g=new THREE.Group(), parts=[{g:BX(2.8,2.4,2.6,0,-2.
 function gondPos(u){ const C=NORTH.cable; return {x:C.a.x+(C.b.x-C.a.x)*u+2.4*(GOND.dir>0?1:-1)*0, y:C.a.y+(C.b.y-C.a.y)*u+5.2, z:C.a.z+(C.b.z-C.a.z)*u}; }
 function gondPlace(){ const p=gondPos(GOND.u); GOND.g.position.set(p.x+2.4,p.y,p.z); GOND.g.rotation.y=Math.atan2(NORTH.cable.b.x-NORTH.cable.a.x,NORTH.cable.b.z-NORTH.cable.a.z); }
 function gondNear(){ if(activeCar||activeHeli||activeJet||player.mode!=='walk'||GOND.wait<=0) return false; const C=NORTH.cable, st=GOND.u<.5?C.a:C.b; return Math.hypot(player.pos.x-st.x,player.pos.z-st.z)<7&&Math.abs(player.pos.y-HIP-st.y)<3; }
-function gondOn(){ GOND.ride=true; player.mode='drive'; player.g.visible=false; cancelReload(); flash(GOND.u<.5?'Up we go to the lookout!':'Down to the bottom station'); }
+function gondOn(){ achStat('gond'); GOND.ride=true; player.mode='drive'; player.g.visible=false; cancelReload(); flash(GOND.u<.5?'Up we go to the lookout!':'Down to the bottom station'); }
 function gondOff(){ GOND.ride=false; player.mode='walk'; player.g.visible=true; const C=NORTH.cable; if(GOND.wait>0){ const st=GOND.u<.5?C.a:C.b, L=NORTH.look; if(GOND.u<.5) player.pos.set(st.x-7,HIP+.1,st.z+5); else player.pos.set(L.x-4,L.y+HIP+.1,L.z-4); } else { const p=gondPos(GOND.u); player.pos.set(p.x+2.4,p.y-3,p.z); flash('Whoa, that\'s a long way down!'); } player.vel.set(0,0,0); camTarget.copy(player.pos); }
 function northTick(dt){ if(!GOND.g) return; const G=GOND; if(G.wait>0){ G.wait-=dt; if(G.wait<=0&&G.ride) flash('The gondola glides off'); } else { G.u+=G.dir*dt/45; if(G.u>=1||G.u<=0){ G.u=clamp(G.u,0,1); G.dir=-G.dir; G.wait=12; if(G.ride) flash(G.u>.5?'Top station! E to step out at the lookout':'Bottom station. E to get off'); } }
   gondPlace(); if(G.ride){ const p=gondPos(G.u); player.pos.set(p.x+2.4,p.y-2.4,p.z); } }
@@ -3770,7 +3770,7 @@ function eastTick(dt){ if(!EAST.cars) return; const c=activeCar, L=EAST.tlen;
       else if(q.d>140){ raceEnd('You left the track. Race abandoned'); return; }
       const lap=Math.floor(RACE.dist/L); if(lap>RACE.lap&&RACE.dist>0){ const lt=RACE.t-RACE.lapStart; RACE.lapStart=RACE.t; RACE.lap=lap; if(!RACE.best||lt<RACE.best){ RACE.best=lt; try{ localStorage.setItem('tumbleton-lap',lt.toFixed(2)); }catch(e){} flash('Best lap ever: '+lt.toFixed(2)+' s!'); } else flash('Lap '+lap+': '+lt.toFixed(2)+' s'); }
       const place=1+RACE.riv.filter(r=>r.dist>RACE.dist).length;
-      if(RACE.dist>=3*L){ const prize=[1500,800,400,0][place-1]; state.money+=prize; save(); banner(place===1?'YOU WON THE RACE!':'FINISHED '+['1st','2nd','3rd','4th'][place-1],prize?'Prize money: '+money(prize):'Better luck next time'); if(place===1) Snd.fanfare(); raceEnd(); return; }
+      if(RACE.dist>=3*L){ const prize=[1500,800,400,0][place-1]; state.money+=prize; save(); banner(place===1?'YOU WON THE RACE!':'FINISHED '+['1st','2nd','3rd','4th'][place-1],prize?'Prize money: '+money(prize):'Better luck next time'); if(place===1){ Snd.fanfare(); achStat('race'); } raceEnd(); return; }
       raceHudSet('Lap '+Math.min(3,RACE.lap+1)+'/3   ·   '+['1st','2nd','3rd','4th'][place-1]+'   ·   '+(RACE.t-RACE.lapStart).toFixed(1)+' s'+(RACE.best?'   ·   best '+RACE.best.toFixed(2):'')); } }
   // rivals drive the racing line
   for(const r of RACE.riv){ if(!RACE.on||RACE.phase!=='go'||r.done){ if(RACE.on&&r.done){ r.v=Math.max(0,r.v-8*dt); r.s+=r.v*dt; } else continue; } else { const ahead=trackAt(r.s+28,0).curve||trackAt(r.s+8,0).curve, tgt=(ahead?.66:1)*r.max*(.97+.03*Math.sin(perfT*.7+r.max)); r.v+=clamp(tgt-r.v,-14*dt,7*dt); r.s+=r.v*dt; r.dist=r.s; if(r.dist>=3*L) r.done=true; }
@@ -3778,7 +3778,7 @@ function eastTick(dt){ if(!EAST.cars) return; const c=activeCar, L=EAST.tlen;
     if(c&&!c.ride){ const dx=c.pos.x-p.x, dz=c.pos.z-p.z, d=Math.hypot(dx,dz); if(d<3&&d>.01){ const k=(3-d); c.pos.x+=dx/d*k; c.pos.z+=dz/d*k; const vn=c.vel.x*dx/d+c.vel.z*dz/d; if(vn<0){ c.vel.x-=vn*dx/d*1.4; c.vel.z-=vn*dz/d*1.4; } if(RACE.on) r.v*=.97; } } }
   // stunt park: air time and the ring of fire
   const S=EAST.stunt; if(c&&!c.boat&&c.pos.x>S.x0-10&&c.pos.x<S.x1+10&&c.pos.z>S.z0-10&&c.pos.z<S.z1+10){ if(c.air) STUNT.air+=dt; else if(STUNT.air>0){ if(STUNT.air>.6){ const a=STUNT.air, cash=Math.round(a*50); state.money+=cash; save(); if(a>STUNT.best){ STUNT.best=a; try{ localStorage.setItem('tumbleton-air',a.toFixed(2)); }catch(e){} flash('New record: '+a.toFixed(1)+' s of air! +'+money(cash)); } else flash(a.toFixed(1)+' s of air! +'+money(cash)); Snd.tink(c.pos.x,c.pos.z); } STUNT.air=0; }
-    const F=EAST.fire; STUNT.ringCD-=dt; if(STUNT.ringCD<=0&&Math.abs(c.pos.x-F.x)<1.6&&Math.hypot(c.pos.y+.8-F.y,c.pos.z-F.z)<F.r){ STUNT.ringCD=3; state.money+=150; save(); flash('Through the ring of fire! +$150'); Snd.chime(F.x,F.z); for(let k=0;k<6;k++) puff(F.x,F.y+R(-2,2),F.z+R(-2,2),0xff7a1a,1.2,false); } }
+    const F=EAST.fire; STUNT.ringCD-=dt; if(STUNT.ringCD<=0&&Math.abs(c.pos.x-F.x)<1.6&&Math.hypot(c.pos.y+.8-F.y,c.pos.z-F.z)<F.r){ STUNT.ringCD=3; state.money+=150; achStat('ring'); save(); flash('Through the ring of fire! +$150'); Snd.chime(F.x,F.z); for(let k=0;k<6;k++) puff(F.x,F.y+R(-2,2),F.z+R(-2,2),0xff7a1a,1.2,false); } }
   else STUNT.air=0;
   if(STUNT.ring){ STUNT.ring.material.emissiveIntensity=1+.4*Math.sin(perfT*9); if(Math.random()<dt*12){ const a=Math.random()*TAU, F=EAST.fire; puff(F.x,F.y+Math.sin(a)*F.r,F.z+Math.cos(a)*F.r,Math.random()<.5?0xff7a1a:0xffd166,.6,false); } }
   // theme park rides
@@ -3796,7 +3796,7 @@ function rideOn(k){ RIDE.on=k; RIDE.t=0; player.mode='drive'; player.g.visible=f
   if(k==='wheel'){ // the lowest cab picks you up
     const W=EAST.wheel; W.a=-PI/2; }
   flash({wheel:'All aboard the Ferris wheel!',coaster:'Hold on tight!',tower:'Up, up, up...'}[k]); }
-function rideOff(){ const k=RIDE.on; RIDE.on=null; player.mode='walk'; player.g.visible=true; const W=EAST.wheel, D=EAST.tower; const o=k==='wheel'?{x:W.x+3,z:W.z-9}:k==='coaster'?{x:620,z:161}:{x:D.x+3,z:D.z-11}; player.pos.set(o.x,HIP+.1,o.z); player.vel.set(0,0,0); camTarget.copy(player.pos); }
+function rideOff(){ const k=RIDE.on; achStat('ride_'+k); RIDE.on=null; player.mode='walk'; player.g.visible=true; const W=EAST.wheel, D=EAST.tower; const o=k==='wheel'?{x:W.x+3,z:W.z-9}:k==='coaster'?{x:620,z:161}:{x:D.x+3,z:D.z-11}; player.pos.set(o.x,HIP+.1,o.z); player.vel.set(0,0,0); camTarget.copy(player.pos); }
 function rideTick(dt){ if(!RIDE.on) return; RIDE.t+=dt; const s=rideSeat(RIDE.on); player.pos.set(s.x,s.y,s.z); const k=RIDE.on;
   if(k==='wheel'&&RIDE.t>40){ rideOff(); flash('What a view!'); } else if(k==='coaster'&&EAST.lapDone&&RIDE.t>8){ rideOff(); flash('That was wild!'); } else if(k==='tower'&&EAST.tower.lapDone){ rideOff(); flash('Aaaaaah!'); } }
 function ridePrompt(){ if(RIDE.on) return 'Enjoy the ride!'; const k=rideNear(); return k?'<kbd>E</kbd> Ride '+{wheel:'the Ferris wheel',coaster:'the Kea Coaster',tower:'the Sky Drop'}[k]:''; }
@@ -3855,7 +3855,7 @@ function jobEnd(){ JOB.on=null; state.wpDest=null; state.shopWpUntil=0; raceHudS
 function beamAt(x,z,col){ if(!JOB.beam){ const m=new THREE.Mesh(new THREE.CylinderGeometry(2.2,2.2,120,14,1,true),new THREE.MeshBasicMaterial({color:0x3cff8f,transparent:true,opacity:.28,depthWrite:false,side:THREE.DoubleSide,fog:false})); m.renderOrder=4; scene.add(m); JOB.beam=m; } JOB.beam.material.color.set(col||0x3cff8f); JOB.beam.position.set(x,60,z); JOB.beam.visible=true; }
 function jobsTick(dt){ if(!JOB.built) return; const px=activeCar?activeCar.pos.x:player.pos.x, pz=activeCar?activeCar.pos.z:player.pos.z;
   const J=JOB.on; if(J){ J.t-=dt; beamAt(J.x,J.z,0x3cff8f); if(!RACE.on&&!TT.on) raceHudSet('Deliver to '+J.n+'   ·   '+Math.round(Math.hypot(J.x-px,J.z-pz))+' m   ·   '+Math.max(0,J.t).toFixed(0)+' s');
-    if(Math.hypot(J.x-px,J.z-pz)<7){ state.money+=J.pay; JOB.done++; save(); banner('DELIVERED!','+'+money(J.pay)+' · '+J.n); Snd.chime(J.x,J.z); jobEnd(); }
+    if(Math.hypot(J.x-px,J.z-pz)<7){ state.money+=J.pay; JOB.done++; achStat('del'); save(); banner('DELIVERED!','+'+money(J.pay)+' · '+J.n); Snd.chime(J.x,J.z); jobEnd(); }
     else if(J.t<=0){ jobEnd(); flash('Too late! The customer cancelled the delivery'); Snd.dry&&Snd.dry(); } }
   // Ring Road time trial: stop on the ring by SH1, then hit the four corners and come back
   const c=activeCar;
@@ -3967,7 +3967,7 @@ function weatherSky(dt,t){ const W=WX, inGar=player.pos.x>GZ0.x-150, sub=sewSub;
   if(W.fog>.01){ skyCol.lerp(WX_FOG,W.fog*(1-t)*.6); }
   // the Blood Moon: sometimes a night turns red, and the dead come out in force
   if(state.night&&!BLOOD.wasNight){ BLOOD.wasNight=true; if(state.started&&!story.on&&!mpClient()&&Math.random()<.35){ BLOOD.on=true; BLOOD.kills=0; BLOOD.t=0; banner('BLOOD MOON','The dead are restless tonight. Every zombie is worth +$20 until sunrise'); Snd.sting(); } }
-  else if(!state.night&&BLOOD.wasNight){ BLOOD.wasNight=false; if(BLOOD.on){ BLOOD.on=false; flash('The Blood Moon is over. You took down '+BLOOD.kills+' zombies'); } }
+  else if(!state.night&&BLOOD.wasNight){ BLOOD.wasNight=false; if(BLOOD.on){ BLOOD.on=false; if(BLOOD.kills>=30) achStat('blood30'); flash('The Blood Moon is over. You took down '+BLOOD.kills+' zombies'); } }
   if(BLOOD.on){ const b=t; skyCol.lerp(BLOOD_SKY,.7*b); skyU.top.value.lerp(BLOOD_TOP,.8*b); skyU.hor.value.lerp(BLOOD_SKY,.8*b); sun.color.lerp(BLOOD_MOON,.8*b); }
   scene.fog.color.copy(skyCol); scene.fog.density+=W.fog*.04+W.rain*.007+(BLOOD.on?.003:0);
   // lightning
@@ -3994,6 +3994,42 @@ function bloodTick(dt){ if(!BLOOD.on||story.on||mpClient()||state.over||!state.s
   const px=player.pos.x, pz=player.pos.z; let n=0; for(const q of people) if(q.zombie&&!q.dead&&Math.hypot(q.pos.x-px,q.pos.z-pz)<70) n++; if(n>=22||player.pos.x>GZ0.x-150) return;
   for(let k=0;k<3;k++){ let x,z; const inCity=Math.abs(px)<LIM&&Math.abs(pz)<LIM; if(inCity){ const q=ringPointFar(28,60); if(!q) continue; x=q.x; z=q.z; } else { const a=Math.random()*TAU, r=30+Math.random()*25; x=px+Math.cos(a)*r; z=pz+Math.sin(a)*r; const p={x,z}; bounds(p,{x:0,z:0}); x=p.x; z=p.z; if(Math.min(riverH(z),seaH(x,z))<-.5||solidAt(x,1,z)) continue; }
     const zb=new Person(x,z,{spawned:true,zombie:true,kind:pickZKind(5),y:groundHeight(x,z)}); zb.aggro=12; } }
+
+/* ---------- Stage 11: achievements, with cash rewards, saved between sessions ---------- */
+const ACH={got:[],st:{},q:[],t:0,bT:0};
+const achSt=k=>ACH.st[k]||0, ownN=()=>Object.values(GAR.h).filter(h=>h&&h.own).length;
+const ACHL=[
+  ['zk1','First Bite Back','Defeat your first zombie',50,()=>achSt('zk')>=1],
+  ['zk100','Zombie Hunter','Defeat 100 zombies',500,()=>achSt('zk')>=100],
+  ['zk1000','Undead Exterminator','Defeat 1,000 zombies',5000,()=>achSt('zk')>=1000],
+  ['house','Home Owner','Buy a house',200,()=>ownN()>=1],
+  ['mansion','Living Large','Own the Pōhutukawa Mansion',2000,()=>!!(GAR.h[3]&&GAR.h[3].own)],
+  ['yard','Fortress Home','Give one house a sentry gun, electric fence, trampoline and rooftop helipad',3000,()=>Object.values(GAR.h).some(h=>h&&h.own&&h.sentryN>0&&h.fence&&h.tramp&&h.heli)],
+  ['garage','Car Collector','Keep 6 vehicles in your garages',1500,()=>GAR.cars.length>=6],
+  ['tank','Heavy Metal','Drive a tank',300,()=>!!(activeCar&&activeCar.variant==='tank')],
+  ['plane','Taking Off','Fly a small plane from the airstrip',500,()=>!!(activeJet&&activeJet.small&&!activeJet.ground)],
+  ['race','Champion','Win a race at Tumbleton Raceway',1000,()=>achSt('race')>=1],
+  ['tt','Round the Ring','Finish the Ring Road time trial with a medal',300,()=>TT.medal>=1],
+  ['ttgold','Ring Road Legend','Get gold in the Ring Road time trial',2000,()=>TT.medal>=3],
+  ['del1','Special Delivery','Finish a courier job',100,()=>achSt('del')>=1],
+  ['del10','Courier of the Month','Finish 10 courier jobs',1500,()=>achSt('del')>=10],
+  ['air','Big Air','Get 2.5 seconds of air at the stunt park',500,()=>STUNT.best>=2.5],
+  ['ring','Hot Stuff','Jump through the ring of fire',200,()=>achSt('ring')>=1],
+  ['rides','Thrill Seeker','Ride the Ferris wheel, the Kea Coaster and the Sky Drop',500,()=>achSt('ride_wheel')&&achSt('ride_coaster')&&achSt('ride_tower')],
+  ['top','Top of the World','Stand at the Mt Tumbleton lookout',300,()=>Math.hypot(player.pos.x-NORTH.look.x,player.pos.z-NORTH.look.z)<16&&player.pos.y>NORTH.look.y],
+  ['fort','Raid the Fort','Find the supply cache in Fort Kererū',1000,()=>!!BASES.got],
+  ['island','Island Hopper','Set foot on Mōtu Island',300,()=>!activeCar&&Math.hypot(player.pos.x-ISLE.x,player.pos.z-ISLE.z)<ISLE.r],
+  ['blood','Blood Moon Survivor','Defeat 30 zombies during one Blood Moon',2000,()=>achSt('blood30')>=1]];
+function achSave(){ try{ localStorage.setItem('tumbleton-ach',JSON.stringify({got:ACH.got,st:ACH.st})); }catch(e){} }
+try{ const q=JSON.parse(localStorage.getItem('tumbleton-ach')||'null'); if(q){ if(Array.isArray(q.got)) ACH.got=q.got.filter(id=>typeof id==='string').slice(0,64); if(q.st&&typeof q.st==='object') for(const k in q.st) if(isFinite(q.st[k])) ACH.st[k]=Math.max(0,Math.floor(q.st[k])); } }catch(e){}
+function achStat(k,n){ ACH.st[k]=(ACH.st[k]||0)+(n||1); ACH.dirty=true; }
+function achTick(dt){ if(!state.started||story.on) return; ACH.t-=dt; ACH.bT-=dt;
+  if(ACH.t<=0){ ACH.t=1; if(ACH.dirty){ ACH.dirty=false; achSave(); } for(const [id,n,d,r,ok] of ACHL){ if(ACH.got.includes(id)) continue; let pass=false; try{ pass=!!ok(); }catch(e){} if(pass){ ACH.got.push(id); state.money+=r; save(); achSave(); ACH.q.push([n,r]); } } }
+  if(ACH.q.length&&ACH.bT<=0){ const [n,r]=ACH.q.shift(); ACH.bT=3.2; banner('🏆 '+n,'Achievement unlocked · +'+money(r)); Snd.fanfare(); } }
+function achMenu(){ const add=menuOpen('Achievements · '+ACH.got.length+' of '+ACHL.length+' unlocked'); const done=ACHL.filter(a=>ACH.got.includes(a[0])), todo=ACHL.filter(a=>!ACH.got.includes(a[0]));
+  if(todo.length) menuHead('Still to do'); for(const [id,n,d,r] of todo){ let prog=''; if(id==='zk100'||id==='zk1000') prog=' · '+Math.min(achSt('zk'),id==='zk100'?100:1000)+' so far'; if(id==='del10') prog=' · '+Math.min(10,achSt('del'))+'/10'; if(id==='garage') prog=' · '+GAR.cars.length+'/6'; add('🔒 '+n+' · '+money(r),d+prog,()=>menuDone(),''); }
+  if(done.length) menuHead('Unlocked'); for(const [id,n,d,r] of done) add('🏆 '+n,d,()=>menuDone(),'');
+  add('Close','',()=>menuDone()); }
 let rescueI=0;
 function underOK(x,z,y){ if(Math.abs(x)<HALF+12&&Math.abs(z)<HALF+12) return true; if(x>1150) return true; if(z<-LIM&&Math.abs(x)<290){ const r=roadNear(x,z); if(r&&r.tun&&r.d<6) return true; } return false; }
 function rescueTick(dt){ const n=people.length+cars.length; if(!n) return; const per=Math.max(4,Math.ceil(n*dt*4));
@@ -4039,7 +4075,7 @@ function setupMotor(){ try{ setupSale(); }catch(e){ console.warn('houses',e); } 
   GREET.cars=['G\'day! Every vehicle comes with a free garage delivery.','Tanks are on special this week. Well, not really.','Have a look around, they don\'t bite.','Need a house first? Check the FOR SALE signs in the suburbs.'];
   GREET.motor=['Drive into a bay and press F.','Left bay for mods, right bay for repairs.','We fix anything that isn\'t a smoking crater.','Zombie rammer? Best money you\'ll ever spend.'];
   try{ for(const site of [0,1]){ const S=SITES[site]; if(!S) continue; const x=lotC(S[0]), z=lotC(S[1]); roadPark(x+10,z+24,site?'digger':'bulldozer'); } }catch(e){ console.warn('site vehicles',e); } }
-function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); southTick(dt); northTick(dt); eastTick(dt); basesTick(dt); rescueTick(dt); keepTick(dt); jobsTick(dt); homeTick(dt); bloodTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
+function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); southTick(dt); northTick(dt); eastTick(dt); basesTick(dt); rescueTick(dt); keepTick(dt); jobsTick(dt); homeTick(dt); bloodTick(dt); achTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
   const c=activeCar;
   if(c&&c.emerg==='fire'&&use){ camera.getWorldDirection(_ewd); let dx=_ewd.x, dy=_ewd.y+.16, dz=_ewd.z; const l=Math.hypot(dx,dy,dz)||1; hoseSpray(nozzleWorld(c),{x:dx/l,y:Math.max(-.35,dy/l),z:dz/l},dt,true); }
   if(c&&c.emerg==='tow'){ if(use&&!c.useW){ if(c.towed){ towRelease(c); flash('Let go of the car'); } else { const h=hookWorld(c); let best=null,bd=4.6;
@@ -4831,6 +4867,7 @@ function storeE(){ const n=storeNear(); if(!n) return false; if(n.counter){ open
 // B: pick a place and an arrow shows the way
 function findMenu(){ if(!state.started||state.over||!cfEl.hidden) return; const p=player.pos, dist=(x,z)=>Math.round(Math.hypot(x-p.x,z-p.z))+' m away', go=(x,z,msg)=>()=>{ menuDone(msg); state.wpDest={x,z}; state.shopWpUntil=perfT+120; };
   const add=menuOpen('Find a place · the arrow shows the way');
+  add('🏆 Achievements ('+ACH.got.length+'/'+ACHL.length+')','Challenges all over the map, each with a cash reward',()=>{ menuDone(); achMenu(); },'pick-go');
   if(STORE) add('Hardware & Arms store','Weapons, ammo and building blocks · '+dist(STORE.door.x,STORE.door.z),()=>{ menuDone(); findStore(); });
   if(CARYARD.kiosk) add('Vehicles R Us','Buy cars, bikes, trucks and tanks · '+dist(CARYARD.kiosk.x,CARYARD.kiosk.z),go(CARYARD.kiosk.x,CARYARD.kiosk.z,'Vehicles R Us is marked. Follow the arrow'));
   if(MOTOR.door) add('Tumbleton Motors','Mods and repairs for your car · '+dist(MOTOR.door.x,MOTOR.door.z),go(MOTOR.door.x,MOTOR.door.z,'Tumbleton Motors is marked. Follow the arrow'));
