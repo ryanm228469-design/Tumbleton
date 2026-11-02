@@ -1652,7 +1652,7 @@ function fParts(k){ const P=[], B=(w,h,d,x,y,z,c)=>P.push({g:new THREE.BoxGeomet
   case 'drawers': B(.8,.88,.6,0,.44,0,WL); B(.84,.05,.64,0,.9,.02,'#e6e1d8'); for(let i=0;i<3;i++){ B(.76,.005,.01,0,.3+i*.28,.305,'#7a5a3a'); B(.26,.03,.04,0,.18+i*.28,.32,S); } break;
   case 'cupboard': B(.6,2,.6,0,1,0,WL); B(.005,1.9,.01,0,1,.305,'#7a5a3a'); B(.03,.3,.04,-.06,1.1,.32,S); B(.03,.3,.04,.06,1.1,.32,S); break;
   case 'sink': B(1.2,.88,.6,0,.44,0,WL); B(1.24,.05,.64,0,.9,.02,'#e6e1d8'); B(.6,.06,.4,0,.93,.04,'#c9ccd1'); B(.54,.03,.34,0,.95,.04,'#6b7178'); C(.025,.42,0,1.13,-.18,S); B(.03,.03,.24,0,1.33,-.07,S); C(.02,.1,0,1.29,.05,S); for(const [x,h,c] of [[.38,.2,'#2a9d8f'],[.46,.16,'#e5484d'],[.53,.24,'#f2f2ef']]) C(.035,h,x,.93+h/2,-.18,c,undefined,8); break;
-  case 'spice': B(.5,.03,.18,0,1.1,0,WD); B(.5,.03,.18,0,1.32,0,WD); B(.03,.3,.18,-.24,1.21,0,WD); B(.03,.3,.18,.24,1.21,0,WD); for(let i=0;i<5;i++) C(.03,.12,-.18+i*.09,1.18,0,['#e5484d','#ffb703','#2a9d8f','#8b5a2b','#f2f2ef'][i],undefined,8); for(let i=0;i<4;i++) C(.03,.1,-.14+i*.09,1.39,0,['#6a994e','#bc4749','#f2e8cf','#386641'][i],undefined,8); break;
+  case 'spice': B(.5,.03,.18,0,.015,0,WD); B(.5,.03,.18,0,.235,0,WD); B(.03,.42,.18,-.24,.21,0,WD); B(.03,.42,.18,.24,.21,0,WD); B(.5,.42,.02,0,.21,-.08,WD); for(let i=0;i<5;i++) C(.03,.12,-.18+i*.09,.09,0,['#e5484d','#ffb703','#2a9d8f','#8b5a2b','#f2f2ef'][i],undefined,8); for(let i=0;i<4;i++) C(.03,.1,-.14+i*.09,.3,0,['#6a994e','#bc4749','#f2e8cf','#386641'][i],undefined,8); break;
   case 'island': B(2,.9,.9,0,.45,0,W); B(2.2,.06,1.1,0,.93,0,'#d9d2c4'); B(1.96,.01,.01,0,.6,.455,'#c9ccd1'); break;
   case 'stool': C(.22,.06,0,.75,0,D,undefined,16); C(.2,.04,0,.71,0,'#3b3d42',undefined,16); for(const [x,z] of [[.15,.15],[-.15,.15],[.15,-.15],[-.15,-.15]]) P.push({g:beamGeo(x*.6,.7,z*.6,x*1.2,0,z*1.2,.035),c:'#9aa0a6'}); P.push({g:new THREE.TorusGeometry(.2,.015,6,16).rotateX(PI/2).translate(0,.3,0),c:'#9aa0a6'}); break;
   case 'sofa': B(2,.4,.85,0,.3,0,'#3d5a80'); B(2,.5,.2,0,.65,-.32,'#3d5a80'); B(.2,.3,.85,-.95,.55,0,'#34507a'); B(.2,.3,.85,.95,.55,0,'#34507a'); for(const x of [-.45,.45]) B(.85,.12,.6,x,.56,.07,'#4a6a94'); break;
@@ -1672,9 +1672,9 @@ function fParts(k){ const P=[], B=(w,h,d,x,y,z,c)=>P.push({g:new THREE.BoxGeomet
   case 'stairs': B(.08,.4,4.2,-.62,.2,0,WD); break; }
   return P; }
 // id: [name, price, category, width, depth, height, solid?, description]
-const FURN={stove:['Stove and oven',800,'Kitchen',.82,.66,.95,1,'Four burners and an oven'],hood:['Range hood exhaust',300,'Kitchen',.8,.5,2.7,0,'Hangs above the stove'],fridge:['Fridge-freezer with frame',1200,'Kitchen',.92,.74,2.02,1,'Fridge on top, freezer below'],
+const FURN={stove:['Stove and oven',800,'Kitchen',.82,.66,.95,1,'Four burners and an oven'],hood:['Range hood exhaust',300,'Kitchen',.8,.5,2.7,0,'Goes on the wall above the stove'],fridge:['Fridge-freezer with frame',1200,'Kitchen',.92,.74,2.02,1,'Fridge on top, freezer below'],
   drawers:['Kitchen drawers',400,'Kitchen',.84,.64,.93,1,'Three drawers with a benchtop'],cupboard:['Tall cupboard',500,'Kitchen',.6,.6,2,1,'Floor to ceiling storage'],sink:['Sink unit',600,'Kitchen',1.24,.64,1.35,1,'Sink, tap and soap bottles'],
-  spice:['Herb and spice shelf',80,'Kitchen',.5,.2,1.4,0,'A little shelf of jars'],island:['Kitchen island',900,'Kitchen',2.2,1.1,.96,1,'A long bench to sit at'],stool:['Bar stool',120,'Kitchen',.5,.5,.78,0,'Round seat on four legs'],
+  spice:['Herb and spice shelf',80,'Kitchen',.5,.2,.45,0,'Sits on a bench or hangs on a wall'],island:['Kitchen island',900,'Kitchen',2.2,1.1,.96,1,'A long bench to sit at'],stool:['Bar stool',120,'Kitchen',.5,.5,.78,0,'Round seat on four legs'],
   sofa:['Sofa',700,'Living room',2,.85,.9,1,'Three-seater'],armchair:['Armchair',350,'Living room',.85,.8,.9,1,'Comfy'],coffee:['Coffee table',200,'Living room',1.1,.6,.45,1,'Low wooden table'],tv:['TV and stand',900,'Living room',1.4,.45,1.25,1,'Big flat screen'],
   books:['Bookshelf',300,'Living room',.9,.32,1.8,1,'Full of books'],rug:['Rug',100,'Living room',2.2,1.5,.03,0,'Soft and red'],lamp:['Floor lamp',150,'Living room',.4,.4,1.75,0,'Warm light'],plant:['Pot plant',60,'Living room',.45,.45,1,0,'Leafy'],
   bed:['Double bed',800,'Bedroom',1.5,2.1,.95,1,'With pillows and a duvet'],bedside:['Bedside table',120,'Bedroom',.45,.4,.75,1,'With a little lamp'],wardrobe:['Wardrobe',500,'Bedroom',1.2,.6,2,1,'For all your clothes'],desk:['Desk with computer',400,'Bedroom',1.2,.6,1.1,1,'For homework and games'],
@@ -1690,7 +1690,7 @@ function buildFurniStore(){ const B=AIR.boxes, F=FSTORE, box=(x0,x1,y0,y1,z0,z1,
   box(-295,-292,0,1.05,32,33.2,lam('#2a9d8f'),true); addS(BX(3,.06,1.3,-293.5,1.08,32.6),lam('#e6e1d8')); addS(BX(.08,.8,2.4,-292.95,1.6,32.6).rotateY(0),signMat([['E · BUY FURNITURE',40]],'#ffd166','#111111',512,160));
   // display rooms: a kitchen just like the creator's sketch, a lounge and a bedroom
   const put=(k,x,z,r,y)=>{ const m=new THREE.Mesh(fGeo(k),VC); m.position.set(x,y||0,z); m.rotation.y=(r||0)*PI/2; m.castShadow=true; m.receiveShadow=true; scene.add(m); const D=FURN[k]; if(D[6]){ const sw=(r||0)%2?D[4]:D[3], sd=(r||0)%2?D[3]:D[4]; B.push({x0:x-sw/2,x1:x+sw/2,z0:z-sd/2,z1:z+sd/2,y0:0,h:D[5]}); } };
-  put('cupboard',-312.3,51.35,2); put('stove',-311.2,51.35,2); put('hood',-311.2,51.35,2); put('drawers',-310.3,51.35,2); put('spice',-310.3,51.35,2); put('fridge',-309.2,51.3,2); put('sink',-307.9,51.35,2); put('island',-310,48.6,0); for(const x of [-311,-310,-309]) put('stool',x,47.4,0);
+  put('cupboard',-312.3,51.35,2); put('stove',-311.2,51.35,2); put('hood',-311.2,51.35,2); put('drawers',-310.3,51.35,2); put('spice',-310.3,51.55,2,.93); put('fridge',-309.2,51.3,2); put('sink',-307.9,51.35,2); put('island',-310,48.6,0); for(const x of [-311,-310,-309]) put('stool',x,47.4,0);
   put('rug',-302,48.5,0); put('sofa',-302,51.2,2); put('coffee',-302,48.5,0); put('tv',-302,45.6,0); put('armchair',-299.4,48.5,3); put('lamp',-304.6,51.4,0); put('plant',-298.6,51.4,0); put('books',-305.7,46.5,1);
   put('bed',-310,29.4,0); put('bedside',-311.4,28.55,0); put('wardrobe',-306.8,28.65,0); put('desk',-303,28.65,0); put('chair',-303,29.5,2); put('table',-300,38,0); for(const [x,z,r] of [[-300.5,37.2,0],[-299.5,37.2,0],[-300.5,38.8,2],[-299.5,38.8,2]]) put('chair',x,z,r); }
 function buildCountry(){ const keep=_rngF; _rngF=mulberry32(4242); try{
@@ -4113,10 +4113,16 @@ function furnBuild(S){ if(S.furnG){ scene.remove(S.furnG); } for(const f of (S.f
     if(f.k==='stairs'){ const r=addRamp(x,z,[PI/2,PI,-PI/2,0][f.r],4,2.8,1.2,false,f.y,true); S.furnR.push(r); continue; }
     if(D[6]){ const b={x0:x-sw/2,x1:x+sw/2,z0:z-sd/2,z1:z+sd/2,y0:f.y,h:f.y+D[5]}; S.furnB.push({b,L:cellPush(b)}); } } }
 function onProp(){ for(const S of SALE){ const h=GAR.h[S.i]; if(!h||!h.own) continue; if(Math.abs(player.pos.x-S.cx)<BLOCK/2&&Math.abs(player.pos.z-S.cz)<BLOCK/2) return S; } return null; }
-function furnSpot(){ const S=FP.S, D=FURN[FP.k]; if(!S||!D) return null; const r=((Math.round((player.yaw+PI)/(PI/2))%4)+4)%4, yaw=r*PI/2, sw=r%2?D[4]:D[3], sd=r%2?D[3]:D[4], dist=Math.max(sw,sd)/2+.9;
-  let x=player.pos.x+Math.sin(player.yaw)*dist, z=player.pos.z+Math.cos(player.yaw)*dist; x=Math.round(x*4)/4; z=Math.round(z*4)/4; const foot=player.pos.y-HIP, y=groundHeight(x,z,foot+.4), E=BLOCK/2-.5;
-  let why=''; if(Math.abs(x-S.cx)+sw/2>E-.3||Math.abs(z-S.cz)+sd/2>E-.3) why='It has to go on your property'; else if(Math.abs(y-foot)>.5) why='Put it on the same floor you\'re standing on';
-  if(!why){ for(const [a,b] of [[0,0],[-1,-1],[1,-1],[-1,1],[1,1]]){ const px=x+a*(sw/2-.08), pz=z+b*(sd/2-.08); if(Math.abs(groundHeight(px,pz,y+.3)-y)>.3){ why='The floor isn\'t flat there'; break; } for(const yy of [y+.25,y+Math.min(1.6,D[5]*.8)]) if(solidAt(px,yy,pz)){ why='Something is in the way'; break; } if(why) break; } }
+function furnSpot(){ const S=FP.S, k=FP.k, D=FURN[k]; if(!S||!D) return null; const r=((Math.round((player.yaw+PI)/(PI/2))%4)+4)%4, yaw=r*PI/2, sw=r%2?D[4]:D[3], sd=r%2?D[3]:D[4], dist=Math.max(sw,sd)/2+.9;
+  let x=player.pos.x+Math.sin(player.yaw)*dist, z=player.pos.z+Math.cos(player.yaw)*dist; x=Math.round(x*4)/4; z=Math.round(z*4)/4; const foot=player.pos.y-HIP, E=BLOCK/2-.5;
+  // slide it back until it touches a wall (or the back of another piece), so things sit flush
+  const bx=-Math.sin(yaw), bz=-Math.cos(yaw), hd=D[4]/2, py=foot+(k==='hood'?2.2:1.1); let wall=false;
+  for(let t=hd;t<=hd+2;t+=.05){ if(solidAt(x+bx*t,py,z+bz*t)){ if(t>hd+.04){ x+=bx*(t-hd-.03); z+=bz*(t-hd-.03); } wall=true; break; } }
+  let y=groundHeight(x,z,foot+.2);
+  if(k==='spice'){ const top=groundHeight(x,z,foot+1.8); if(top-foot>.3&&top-foot<1.7) y=top; else if(wall) y=foot+1.25; else y=foot; }
+  let why=''; if(Math.abs(x-S.cx)+sw/2>E-.3||Math.abs(z-S.cz)+sd/2>E-.3) why='It has to go on your property'; else if(k!=='spice'&&Math.abs(y-foot)>.5) why='Put it on the same floor you\'re standing on'; else if(k==='hood'&&!wall) why='A range hood goes against a wall';
+  const hs=k==='hood'?[y+1.85,y+2.45]:k==='spice'?[y+.12,y+.36]:[y+.25,y+Math.min(1.6,D[5]*.8)];
+  if(!why){ for(const [a,b] of [[0,0],[-1,-1],[1,-1],[-1,1],[1,1]]){ const px=x+a*(sw/2-.1), pz=z+b*(sd/2-.1); if(k!=='spice'&&k!=='hood'&&Math.abs(groundHeight(px,pz,y+.3)-y)>.3){ why='The floor isn\'t flat there'; break; } for(const yy of hs) if(solidAt(px,yy,pz)){ why='Something is in the way'; break; } if(why) break; } }
   if(!why&&Math.hypot(x-S.padP.x,z-S.padP.z)<3) why='Keep the blue parking ring clear';
   return {x,z,y,r,yaw,why}; }
 function furnGhost(){ if(!FP.ghost){ const mt=new THREE.MeshBasicMaterial({color:0x3cff8f,transparent:true,opacity:.5,depthWrite:false}); FP.ghost=new THREE.Mesh(fGeo('stool'),mt); FP.ghost.renderOrder=5; scene.add(FP.ghost); } if(FP.ghostK!==FP.k){ FP.ghost.geometry=fGeo(FP.k); FP.ghostK=FP.k; } return FP.ghost; }
