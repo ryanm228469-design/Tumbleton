@@ -117,6 +117,16 @@ kbd{font:700 12px/1 var(--f-body);min-width:22px;padding:4px 6px 3px;border-radi
 .confirm .card{width:min(460px,100%);background:#1b1e24;border:1px solid var(--asphalt-hi);border-top:4px solid #e5484d;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px}
 .confirm h2{margin:0;font:400 clamp(19px,2.6vw,24px)/1.15 var(--f-display);color:var(--paper);text-wrap:balance}
 .confirm .opts{display:flex;flex-direction:column;gap:8px}
+.guide .card{width:min(680px,100%);max-height:90vh;border-top-color:#2a9d8f}
+.guidebody{overflow:auto;display:flex;flex-direction:column;gap:14px;padding-right:6px;color:var(--paper);font:500 15px/1.5 var(--f-body)}
+.guidebody h3{margin:6px 0 0;font:700 17px var(--f-body);color:#ffd166}
+.guidebody p{margin:0;color:var(--paper)}
+.guidebody ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.guidebody li{color:var(--paper)}
+.guidebody b{color:#fff}
+.guidetabs{display:flex;flex-wrap:wrap;gap:6px}
+.guidetabs button{background:var(--asphalt);border:1px solid var(--asphalt-hi);color:var(--paper);border-radius:8px;padding:6px 10px;font:600 13px var(--f-body);cursor:pointer}
+.guidetabs button[aria-pressed="true"]{background:#2a9d8f;border-color:#2a9d8f;color:#fff}
 .confirm .opt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:var(--asphalt);border:1px solid var(--asphalt-hi);border-radius:9px;padding:10px 14px;color:var(--paper);cursor:pointer;font:700 16px var(--f-body)}
 .confirm .opt span{font:500 13px var(--f-body);color:var(--muted)}
 .confirm .opt:hover{border-color:var(--muted)}
@@ -468,7 +478,7 @@ body.touch .dlg .nx kbd{display:none}
       <dt><kbd>J</kbd></dt><dd>Play online (Sandbox): join a public server, join a private one with its code, or make your own · <kbd>Enter</kbd> chat</dd>
       <dt><kbd>Y</kbd></dt><dd>Slow motion</dd>
       <dt><kbd>P</kbd></dt><dd>Restart from nothing (press twice)</dd>
-      <dt><kbd>H</kbd></dt><dd>Show or hide this panel</dd>
+      <dt><kbd>H</kbd></dt><dd>Show or hide this panel · the full <b>📖 How to play</b> guide is in the <kbd>B</kbd> menu and on the start screen</dd>
     </dl>
   </div>
 
@@ -476,7 +486,7 @@ body.touch .dlg .nx kbd{display:none}
     <div class="start-inner">
       <div class="bigsign"><h1>TUMBLETON</h1><div class="pop">POP. <span id="pop2">0</span></div></div>
       <p class="tag">A small blocky town where nothing is bolted down. Drive, build, explore the shops and houses, and hold off the zombies when they come shuffling in.</p>
-      <div class="startbtns"><button class="go" id="gostory">Story mode</button><button class="ghost" id="go">Sandbox · by yourself</button><button class="ghost online" id="goonline">Play online</button><button class="ghost" id="gosettings" type="button">⚙ Settings</button></div>
+      <div class="startbtns"><button class="go" id="gostory">Story mode</button><button class="ghost" id="go">Sandbox · by yourself</button><button class="ghost online" id="goonline">Play online</button><button class="ghost" id="gosettings" type="button">⚙ Settings</button><button class="ghost" id="goguide" type="button">📖 How to play</button></div>
       <p class="note" id="storynote" hidden><span id="storynt"></span><button class="linkbtn" id="storyreset" type="button">Start the story again</button></p>
       <dl class="keys">
         <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>Walk or drive</dd>
@@ -520,6 +530,12 @@ body.touch .dlg .nx kbd{display:none}
     <div class="settabs" role="tablist" id="settabs"></div>
     <div class="setlist" id="setlist"></div>
     <div class="setfoot"><button class="cancel" id="setreset" type="button">Reset this page to default</button><button class="cancel" id="setclose" type="button">Done <kbd>Esc</kbd></button></div>
+  </div></div>
+  <div class="confirm guide" id="guide" hidden role="dialog" aria-modal="true" aria-labelledby="guideh"><div class="card">
+    <h2 id="guideh">How to play Tumbleton</h2>
+    <div class="guidetabs" id="guidetabs"></div>
+    <div class="guidebody" id="guidebody"></div>
+    <div class="setfoot"><button class="cancel" id="guideclose" type="button">Done <kbd>Esc</kbd></button></div>
   </div></div>
   <div class="hud fps" id="fps" hidden>-- FPS</div>
   <div class="hud mpbadge" id="mpbadge" hidden></div>
@@ -1626,6 +1642,57 @@ function buildRing(){ const B=AIR.boxes, box=(x0,x1,y0,y1,z0,z1,m,col)=>{ addS(B
   const lp=[]; for(let x=-320;x<770;x+=40) lp.push([x,-299.5]); for(let z=-270;z<330;z+=40) if(Math.abs(z-RIVER_Z)>24) lp.push([786,z]);
   const parts=[]; for(const [x,z] of lp){ parts.push({g:new THREE.CylinderGeometry(.12,.15,8,6).translate(x,4,z),c:'#7d8288'},{g:new THREE.BoxGeometry(1.4,.25,.5).translate(x+(z<-290?0:-.7),8,z+(z<-290?.7:0)),c:'#e9e9e9'}); B.push({x0:x-.2,x1:x+.2,z0:z-.2,z1:z+.2,y0:0,h:8}); } scene.add(new THREE.Mesh(mergeGeos(parts,true),VC));
 }
+const FSTORE={x0:-313,x1:-289,z0:28,z1:52,counter:{x:-293.5,z:34}};
+function fParts(k){ const P=[], B=(w,h,d,x,y,z,c)=>P.push({g:new THREE.BoxGeometry(w,h,d).translate(x,y,z),c}), C=(r,h,x,y,z,c,r2,seg)=>P.push({g:new THREE.CylinderGeometry(r,r2===undefined?r:r2,h,seg||12).translate(x,y,z),c});
+  const W='#f2f2ef', S='#b9bfc6', D='#2b2d31', WD='#a5764a', WL='#c9a27a', G='#9fd3e8';
+  switch(k){
+  case 'stove': B(.8,.88,.65,0,.44,0,S); B(.7,.5,.03,0,.42,.33,'#1d1f24'); B(.4,.04,.04,0,.72,.36,'#d9d9d9'); for(const [x,z] of [[-.2,-.15],[.2,-.15],[-.2,.12],[.2,.12]]) C(.1,.03,x,.9,z,D); for(let i=0;i<4;i++) C(.03,.04,-.27+i*.18,.8,.34,D,undefined,8); B(.82,.08,.66,0,.93,0,'#d9dce0'); break;
+  case 'hood': B(.8,.22,.5,0,1.85,-.08,S); B(.5,.2,.35,0,2.04,-.12,S); B(.26,.55,.26,0,2.4,-.17,S); break;
+  case 'fridge': B(.92,2.02,.72,0,1.01,-.02,'#7d8288'); B(.8,1.9,.68,0,.97,.03,W); B(.8,.03,.02,0,1.2,.38,'#c9ccd1'); B(.04,.5,.06,-.32,1.55,.4,S); B(.04,.4,.06,-.32,.75,.4,S); for(const x of [-.3,.3]) B(.06,.06,.06,x,.03,.25,D); break;
+  case 'drawers': B(.8,.88,.6,0,.44,0,WL); B(.84,.05,.64,0,.9,.02,'#e6e1d8'); for(let i=0;i<3;i++){ B(.76,.005,.01,0,.3+i*.28,.305,'#7a5a3a'); B(.26,.03,.04,0,.18+i*.28,.32,S); } break;
+  case 'cupboard': B(.6,2,.6,0,1,0,WL); B(.005,1.9,.01,0,1,.305,'#7a5a3a'); B(.03,.3,.04,-.06,1.1,.32,S); B(.03,.3,.04,.06,1.1,.32,S); break;
+  case 'sink': B(1.2,.88,.6,0,.44,0,WL); B(1.24,.05,.64,0,.9,.02,'#e6e1d8'); B(.6,.06,.4,0,.93,.04,'#c9ccd1'); B(.54,.03,.34,0,.95,.04,'#6b7178'); C(.025,.42,0,1.13,-.18,S); B(.03,.03,.24,0,1.33,-.07,S); C(.02,.1,0,1.29,.05,S); for(const [x,h,c] of [[.38,.2,'#2a9d8f'],[.46,.16,'#e5484d'],[.53,.24,'#f2f2ef']]) C(.035,h,x,.93+h/2,-.18,c,undefined,8); break;
+  case 'spice': B(.5,.03,.18,0,1.1,0,WD); B(.5,.03,.18,0,1.32,0,WD); B(.03,.3,.18,-.24,1.21,0,WD); B(.03,.3,.18,.24,1.21,0,WD); for(let i=0;i<5;i++) C(.03,.12,-.18+i*.09,1.18,0,['#e5484d','#ffb703','#2a9d8f','#8b5a2b','#f2f2ef'][i],undefined,8); for(let i=0;i<4;i++) C(.03,.1,-.14+i*.09,1.39,0,['#6a994e','#bc4749','#f2e8cf','#386641'][i],undefined,8); break;
+  case 'island': B(2,.9,.9,0,.45,0,W); B(2.2,.06,1.1,0,.93,0,'#d9d2c4'); B(1.96,.01,.01,0,.6,.455,'#c9ccd1'); break;
+  case 'stool': C(.22,.06,0,.75,0,D,undefined,16); C(.2,.04,0,.71,0,'#3b3d42',undefined,16); for(const [x,z] of [[.15,.15],[-.15,.15],[.15,-.15],[-.15,-.15]]) P.push({g:beamGeo(x*.6,.7,z*.6,x*1.2,0,z*1.2,.035),c:'#9aa0a6'}); P.push({g:new THREE.TorusGeometry(.2,.015,6,16).rotateX(PI/2).translate(0,.3,0),c:'#9aa0a6'}); break;
+  case 'sofa': B(2,.4,.85,0,.3,0,'#3d5a80'); B(2,.5,.2,0,.65,-.32,'#3d5a80'); B(.2,.3,.85,-.95,.55,0,'#34507a'); B(.2,.3,.85,.95,.55,0,'#34507a'); for(const x of [-.45,.45]) B(.85,.12,.6,x,.56,.07,'#4a6a94'); break;
+  case 'armchair': B(.85,.4,.8,0,.3,0,'#9c6644'); B(.85,.5,.18,0,.65,-.3,'#9c6644'); B(.15,.3,.8,-.35,.55,0,'#8a5a3b'); B(.15,.3,.8,.35,.55,0,'#8a5a3b'); break;
+  case 'coffee': B(1.1,.05,.6,0,.42,0,WD); for(const [x,z] of [[.5,.25],[-.5,.25],[.5,-.25],[-.5,-.25]]) B(.05,.4,.05,x,.2,z,'#5b4636'); break;
+  case 'tv': B(1.4,.45,.45,0,.22,0,'#3b3d42'); B(1.3,.75,.06,0,.85,-.05,'#111317'); B(1.22,.67,.01,0,.85,-.015,'#1f3b57'); B(.3,.04,.2,0,.47,-.05,D); break;
+  case 'books': B(.9,1.8,.32,0,.9,0,WD); for(let r=0;r<4;r++){ B(.84,.03,.3,0,.3+r*.42,0,'#7a5a3a'); for(let i=0;i<7;i++) B(.08,.3,.22,-.33+i*.11,.47+r*.42,.02,['#e5484d','#2a9d8f','#ffb703','#3d5a80','#f2f2ef','#6a994e','#a23b72'][(i+r)%7]); } break;
+  case 'rug': B(2.2,.02,1.5,0,.011,0,'#bc4749'); B(1.9,.025,1.2,0,.012,0,'#f2e8cf'); B(1.5,.03,.8,0,.013,0,'#bc4749'); break;
+  case 'lamp': C(.18,.04,0,.02,0,D,undefined,12); C(.025,1.5,0,.77,0,'#c9a24a'); C(.18,.3,0,1.6,0,'#f4e9d0',.26,14); break;
+  case 'plant': C(.2,.4,0,.2,0,'#bc6c25',.16); for(let i=0;i<7;i++){ const a=i/7*TAU; P.push({g:new THREE.ConeGeometry(.09,.7,5).rotateZ(Math.cos(a)*.5).rotateX(Math.sin(a)*.5).translate(Math.cos(a)*.08,.72,Math.sin(a)*.08),c:i%2?'#6a994e':'#386641'}); } break;
+  case 'bed': B(1.5,.35,2.1,0,.2,0,WD); B(1.4,.2,2,0,.47,.02,'#f2f2ef'); B(1.5,.9,.08,0,.45,-1.03,WD); for(const x of [-.38,.38]) B(.55,.12,.32,x,.62,-.78,'#ffffff'); B(1.42,.06,1.3,0,.6,.35,'#3d5a80'); break;
+  case 'bedside': B(.45,.5,.4,0,.25,0,WL); B(.4,.005,.01,0,.3,.2,'#7a5a3a'); C(.07,.04,0,.52,0,D); C(.1,.18,0,.66,0,'#f4e9d0',.12); break;
+  case 'wardrobe': B(1.2,2,.6,0,1,0,WD); B(.005,1.9,.01,0,1,.305,'#5b4636'); B(.03,.3,.04,-.07,1.1,.32,'#c9a24a'); B(.03,.3,.04,.07,1.1,.32,'#c9a24a'); break;
+  case 'desk': B(1.2,.05,.6,0,.75,0,WL); B(.05,.72,.55,-.57,.36,0,WL); B(.4,.72,.55,.38,.36,0,WL); B(.5,.32,.04,-.15,.95,-.2,'#111317'); B(.46,.28,.01,-.15,.95,-.18,'#2a6f97'); break;
+  case 'table': B(1.6,.05,.9,0,.75,0,WD); for(const [x,z] of [[.72,.38],[-.72,.38],[.72,-.38],[-.72,-.38]]) B(.06,.74,.06,x,.37,z,'#5b4636'); break;
+  case 'chair': B(.45,.05,.45,0,.46,0,WD); B(.45,.5,.05,0,.7,-.2,WD); for(const [x,z] of [[.19,.19],[-.19,.19],[.19,-.19],[-.19,-.19]]) B(.04,.46,.04,x,.23,z,'#5b4636'); break;
+  case 'stairs': B(.08,.4,4.2,-.62,.2,0,WD); break; }
+  return P; }
+// id: [name, price, category, width, depth, height, solid?, description]
+const FURN={stove:['Stove and oven',800,'Kitchen',.82,.66,.95,1,'Four burners and an oven'],hood:['Range hood exhaust',300,'Kitchen',.8,.5,2.7,0,'Hangs above the stove'],fridge:['Fridge-freezer with frame',1200,'Kitchen',.92,.74,2.02,1,'Fridge on top, freezer below'],
+  drawers:['Kitchen drawers',400,'Kitchen',.84,.64,.93,1,'Three drawers with a benchtop'],cupboard:['Tall cupboard',500,'Kitchen',.6,.6,2,1,'Floor to ceiling storage'],sink:['Sink unit',600,'Kitchen',1.24,.64,1.35,1,'Sink, tap and soap bottles'],
+  spice:['Herb and spice shelf',80,'Kitchen',.5,.2,1.4,0,'A little shelf of jars'],island:['Kitchen island',900,'Kitchen',2.2,1.1,.96,1,'A long bench to sit at'],stool:['Bar stool',120,'Kitchen',.5,.5,.78,0,'Round seat on four legs'],
+  sofa:['Sofa',700,'Living room',2,.85,.9,1,'Three-seater'],armchair:['Armchair',350,'Living room',.85,.8,.9,1,'Comfy'],coffee:['Coffee table',200,'Living room',1.1,.6,.45,1,'Low wooden table'],tv:['TV and stand',900,'Living room',1.4,.45,1.25,1,'Big flat screen'],
+  books:['Bookshelf',300,'Living room',.9,.32,1.8,1,'Full of books'],rug:['Rug',100,'Living room',2.2,1.5,.03,0,'Soft and red'],lamp:['Floor lamp',150,'Living room',.4,.4,1.75,0,'Warm light'],plant:['Pot plant',60,'Living room',.45,.45,1,0,'Leafy'],
+  bed:['Double bed',800,'Bedroom',1.5,2.1,.95,1,'With pillows and a duvet'],bedside:['Bedside table',120,'Bedroom',.45,.4,.75,1,'With a little lamp'],wardrobe:['Wardrobe',500,'Bedroom',1.2,.6,2,1,'For all your clothes'],desk:['Desk with computer',400,'Bedroom',1.2,.6,1.1,1,'For homework and games'],
+  table:['Dining table',450,'Dining',1.6,.9,.78,1,'Seats six'],chair:['Dining chair',80,'Dining',.45,.45,.95,0,'Wooden chair'],stairs:['Wooden staircase',1000,'Extras',1.3,4.2,2.8,0,'Real stairs you can climb, 2.8 m up']};
+const _fGeo={}; function fGeo(k){ if(!_fGeo[k]){ const p=fParts(k); _fGeo[k]=p.length?mergeGeos(p,true):new THREE.BoxGeometry(.1,.1,.1); _fGeo[k].userData.keep=true; } return _fGeo[k]; }
+function buildFurniStore(){ const B=AIR.boxes, F=FSTORE, box=(x0,x1,y0,y1,z0,z1,m,col)=>{ addS(BX(x1-x0,y1-y0,z1-z0,(x0+x1)/2,(y0+y1)/2,(z0+z1)/2),m); if(col!==false) B.push({x0,x1,z0,z1,y0,h:y1}); };
+  const wall=lam('#f1e3c8',{roughness:.9}), trim=lam('#2a9d8f'), floor=lam('#c9a27a',{roughness:.8}), H=5;
+  addS(PL(24,12,-278.5,.045,29),matAsphalt); addS(PL(F.x1-F.x0,F.z1-F.z0,(F.x0+F.x1)/2,.06,(F.z0+F.z1)/2),flat(floor));
+  box(F.x0,F.x1,0,H,F.z0,F.z0+.3,wall); box(F.x0,F.x1,0,H,F.z1-.3,F.z1,wall); box(F.x0,F.x0+.3,0,H,F.z0,F.z1,wall); box(F.x1-.3,F.x1,0,H,F.z0,31,wall); box(F.x1-.3,F.x1,0,H,37,F.z1,wall); box(F.x1-.3,F.x1,3.2,H,31,37,wall);
+  box(F.x0-.3,F.x1+.3,H,H+.4,F.z0-.3,F.z1+.3,lam('#7d8288'),false); for(const z of [F.z0+.3,F.z1-.3]) for(let x=F.x0+3;x<F.x1-2;x+=5) addS(BX(2.6,1.4,.06,x,2.2,z+(z<40?.03:-.03)),lam('#cfe8ff'));
+  addS(BX(.2,1.6,14,F.x1+.15,H-.8,40),signMat([['TUMBLETON FURNITURE CO.',72]],'#2a9d8f','#ffffff',1024,96)); box(F.x1+.1,F.x1+.4,0,3.2,30.6,31,trim,true); box(F.x1+.1,F.x1+.4,0,3.2,37,37.4,trim,true);
+  // the counter and a sign
+  box(-295,-292,0,1.05,32,33.2,lam('#2a9d8f'),true); addS(BX(3,.06,1.3,-293.5,1.08,32.6),lam('#e6e1d8')); addS(BX(.08,.8,2.4,-292.95,1.6,32.6).rotateY(0),signMat([['E · BUY FURNITURE',40]],'#ffd166','#111111',512,160));
+  // display rooms: a kitchen just like the creator's sketch, a lounge and a bedroom
+  const put=(k,x,z,r,y)=>{ const m=new THREE.Mesh(fGeo(k),VC); m.position.set(x,y||0,z); m.rotation.y=(r||0)*PI/2; m.castShadow=true; m.receiveShadow=true; scene.add(m); const D=FURN[k]; if(D[6]){ const sw=(r||0)%2?D[4]:D[3], sd=(r||0)%2?D[3]:D[4]; B.push({x0:x-sw/2,x1:x+sw/2,z0:z-sd/2,z1:z+sd/2,y0:0,h:D[5]}); } };
+  put('cupboard',-312.3,51.35,2); put('stove',-311.2,51.35,2); put('hood',-311.2,51.35,2); put('drawers',-310.3,51.35,2); put('spice',-310.3,51.35,2); put('fridge',-309.2,51.3,2); put('sink',-307.9,51.35,2); put('island',-310,48.6,0); for(const x of [-311,-310,-309]) put('stool',x,47.4,0);
+  put('rug',-302,48.5,0); put('sofa',-302,51.2,2); put('coffee',-302,48.5,0); put('tv',-302,45.6,0); put('armchair',-299.4,48.5,3); put('lamp',-304.6,51.4,0); put('plant',-298.6,51.4,0); put('books',-305.7,46.5,1);
+  put('bed',-310,29.4,0); put('bedside',-311.4,28.55,0); put('wardrobe',-306.8,28.65,0); put('desk',-303,28.65,0); put('chair',-303,29.5,2); put('table',-300,38,0); for(const [x,z,r] of [[-300.5,37.2,0],[-299.5,37.2,0],[-300.5,38.8,2],[-299.5,38.8,2]]) put('chair',x,z,r); }
 function buildCountry(){ const keep=_rngF; _rngF=mulberry32(4242); try{
   const B=AIR.boxes, box=(x0,x1,y0,y1,z0,z1,m,col)=>{ addS(BX(x1-x0,y1-y0,z1-z0,(x0+x1)/2,(y0+y1)/2,(z0+z1)/2),m); if(col!==false) B.push({x0,x1,z0,z1,y0,h:y1}); };
   const white=lam('#f2f2f2',{roughness:.6}), yel=lam('#ffcc33',{roughness:.6}), dirt=flat(lam('#a68a64',{roughness:1})), gravel=flat(lam('#b9b2a4',{roughness:1})), conc=lam('#b8bab6',{roughness:.9}), dark=lam('#2b2d31',{roughness:.6});
@@ -1704,7 +1771,7 @@ function buildCountry(){ const keep=_rngF; _rngF=mulberry32(4242); try{
     box(-726.1,-725.9,0,7,-130.1,-129.9,dark,false); addS(new THREE.ConeGeometry(.7,2.6,10,1,true).rotateZ(PI/2).translate(-727.3,6.6,-130),lam('#ff7a1a',{side:THREE.DoubleSide})); }
   // trees and hedgerows across the countryside
   const clear=(x,z)=>{ if(Math.abs(z+45)<9) return false; if(Math.abs(z+87)<16||Math.abs(z-203)<14||Math.abs(x-HX)<16) return false; if(Math.abs(z-RIVER_Z)<RIV_OUT+3) return false;
-    for(const p of [[-792,-645,205,282],[-768,-662,-282,-100],[-600,-470,-270,-110],[-625,-420,135,270],[-470,-395,-190,-140],[-620,-410,-112,-60],[-640,-560,-110,-60]]) if(x>p[0]-3&&x<p[1]+3&&z>p[2]-3&&z<p[3]+3) return false; return true; };
+    for(const p of [[-318,-284,18,60],[-792,-645,205,282],[-768,-662,-282,-100],[-600,-470,-270,-110],[-625,-420,135,270],[-470,-395,-190,-140],[-620,-410,-112,-60],[-640,-560,-110,-60]]) if(x>p[0]-3&&x<p[1]+3&&z>p[2]-3&&z<p[3]+3) return false; return true; };
   for(let k=0;k<170;k++){ const x=-285-rng()*495, z=-270+rng()*540; if(!clear(x,z)) continue; addTree(x,z,.9+rng()*.8,null); }
   for(let k=0;k<26;k++){ const a=PI*.6+rng()*PI*.8, rad=560+rng()*120, x=Math.cos(a)*rad-160, z=Math.sin(a)*rad*.55, w=30+rng()*50, h=14+rng()*30; if(x>-760) continue; addS(new THREE.BoxGeometry(w,h,25+rng()*30).rotateY(a).translate(x-40,h/2-1,z),pick(matHill)); }
 } finally { _rngF=keep; } }
@@ -2167,7 +2234,7 @@ for(let i=0;i<N;i++) for(let j=0;j<N;j++){
   }
 }
 /* edge hedge, border trees, hills, clouds */
-for(const s of [-1,1]){ if(s<0){ for(const [a,b] of [[-LIM-1.6,-211],[-195,-37],[-21,137],[153,LIM+1.6]]) addS(BX(b-a,1.3,1.4,(a+b)/2,.65,-LIM-1.6),matHedge); } else for(const [a,b] of [[-LIM-1.6,-153],[-137,79],[95,LIM+1.6]]) addS(BX(b-a,1.3,1.4,(a+b)/2,.65,LIM+1.6),matHedge); for(const [a,b] of (s>0?[[-LIM-3.2,-211],[-195,-40],[-18,RIVER_Z-RIV_OUT],[RIVER_Z+RIV_OUT,195],[211,LIM+3.2]]:[[-LIM-3.2,-94],[-80,RIVER_Z-RIV_OUT],[RIVER_Z+RIV_OUT,196],[210,LIM+3.2]])) addS(BX(1.4,1.3,b-a,s*(LIM+1.6),.65,(a+b)/2),matHedge); }
+for(const s of [-1,1]){ if(s<0){ for(const [a,b] of [[-LIM-1.6,-211],[-195,-37],[-21,137],[153,LIM+1.6]]) addS(BX(b-a,1.3,1.4,(a+b)/2,.65,-LIM-1.6),matHedge); } else for(const [a,b] of [[-LIM-1.6,-153],[-137,79],[95,LIM+1.6]]) addS(BX(b-a,1.3,1.4,(a+b)/2,.65,LIM+1.6),matHedge); for(const [a,b] of (s>0?[[-LIM-3.2,-211],[-195,-40],[-18,RIVER_Z-RIV_OUT],[RIVER_Z+RIV_OUT,195],[211,LIM+3.2]]:[[-LIM-3.2,-94],[-80,21],[37,RIVER_Z-RIV_OUT],[RIVER_Z+RIV_OUT,196],[210,LIM+3.2]])) addS(BX(1.4,1.3,b-a,s*(LIM+1.6),.65,(a+b)/2),matHedge); }
 const inCountry=(x,z)=>x>740||(x<-LIM-2&&z>-LIM-40&&z<LIM+40)||z>LIM+2||z<-LIM-2||(x>LIM+2&&((z>-290&&z<-138)||(z>132&&z<290)));
 const inAir=(x,z,m)=>x>AIR.x0-m&&x<AIR.x1+m&&z>AIR.z0-m&&z<AIR.z1+m;
 for(let k=0;k<220;k++){ const x=rr(-HALF-130,HALF+130), z=rr(-HALF-130,HALF+130); if(Math.max(Math.abs(x),Math.abs(z))<LIM+5||Math.abs(z-RIVER_Z)<RIV_OUT+3) continue; if(inAir(x,z,4)||inCountry(x,z)){ suppressS=true; addTree(x,z,rr(.9,1.6),null); suppressS=false; continue; } addTree(x,z,rr(.9,1.6),null); }
@@ -2175,7 +2242,7 @@ for(let k=0;k<46;k++){ const a=k/46*TAU+rr(-.05,.05), rad=rr(LIM+70,LIM+130), w=
 buildRiver();
 airportBuild();
 if(POLY){ detailPass(); aoPass(); }
-buildCountry(); buildSouth(); buildNorth(); buildEast(); buildBases(); buildRing();
+buildCountry(); buildSouth(); buildNorth(); buildEast(); buildBases(); buildRing(); buildFurniStore();
 flushS(); SEW.surf=scene.children.filter(m=>m.isMesh&&m!==skyDome);
 sealCells(); staticSealed=true;
 
@@ -3460,8 +3527,9 @@ const VEH_SHOP=[['bicycle','Bicycle',300],['scooter','Scooter',900],['gokart','G
 const VNAME={}; for(const [v,n] of VEH_SHOP) VNAME[v]=n; VNAME.jetski='Jet ski';
 const HOUSES=[{name:'Kōwhai Cottage',price:4000,cap:2},{name:'Rimu Family Home',price:12000,cap:3},{name:'Tōtara House',price:30000,cap:4},{name:'Pōhutukawa Mansion',price:75000,cap:6}];
 const MODS=[['ram','Zombie rammer',2500,'Spiked plough on the front. People and zombies go flying and the car hardly slows down'],['bump','Crash bumpers',1500,'Steel bars front and back. Crashes do 60% less damage'],['armor','Armour plating',4000,'Metal plates and window bars. Bullets, blasts and bites do half damage'],['nitro','Nitro boost',3000,'Hold Shift for a burst of speed (refills by itself)'],['gun','Roof gun',8000,'A machine gun on the roof. Aim with the mouse, click or F to shoot']];
+const FURN_IDS=['stove','hood','fridge','drawers','cupboard','sink','spice','island','stool','sofa','armchair','coffee','tv','books','rug','lamp','plant','bed','bedside','wardrobe','desk','table','chair','stairs'];
 const GAR={h:{},cars:[],n:1}; const GAR_KEY='tumbleton-garage';
-try{ const q=JSON.parse(localStorage.getItem(GAR_KEY)||'null'); if(q){ if(q.h&&typeof q.h==='object') for(const k in q.h){ const o=q.h[k]; if(o&&o.own) GAR.h[k]={own:true,cap:clamp(o.cap|0,1,12),arm:!!o.arm,med:!!o.med,sentry:!!o.sentry,heli:!!o.heli,tramp:!!o.tramp,fence:!!o.fence,sentryN:clamp((o.sentryN|0)||(o.sentry?1:0),0,4),sentries:Array.isArray(o.sentries)?o.sentries.slice(0,4).filter(p=>p&&isFinite(p.x)&&isFinite(p.z)&&Math.abs(p.x)<22&&Math.abs(p.z)<22).map(p=>({x:+p.x,z:+p.z,y:clamp(+p.y||0,0,30)})):null}; }
+try{ const q=JSON.parse(localStorage.getItem(GAR_KEY)||'null'); if(q){ if(q.h&&typeof q.h==='object') for(const k in q.h){ const o=q.h[k]; if(o&&o.own) GAR.h[k]={own:true,cap:clamp(o.cap|0,1,12),arm:!!o.arm,med:!!o.med,sentry:!!o.sentry,heli:!!o.heli,tramp:!!o.tramp,fence:!!o.fence,sentryN:clamp((o.sentryN|0)||(o.sentry?1:0),0,4),furn:Array.isArray(o.furn)?o.furn.slice(0,80).filter(f=>f&&FURN_IDS.includes(f.k)&&isFinite(f.x)&&isFinite(f.z)&&isFinite(f.y)&&Math.abs(f.x)<22&&Math.abs(f.z)<22).map(f=>({k:f.k,x:+f.x,z:+f.z,y:clamp(+f.y,-1,30),r:(f.r|0)&3})):[],sentries:Array.isArray(o.sentries)?o.sentries.slice(0,4).filter(p=>p&&isFinite(p.x)&&isFinite(p.z)&&Math.abs(p.x)<22&&Math.abs(p.z)<22).map(p=>({x:+p.x,z:+p.z,y:clamp(+p.y||0,0,30)})):null}; }
   if(Array.isArray(q.cars)) for(const e of q.cars.slice(0,40)) if(e&&VNAME[e.v]) GAR.cars.push({id:GAR.n++,v:e.v,col:/^#[0-9a-fA-F]{6}$/.test(e.col)?e.col:'#3a86ff',mods:Object.assign({},e.mods||{}),out:false}); } }catch(e){}
 function garSave(){ try{ localStorage.setItem(GAR_KEY,JSON.stringify({h:GAR.h,cars:GAR.cars.map(e=>({v:e.v,col:e.col,mods:e.mods}))})); }catch(e){} }
 const garCap=()=>{ let n=0; for(const k in GAR.h) if(GAR.h[k].own) n+=GAR.h[k].cap; return n; };
@@ -3552,6 +3620,7 @@ function portalMenu(S){ const h=GAR.h[S.i], add=menuOpen(S.D.name+' · garage '+
   else add('Armoury · '+money(5000),'Refill all your ammo here for free, any time',()=>{ if(state.money<5000){ menuDone('Not enough cash'); return; } state.money-=5000; save(); h.arm=true; garSave(); menuDone('Armoury built. Open the garage menu to refill ammo'); },'',state.money<5000);
   if(h.med) add('Medical bay: heal','Back to full health',()=>{ state.hp=100; menuDone('Fully healed'); });
   else add('Medical bay · '+money(2500),'Heal to full health here, any time',()=>{ if(state.money<2500){ menuDone('Not enough cash'); return; } state.money-=2500; save(); h.med=true; garSave(); menuDone('Medical bay built'); },'',state.money<2500);
+  add('🛋 Your furniture','Place, move or pick up furniture in this house',()=>{ menuDone(); furnMenu(S); },'');
   menuHead('Yard upgrades');
   { const n=h.sentryN||0, placed=(h.sentries||[]).length;
     if(n<4) add('Sentry gun ('+n+'/4) · '+money(12000),'Shoots zombies that come near. You choose where it goes',()=>{ if(state.money<12000){ menuDone('Not enough cash'); return; } state.money-=12000; save(); h.sentryN=n+1; garSave(); sentryPlace(S); menuDone('Walk to where you want the sentry gun and press E to put it there'); },'',state.money<12000);
@@ -4030,6 +4099,50 @@ function achMenu(){ const add=menuOpen('Achievements · '+ACH.got.length+' of '+
   if(todo.length) menuHead('Still to do'); for(const [id,n,d,r] of todo){ let prog=''; if(id==='zk100'||id==='zk1000') prog=' · '+Math.min(achSt('zk'),id==='zk100'?100:1000)+' so far'; if(id==='del10') prog=' · '+Math.min(10,achSt('del'))+'/10'; if(id==='garage') prog=' · '+GAR.cars.length+'/6'; add('🔒 '+n+' · '+money(r),d+prog,()=>menuDone(),''); }
   if(done.length) menuHead('Unlocked'); for(const [id,n,d,r] of done) add('🏆 '+n,d,()=>menuDone(),'');
   add('Close','',()=>menuDone()); }
+
+/* ---------- Stage 12: furniture: buy it at Tumbleton Furniture Co. and place it in your house ---------- */
+const FP={inv:{},mode:null,k:null,S:null,ghost:null,ghostK:null};
+try{ const q=JSON.parse(localStorage.getItem('tumbleton-furn')||'null'); if(q&&q.inv) for(const k in q.inv) if(FURN[k]&&isFinite(q.inv[k])) FP.inv[k]=clamp(q.inv[k]|0,0,99); }catch(e){}
+function furnSave(){ try{ localStorage.setItem('tumbleton-furn',JSON.stringify({inv:FP.inv})); }catch(e){} }
+function cellPush(b){ const out=[]; const ja=Math.floor(((b.z0+b.z1)/2+HALF)/P); if(ja<0||ja>=N){ AIR.boxes.push(b); return [AIR.boxes]; } const i0=clamp(Math.floor((b.x0+HALF)/P),0,N-1), i1=clamp(Math.floor((b.x1+HALF)/P),0,N-1); for(let i=i0;i<=i1;i++){ cells[i][ja].b.push(b); out.push(cells[i][ja].b); } return out; }
+function cellPull(b,lists){ for(const L of lists){ const i=L.indexOf(b); if(i>=0) L.splice(i,1); } }
+function furnBuild(S){ if(S.furnG){ scene.remove(S.furnG); } for(const f of (S.furnB||[])) cellPull(f.b,f.L); for(const r of (S.furnR||[])){ const i=ramps.indexOf(r); if(i>=0) ramps.splice(i,1); if(r.m){ scene.remove(r.m); r.m.geometry.dispose(); } }
+  S.furnB=[]; S.furnR=[]; const h=GAR.h[S.i]; if(!h||!h.own) return; const g=new THREE.Group(); S.furnG=g; scene.add(g);
+  for(const f of (h.furn||[])){ const D=FURN[f.k]; if(!D) continue; const x=S.cx+f.x, z=S.cz+f.z, yaw=f.r*PI/2, m=new THREE.Mesh(fGeo(f.k),VC); m.position.set(x,f.y,z); m.rotation.y=yaw; m.castShadow=true; m.receiveShadow=true; g.add(m);
+    const sw=f.r%2?D[4]:D[3], sd=f.r%2?D[3]:D[4];
+    if(f.k==='stairs'){ const r=addRamp(x,z,[PI/2,PI,-PI/2,0][f.r],4,2.8,1.2,false,f.y,true); S.furnR.push(r); continue; }
+    if(D[6]){ const b={x0:x-sw/2,x1:x+sw/2,z0:z-sd/2,z1:z+sd/2,y0:f.y,h:f.y+D[5]}; S.furnB.push({b,L:cellPush(b)}); } } }
+function onProp(){ for(const S of SALE){ const h=GAR.h[S.i]; if(!h||!h.own) continue; if(Math.abs(player.pos.x-S.cx)<BLOCK/2&&Math.abs(player.pos.z-S.cz)<BLOCK/2) return S; } return null; }
+function furnSpot(){ const S=FP.S, D=FURN[FP.k]; if(!S||!D) return null; const r=((Math.round((player.yaw+PI)/(PI/2))%4)+4)%4, yaw=r*PI/2, sw=r%2?D[4]:D[3], sd=r%2?D[3]:D[4], dist=Math.max(sw,sd)/2+.9;
+  let x=player.pos.x+Math.sin(player.yaw)*dist, z=player.pos.z+Math.cos(player.yaw)*dist; x=Math.round(x*4)/4; z=Math.round(z*4)/4; const foot=player.pos.y-HIP, y=groundHeight(x,z,foot+.4), E=BLOCK/2-.5;
+  let why=''; if(Math.abs(x-S.cx)+sw/2>E-.3||Math.abs(z-S.cz)+sd/2>E-.3) why='It has to go on your property'; else if(Math.abs(y-foot)>.5) why='Put it on the same floor you\'re standing on';
+  if(!why){ for(const [a,b] of [[0,0],[-1,-1],[1,-1],[-1,1],[1,1]]){ const px=x+a*(sw/2-.08), pz=z+b*(sd/2-.08); if(Math.abs(groundHeight(px,pz,y+.3)-y)>.3){ why='The floor isn\'t flat there'; break; } for(const yy of [y+.25,y+Math.min(1.6,D[5]*.8)]) if(solidAt(px,yy,pz)){ why='Something is in the way'; break; } if(why) break; } }
+  if(!why&&Math.hypot(x-S.padP.x,z-S.padP.z)<3) why='Keep the blue parking ring clear';
+  return {x,z,y,r,yaw,why}; }
+function furnGhost(){ if(!FP.ghost){ const mt=new THREE.MeshBasicMaterial({color:0x3cff8f,transparent:true,opacity:.5,depthWrite:false}); FP.ghost=new THREE.Mesh(fGeo('stool'),mt); FP.ghost.renderOrder=5; scene.add(FP.ghost); } if(FP.ghostK!==FP.k){ FP.ghost.geometry=fGeo(FP.k); FP.ghostK=FP.k; } return FP.ghost; }
+function furnStart(S,k){ FP.mode='place'; FP.S=S; FP.k=k; furnGhost().visible=true; }
+function furnStop(){ FP.mode=null; if(FP.ghost) FP.ghost.visible=false; }
+function furnNearest(){ const S=FP.S, h=S&&GAR.h[S.i]; if(!h||!h.furn) return null; let best=null,bd=2.6; for(const f of h.furn){ const d=Math.hypot(S.cx+f.x-player.pos.x,S.cz+f.z-player.pos.z); if(d<bd&&Math.abs(f.y-(player.pos.y-HIP))<1.5){ bd=d; best=f; } } return best; }
+function furnUse(){ if(!FP.mode||activeCar||player.mode!=='walk') return false; const S=FP.S, h=GAR.h[S.i];
+  if(FP.mode==='pick'){ const f=furnNearest(); if(!f){ flash('Walk up to a piece of furniture to pick it up'); return true; } h.furn.splice(h.furn.indexOf(f),1); FP.inv[f.k]=(FP.inv[f.k]||0)+1; garSave(); furnSave(); furnBuild(S); Snd.tink(player.pos.x,player.pos.z); flash('Picked up the '+FURN[f.k][0].toLowerCase()+'. Place it again from the B menu'); return true; }
+  const p=furnSpot(); if(!p) return false; if(p.why){ flash(p.why); return true; } if((FP.inv[FP.k]||0)<=0){ furnStop(); return true; } h.furn=h.furn||[]; if(h.furn.length>=80){ flash('That\'s a lot of furniture! 80 pieces is the most for one house'); return true; }
+  h.furn.push({k:FP.k,x:+(p.x-S.cx).toFixed(2),z:+(p.z-S.cz).toFixed(2),y:+p.y.toFixed(2),r:p.r}); FP.inv[FP.k]--; garSave(); furnSave(); furnBuild(S); Snd.tink(p.x,p.z);
+  if(FP.inv[FP.k]>0) flash('Placed! '+FP.inv[FP.k]+' more '+FURN[FP.k][0].toLowerCase()+' to place'); else { furnStop(); flash('Placed! Press B for more furniture'); } return true; }
+function furnPrompt(){ if(!FP.mode||activeCar||player.mode!=='walk') return ''; if(FP.mode==='pick'){ const f=furnNearest(); return f?'<kbd>E</kbd> Pick up the '+FURN[f.k][0].toLowerCase():'Picking up furniture: walk up to a piece · <kbd>B</kbd> to stop'; }
+  const p=furnSpot(); if(!p) return ''; return p.why?'Placing a '+FURN[FP.k][0].toLowerCase()+': '+p.why:'<kbd>E</kbd> Place the '+FURN[FP.k][0].toLowerCase()+' · turn to rotate it · <kbd>B</kbd> to stop'; }
+function furnTick(dt){ if(!FP.mode) return; const S=FP.S; if(!S||Math.hypot(player.pos.x-S.cx,player.pos.z-S.cz)>45){ furnStop(); return; }
+  if(FP.mode==='place'&&FP.ghost){ const p=furnSpot(), show=p&&!activeCar&&player.mode==='walk'; FP.ghost.visible=!!show; if(show){ FP.ghost.position.set(p.x,p.y,p.z); FP.ghost.rotation.y=p.yaw; FP.ghost.material.color.set(p.why?0xff4d4d:0x3cff8f); } } else if(FP.ghost) FP.ghost.visible=false; }
+function furnMenu(S){ const h=GAR.h[S.i], add=menuOpen('Your furniture · '+S.D.name);
+  if(FP.mode) add('Stop placing furniture','',()=>{ furnStop(); menuDone(); },'pick-go');
+  const have=Object.keys(FURN).filter(k=>(FP.inv[k]||0)>0); if(have.length){ menuHead('Ready to place'); for(const k of have) add(FURN[k][0]+' × '+FP.inv[k],'Stand where you want it, face where it should go, press E',()=>{ furnStart(S,k); menuDone('Press E to place it. Turn to rotate it'); },''); }
+  else add('You don\'t have any furniture to place','Buy some at Tumbleton Furniture Co., just west of the city',()=>{ menuDone('The furniture store is marked'); state.wpDest={x:FSTORE.counter.x,z:FSTORE.counter.z}; state.shopWpUntil=perfT+120; },'');
+  if((h.furn||[]).length) add('Pick up or move furniture ('+h.furn.length+' placed)','Walk up to a piece and press E to put it back in your stock',()=>{ FP.mode='pick'; FP.S=S; if(FP.ghost) FP.ghost.visible=false; menuDone('Walk up to a piece and press E'); },'');
+  add('Close','',()=>menuDone()); }
+function fstoreNear(){ if(activeCar||player.mode!=='walk') return false; return Math.hypot(player.pos.x-FSTORE.counter.x,player.pos.z-FSTORE.counter.z)<3; }
+function fstoreMenu(){ const add=menuOpen('Tumbleton Furniture Co. · you have '+money(state.money)); let cat='';
+  for(const k in FURN){ const D=FURN[k]; if(D[2]!==cat){ cat=D[2]; menuHead(cat); } add(D[0]+' · '+money(D[1]),D[7]+((FP.inv[k]||0)?' · you have '+FP.inv[k]+' to place':''),()=>{ if(state.money<D[1]){ menuDone('Not enough cash'); return; } state.money-=D[1]; save(); FP.inv[k]=(FP.inv[k]||0)+1; furnSave(); menuDone('Bought! Go home and press B → Your furniture to place it'); Snd.tink(FSTORE.counter.x,FSTORE.counter.z); },'',state.money<D[1]); }
+  add('Close','',()=>menuDone()); }
+function fstorePrompt(){ return fstoreNear()?'<kbd>E</kbd> Buy furniture':''; }
 let rescueI=0;
 function underOK(x,z,y){ if(Math.abs(x)<HALF+12&&Math.abs(z)<HALF+12) return true; if(x>1150) return true; if(z<-LIM&&Math.abs(x)<290){ const r=roadNear(x,z); if(r&&r.tun&&r.d<6) return true; } return false; }
 function rescueTick(dt){ const n=people.length+cars.length; if(!n) return; const per=Math.max(4,Math.ceil(n*dt*4));
@@ -4037,7 +4150,7 @@ function rescueTick(dt){ const n=people.length+cars.length; if(!n) return; const
     if(o.isPerson){ if(o.mode==='drive'||o.mode==='lift'||o.mode==='sit'||o.net||o.npc) continue; const x=o.pos.x, z=o.pos.z; if(underOK(x,z)) continue; const top=groundHeight(x,z), foot=o.pos.y-HIP; if(foot<top-1.4){ o.pos.y=top+HIP+.05; if(o.vel) o.vel.y=Math.max(0,o.vel.y); } }
     else { if(o.boat||o.display||o.ride) continue; const x=o.pos.x, z=o.pos.z; if(underOK(x,z)) continue; const top=groundHeight(x,z); if(o.pos.y<top-1.4){ o.pos.y=top+.1; o.vy=0; o.air=true; } } }
   if(!activeCar&&player.mode==='walk'){ const x=player.pos.x, z=player.pos.z; if(!underOK(x,z)){ const top=groundHeight(x,z); if(player.pos.y-HIP<top-1.4){ player.pos.y=top+HIP+.05; player.vel.y=0; } } } }
-function setupCountry(){ try{ for(const S of SALE) homeUpBuild(S); }catch(e){ console.warn('homeup',e); } try{ setupJobs(); }catch(e){ console.warn('jobs',e); } try{ setupBases(); }catch(e){ console.warn('bases',e); } try{ setupEast(); }catch(e){ console.warn('east',e); } try{ setupNorth(); }catch(e){ console.warn('north',e); } try{ setupSouth(); try{ SOUTH.got=localStorage.getItem('tumbleton-island')==='1'; }catch(e){} if(!SOUTH.got){ const ch=new THREE.Mesh(new THREE.BoxGeometry(1.2,.8,.8),lam('#8b5a2b',{emissive:new THREE.Color('#ffcc33'),emissiveIntensity:.25})); ch.position.set(ISLE.x-20,.4,ISLE.z+22); scene.add(ch); SOUTH.chest=ch; } }catch(e){ console.warn('south',e); } try{ trainSetup(); }catch(e){ console.warn('train',e); } try{ setupPlanes(); }catch(e){ console.warn('planes',e); } for(const P of COUNTRY.paddocks) for(let k=0;k<P.n;k++){ const g=animalMesh(P.kind), a={kind:P.kind,P,g,pos:g.position,vel:new V3(),yaw:Math.random()*TAU,t:Math.random()*4,tx:0,tz:0,air:false,down:0,spin:0};
+function setupCountry(){ try{ for(const S of SALE) furnBuild(S); }catch(e){ console.warn('furniture',e); } try{ for(const S of SALE) homeUpBuild(S); }catch(e){ console.warn('homeup',e); } try{ setupJobs(); }catch(e){ console.warn('jobs',e); } try{ setupBases(); }catch(e){ console.warn('bases',e); } try{ setupEast(); }catch(e){ console.warn('east',e); } try{ setupNorth(); }catch(e){ console.warn('north',e); } try{ setupSouth(); try{ SOUTH.got=localStorage.getItem('tumbleton-island')==='1'; }catch(e){} if(!SOUTH.got){ const ch=new THREE.Mesh(new THREE.BoxGeometry(1.2,.8,.8),lam('#8b5a2b',{emissive:new THREE.Color('#ffcc33'),emissiveIntensity:.25})); ch.position.set(ISLE.x-20,.4,ISLE.z+22); scene.add(ch); SOUTH.chest=ch; } }catch(e){ console.warn('south',e); } try{ trainSetup(); }catch(e){ console.warn('train',e); } try{ setupPlanes(); }catch(e){ console.warn('planes',e); } for(const P of COUNTRY.paddocks) for(let k=0;k<P.n;k++){ const g=animalMesh(P.kind), a={kind:P.kind,P,g,pos:g.position,vel:new V3(),yaw:Math.random()*TAU,t:Math.random()*4,tx:0,tz:0,air:false,down:0,spin:0};
       a.pos.set(P.x0+Math.random()*(P.x1-P.x0),0,P.z0+Math.random()*(P.z1-P.z0)); a.tx=a.pos.x; a.tz=a.pos.z; scene.add(g); ANIMALS.push(a); }
   GREET.country=['Kia ora! Not much happens out here.','Watch out for the sheep on the road.','Zombies are worse past the town, mate.','Best pies in the district, these.'];
   for(const S of COUNTRY.shops.slice(0,6)){ try{ const q=new Person(S.x+(Math.random()-.5)*4,S.z,{}); q.work={x:q.pos.x,z:S.z,y:0,yaw:Math.random()*TAU,kind:'shop',greet:'country'}; q.phase0=Math.random()*5; dressWorker(q,q.work); }catch(e){} }
@@ -4075,7 +4188,7 @@ function setupMotor(){ try{ setupSale(); }catch(e){ console.warn('houses',e); } 
   GREET.cars=['G\'day! Every vehicle comes with a free garage delivery.','Tanks are on special this week. Well, not really.','Have a look around, they don\'t bite.','Need a house first? Check the FOR SALE signs in the suburbs.'];
   GREET.motor=['Drive into a bay and press F.','Left bay for mods, right bay for repairs.','We fix anything that isn\'t a smoking crater.','Zombie rammer? Best money you\'ll ever spend.'];
   try{ for(const site of [0,1]){ const S=SITES[site]; if(!S) continue; const x=lotC(S[0]), z=lotC(S[1]); roadPark(x+10,z+24,site?'digger':'bulldozer'); } }catch(e){ console.warn('site vehicles',e); } }
-function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); southTick(dt); northTick(dt); eastTick(dt); basesTick(dt); rescueTick(dt); keepTick(dt); jobsTick(dt); homeTick(dt); bloodTick(dt); achTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
+function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); southTick(dt); northTick(dt); eastTick(dt); basesTick(dt); rescueTick(dt); keepTick(dt); jobsTick(dt); homeTick(dt); bloodTick(dt); achTick(dt); furnTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
   const c=activeCar;
   if(c&&c.emerg==='fire'&&use){ camera.getWorldDirection(_ewd); let dx=_ewd.x, dy=_ewd.y+.16, dz=_ewd.z; const l=Math.hypot(dx,dy,dz)||1; hoseSpray(nozzleWorld(c),{x:dx/l,y:Math.max(-.35,dy/l),z:dz/l},dt,true); }
   if(c&&c.emerg==='tow'){ if(use&&!c.useW){ if(c.towed){ towRelease(c); flash('Let go of the car'); } else { const h=hookWorld(c); let best=null,bd=4.6;
@@ -4624,6 +4737,8 @@ function gunnerTick(dt){ const av=MP.av.get(MPG.id); if(!MP.on||!av||av.veh!==MP
 function enterExit(){
   if(RIDE.on) return;
   if(HOMEUP.place&&sentryTryPlace()) return;
+  if(FP.mode&&furnUse()) return;
+  if(fstoreNear()&&!nearestCar()){ fstoreMenu(); return; }
   { const jb=jobBoardNear(); if(jb&&!nearestCar()){ jobMenu(jb); return; } }
   { const rk=rideNear(); if(rk&&!nearestCar()){ rideOn(rk); return; } }
   if(GOND.ride){ gondOff(); return; }
@@ -4867,12 +4982,16 @@ function storeE(){ const n=storeNear(); if(!n) return false; if(n.counter){ open
 // B: pick a place and an arrow shows the way
 function findMenu(){ if(!state.started||state.over||!cfEl.hidden) return; const p=player.pos, dist=(x,z)=>Math.round(Math.hypot(x-p.x,z-p.z))+' m away', go=(x,z,msg)=>()=>{ menuDone(msg); state.wpDest={x,z}; state.shopWpUntil=perfT+120; };
   const add=menuOpen('Find a place · the arrow shows the way');
+  { const S=onProp(); if(S) add('🛋 Your furniture','Place, move or pick up furniture in '+S.D.name,()=>{ menuDone(); furnMenu(S); },'pick-go'); }
+  if(FP.mode) add('Stop placing furniture','',()=>{ furnStop(); menuDone(); },'');
+  add('📖 How to play','A guide to everything in Tumbleton',()=>{ menuDone(); guideOpen(); },'');
   add('🏆 Achievements ('+ACH.got.length+'/'+ACHL.length+')','Challenges all over the map, each with a cash reward',()=>{ menuDone(); achMenu(); },'pick-go');
   if(STORE) add('Hardware & Arms store','Weapons, ammo and building blocks · '+dist(STORE.door.x,STORE.door.z),()=>{ menuDone(); findStore(); });
   if(CARYARD.kiosk) add('Vehicles R Us','Buy cars, bikes, trucks and tanks · '+dist(CARYARD.kiosk.x,CARYARD.kiosk.z),go(CARYARD.kiosk.x,CARYARD.kiosk.z,'Vehicles R Us is marked. Follow the arrow'));
   if(MOTOR.door) add('Tumbleton Motors','Mods and repairs for your car · '+dist(MOTOR.door.x,MOTOR.door.z),go(MOTOR.door.x,MOTOR.door.z,'Tumbleton Motors is marked. Follow the arrow'));
   const mine=SALE.filter(S=>GAR.h[S.i]&&GAR.h[S.i].own);
   for(const S of mine) add('Your home: '+S.D.name,'Garage entrance · '+dist(S.portal.x,S.portal.z),go(S.portal.x,S.portal.z,'Your garage is marked. Follow the arrow'));
+  add('Tumbleton Furniture Co.','Kitchens, lounges, bedrooms: furniture for your house · '+dist(FSTORE.counter.x,FSTORE.counter.z),go(FSTORE.counter.x,FSTORE.counter.z,'The furniture store is marked. It\'s just west of the city'));
   add('Courier jobs','Job boards at the port, Rangiwai and the SH1 truck stop · '+dist(JOB.boards[0].x,JOB.boards[0].z),go(JOB.boards[0].x,JOB.boards[0].z,'The port job board is marked'));
   add('Ring Road time trial','Stop on the yellow ring by SH1 and race the whole loop · '+dist(TT.ring.x,TT.ring.z),go(TT.ring.x,TT.ring.z,'The time trial start is marked, on SH1 by the north end'));
   add('Ring Road','SH1, the Northern and Eastern Motorways and Marine Parade loop right round the map · '+dist(-330,-290),go(-330,-290,'The Ring Road is marked. SH1 is out past the west side of the city'));
@@ -5227,6 +5346,25 @@ $('setreset').addEventListener('click',()=>{ const T=SETUI.tab, keysOf={game:['f
 $('settings').addEventListener('mousedown',e=>{ if(e.target===$('settings')) closeSettings(); });
 $('m-set').addEventListener('click',()=>openSettings());
 $('gosettings').addEventListener('click',()=>openSettings());
+/* ---------- the How to play guide ---------- */
+const GUIDE=[
+ ['Basics',`<p><b>WASD</b> walk or drive · <b>mouse</b> looks · <b>E</b> gets in and out of vehicles and uses things · <b>Space</b> jumps · <b>click</b> attacks · <b>Q</b> switches weapon · <b>Tab</b> first or third person · <b>B</b> opens <b>Find Places</b>, which marks anywhere on the map with an arrow.</p>
+  <p>Two ways to play: <b>Story mode</b> follows the outbreak in Tumbleton city. <b>Sandbox</b> lets you do anything: zombie waves (<b>Z</b>), last stand (<b>L</b>), toys and building (<b>V</b>). The new areas are open in both.</p><p><b>H</b> shows every key. Change controls, graphics and the weather in <b>⚙ Settings</b>.</p>`],
+ ['The map',`<ul><li><b>Tumbleton city</b> in the middle, with the river running through it.</li><li><b>West:</b> SH1, Rangiwai township, two farms, the airstrip with small planes, the train, and <b>Camp Kahu</b> army base.</li><li><b>North:</b> Mt Tumbleton: the mountain road and tunnel, the gondola to the lookout, the dam, the quarry, and the overrun <b>Fort Kererū</b>.</li>
+  <li><b>South:</b> Marine Parade, the beach, the port, the industry area with the car crusher, and the ferry to <b>Mōtu Island</b>.</li><li><b>East:</b> the airport, <b>Tumbleton Raceway</b>, <b>Send It Stunt Park</b> and the <b>Kiwi Land</b> theme park.</li><li>The <b>Ring Road</b> loops round all of it.</li></ul><p>Zombies get more common and tougher the further you go from the city.</p>`],
+ ['Money',`<ul><li>Defeat zombies (bigger ones pay more).</li><li><b>Courier jobs</b> at the green job boards (port, Rangiwai, SH1 truck stop): deliver before the timer runs out.</li><li><b>Races</b> at the Raceway (stop on the RACE ring) and the <b>Ring Road time trial</b> (stop on the ring on SH1).</li><li>Big air and the ring of fire at the stunt park.</li><li>The supply cache in Fort Kererū, and the treasure on Mōtu Island.</li><li><b>Achievements</b> (B menu) each pay a cash reward.</li></ul>`],
+ ['Vehicles',`<ul><li>Buy anything from a bicycle to a tank at <b>Vehicles R Us</b>.</li><li><b>Tumbleton Motors</b>: drive into a bay for upgrades (zombie rammer, armour, nitro, roof gun, bumpers) or repairs.</li><li>Any car you've driven stays put while you're nearby. To keep one for good, stop on the <b>blue ring</b> at your house and it goes down to your underground garage.</li><li>Get your cars back by going down to the garage (E at the garage entrance) and driving one up the ramp.</li><li>Also try the gondola, the train, the ferry, jet skis and the small planes.</li></ul>`],
+ ['Your house',`<ul><li>Houses for sale have gold beams and FOR SALE signs. They get bigger and better the more they cost, up to the Pōhutukawa Mansion.</li><li>E at the garage entrance opens the house menu: more garage spaces, an armoury, a medical bay, and <b>yard upgrades</b>.</li><li><b>Yard upgrades:</b> up to 4 sentry guns (you choose where, press E), an electric fence that zaps zombies, a trampoline, and a rooftop helipad with stairs and your own helicopter.</li></ul>`],
+ ['Furniture',`<ul><li>Buy furniture at <b>Tumbleton Furniture Co.</b>, just west of the city (B menu shows the way). Press E at the counter.</li><li>At your house, press <b>B → 🛋 Your furniture</b> and pick a piece. A green outline shows where it goes: <b>turn to rotate it</b>, and press <b>E</b> to place it. Red means something is in the way.</li><li>Place it anywhere on your property, inside or out, on any floor.</li><li><b>Pick up or move furniture</b> puts a piece back in your stock so you can place it again.</li><li>There are 24 pieces: a full kitchen (stove, range hood, fridge-freezer, drawers, sink, spice shelf, island, bar stools), lounge, bedroom, dining room, and a staircase.</li></ul>`],
+ ['Danger',`<ul><li><b>Weather</b> changes every few minutes. Rain makes roads slippery, and storms bring lightning that can strike nearby.</li><li><b>Blood Moon:</b> sometimes when night falls (N) the sky turns red. Lots more zombies come, and each one pays an extra $20.</li><li><b>Fort Kererū</b> is crawling with zombies. <b>Camp Kahu</b> has friendly soldiers and free ammo and first aid.</li></ul>`],
+ ['Online',`<p>Press <b>J</b> to play online with friends: join a public server, join a private one with its code, or make your own. <b>Enter</b> chats.</p>`]];
+function guideOpen(tab){ const el=$('guide'); if(!el.hidden&&tab===undefined) return; if(el.hidden){ GUIDE.prev=state.paused; state.paused=true; for(const k in keys) keys[k]=false; try{ document.exitPointerLock&&document.exitPointerLock(); }catch(e){} }
+  el.hidden=false; const T=$('guidetabs'), B=$('guidebody'); T.textContent=''; const cur=tab||0; GUIDE.forEach(([n],i)=>{ const b=document.createElement('button'); b.type='button'; b.textContent=n; b.setAttribute('aria-pressed',String(i===cur)); b.addEventListener('click',()=>guideOpen(i)); T.appendChild(b); });
+  B.innerHTML='<h3>'+GUIDE[cur][0]+'</h3>'+GUIDE[cur][1]; B.scrollTop=0; }
+function guideClose(){ const el=$('guide'); if(el.hidden) return; el.hidden=true; if(state.started) state.paused=!!GUIDE.prev; }
+$('guideclose').addEventListener('click',guideClose); $('goguide').addEventListener('click',()=>guideOpen(0));
+addEventListener('keydown',e=>{ if(!$('guide').hidden&&(e.code==='Escape'||e.code==='KeyH')){ e.preventDefault(); e.stopPropagation(); guideClose(); } },true);
+
 setTimeout(applySettings,0);
 // the FPS counter
 let fpsN=0, fpsT=0; function fpsTick(dt){ if(!SET.fps) return; fpsN++; fpsT+=dt; if(fpsT>=.5){ $('fps').textContent=Math.round(fpsN/fpsT)+' FPS'; fpsN=0; fpsT=0; } }
@@ -5243,7 +5381,7 @@ function updateHUD(){
   if(zs!==lastZ||state.defeated!==lastD){ lastZ=zs; lastD=state.defeated; zcEl.textContent=zs; zdEl.textContent=state.defeated; zplateEl.hidden=!(zs||state.defeated); }
   let pr='';
   if(state.msgT>0&&state.started&&!state.over) pr=state.msg; else
-  if(state.started){ const stp=jetPrompt()||cranePrompt()||storyPrompt()||storePrompt()||motorPrompt()||trainPrompt()||ferryPrompt()||gondPrompt()||ridePrompt()||jobPrompt()||sentryPrompt()||sewerPrompt(); if(stp) pr=stp; else if(activeHeli) pr='<kbd>E</kbd> Get out · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>Click</kbd> guns · <kbd>Right-click</kbd> rockets';  else if(player.chute) pr='<kbd>WASD</kbd> steer · <kbd>Space</kbd> cut away';
+  if(state.started){ const stp=jetPrompt()||cranePrompt()||storyPrompt()||storePrompt()||motorPrompt()||trainPrompt()||ferryPrompt()||gondPrompt()||ridePrompt()||jobPrompt()||sentryPrompt()||furnPrompt()||fstorePrompt()||sewerPrompt(); if(stp) pr=stp; else if(activeHeli) pr='<kbd>E</kbd> Get out · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>Click</kbd> guns · <kbd>Right-click</kbd> rockets';  else if(player.chute) pr='<kbd>WASD</kbd> steer · <kbd>Space</kbd> cut away';
     else if(player.mode==='walk'&&!player.ground&&player.vel.y<-2&&player.pos.y-HIP-groundHeight(player.pos.x,player.pos.z,player.pos.y-HIP)>3.5) pr='<kbd>Space</kbd> Open parachute';
     else if(activeCar) pr=activeCar.boat?'<kbd>W</kbd><kbd>S</kbd> throttle · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>E</kbd> Get out':'<kbd>E</kbd> Get out'+keepHint(activeCar); else if(state.downT>0) pr='Knocked out. Heading back to the plaza…'; else if(state.over) pr=''; else if(player.mode==='held') pr=player.heldBy&&!player.heldBy.zombie?'They grabbed you! Brace for the throw…':'A grabber has you! Brace for the throw…'; else if(player.mode==='ragdoll'||player.mode==='getup') pr='Ouch. Getting back up…'; else if(player.immune>0&&people.some(q=>q.zombie)) pr='Back on your feet. Run!'; else if(player.mode==='walk'&&liftNear()){ const n=liftNear(); pr=n.L.v!==0?(n.inside?'Going '+(n.L.v>0?'up':'down')+'…':'Lift is moving…'):Math.abs(n.L.y-n.lvl)>.05?'<kbd>E</kbd> Call the lift':n.inside?'<kbd>E</kbd> Ride the lift '+(n.lvl===0?'up':'down'):'Step into the lift'; } else if(player.mode==='walk'&&nearestHeli()) pr='<kbd>E</kbd> Fly the helicopter'; else if(nearestCar()) pr=nearestCar().boat?'<kbd>E</kbd> Drive this boat':'<kbd>E</kbd> Drive this car'; }
   if(pr!==lastPrompt){ lastPrompt=pr; promptEl.innerHTML=pr; promptEl.hidden=!pr; }
