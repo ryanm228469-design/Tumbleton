@@ -1686,6 +1686,9 @@ function buildFurniStore(){ const B=AIR.boxes, F=FSTORE, box=(x0,x1,y0,y1,z0,z1,
   box(F.x0,F.x1,0,H,F.z0,F.z0+.3,wall); box(F.x0,F.x1,0,H,F.z1-.3,F.z1,wall); box(F.x0,F.x0+.3,0,H,F.z0,F.z1,wall); box(F.x1-.3,F.x1,0,H,F.z0,31,wall); box(F.x1-.3,F.x1,0,H,37,F.z1,wall); box(F.x1-.3,F.x1,3.2,H,31,37,wall);
   box(F.x0-.3,F.x1+.3,H,H+.4,F.z0-.3,F.z1+.3,lam('#7d8288'),false); for(const z of [F.z0+.3,F.z1-.3]) for(let x=F.x0+3;x<F.x1-2;x+=5) addS(BX(2.6,1.4,.06,x,2.2,z+(z<40?.03:-.03)),lam('#cfe8ff'));
   addS(BX(.2,1.6,14,F.x1+.15,H-.8,40),signMat([['TUMBLETON FURNITURE CO.',72]],'#2a9d8f','#ffffff',1024,96)); box(F.x1+.1,F.x1+.4,0,3.2,30.6,31,trim,true); box(F.x1+.1,F.x1+.4,0,3.2,37,37.4,trim,true);
+  // Paws Animal Shelter: a little booth south of the store
+  box(-306,-296,0,2.8,14,18,lam('#f4efe4'),true); box(-306.4,-295.6,2.8,3.2,13.6,18.4,lam('#e5484d'),false); addS(BX(9,1.1,.12,-301,2.2,18.07),signMat([['PAWS ANIMAL SHELTER',48],['E · adopt a dog',34]],'#e5484d','#ffffff',768,160));
+  for(const [x,c] of [[-304,'#c9a24a'],[-298,'#2b2d31']]){ const d=dogMesh(c); d.g.position.set(x,0,19.6); d.g.rotation.y=PI*.1; scene.add(d.g); }
   // the counter and a sign
   box(-295,-292,0,1.05,32,33.2,lam('#2a9d8f'),true); addS(BX(3,.06,1.3,-293.5,1.08,32.6),lam('#e6e1d8')); addS(BX(.08,.8,2.4,-292.95,1.6,32.6).rotateY(0),signMat([['E · BUY FURNITURE',40]],'#ffd166','#111111',512,160));
   // display rooms: a kitchen just like the creator's sketch, a lounge and a bedroom
@@ -3001,6 +3004,29 @@ const Snd=(function(){
     rain(v){ if(!ctx) return; if(!this._r){ const len=ctx.sampleRate*3, bn=ctx.createBuffer(1,len,ctx.sampleRate), d=bn.getChannelData(0); for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
         const src=ctx.createBufferSource(); src.buffer=bn; src.loop=true; const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=700; const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=5200; const g=ctx.createGain(); g.gain.value=0; src.connect(hp); hp.connect(lp); lp.connect(g); g.connect(out); src.start(); this._r={g}; }
       this._r.g.gain.setTargetAtTime(on?v*.22:0,ctx.currentTime,.8); },
+    // ---- car radio: little procedural bands, one per station ----
+    radioTick(st,active){ if(!ctx) return; const R=this._rad||(this._rad={g:null,next:0,step:0,seed:1,st:-2}); if(!R.g){ R.g=ctx.createGain(); R.g.gain.value=0; R.g.connect(out); }
+      const now=ctx.currentTime; if(!on||!active||st<0){ R.g.gain.setTargetAtTime(0,now,.2); R.st=st; return; } R.g.gain.setTargetAtTime(.55,now,.3);
+      if(R.st!==st){ R.st=st; R.next=now+.15; R.step=0; R.seed=1+Math.floor(Math.random()*9999); }
+      const S=[{bpm:112,root:57,prog:[0,7,9,5],scale:[0,2,4,7,9]},{bpm:140,root:52,prog:[0,5,7,3],scale:[0,3,5,7,10]},{bpm:84,root:60,prog:[0,9,5,7],scale:[0,2,4,7,11]}][st]; if(!S) return; const sd=60/S.bpm/4;
+      const hz=m=>440*Math.pow(2,(m-69)/12), rnd=n=>{ R.seed=(R.seed*16807)%2147483647; return R.seed%n; }, G=R.g;
+      const tn=(type,f,t,d,v,a)=>{ const o=ctx.createOscillator(), g=ctx.createGain(); o.type=type; o.frequency.setValueAtTime(f,t); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(Math.max(.0002,v),t+(a||.01)); g.gain.exponentialRampToValueAtTime(.0001,t+d); o.connect(g); g.connect(G); o.start(t); o.stop(t+d+.05); };
+      const nz=(t,d,type,f,v)=>{ const sr=ctx.createBufferSource(), fl=ctx.createBiquadFilter(), g=ctx.createGain(); sr.buffer=nb; fl.type=type; fl.frequency.value=f; g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(v,t+.003); g.gain.exponentialRampToValueAtTime(.0001,t+d); sr.connect(fl); fl.connect(g); g.connect(G); sr.start(t,Math.random()*.5); sr.stop(t+d+.05); };
+      const kick=t=>{ const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.setValueAtTime(150,t); o.frequency.exponentialRampToValueAtTime(45,t+.18); g.gain.setValueAtTime(.7,t); g.gain.exponentialRampToValueAtTime(.0001,t+.3); o.connect(g); g.connect(G); o.start(t); o.stop(t+.35); };
+      while(R.next<now+.3){ const t=R.next, k=R.step%16, bar=Math.floor(R.step/16), ch=S.prog[bar%4], rt=S.root+ch, mel=Math.floor(R.step/64);
+        if(st===0){ if(k%8===0) kick(t); if(k===4||k===12) nz(t,.16,'bandpass',1800,.35); if(k%2===0) nz(t,.04,'highpass',7000,.12); if(k===0||k===6||k===10) tn('triangle',hz(rt-12),t,sd*3,.3);
+          if(k%4===2) for(const iv of [0,4,7]) tn('square',hz(rt+iv),t,sd*1.6,.045); if(k%2===0){ const m=(R.step*7+mel*13+bar)%5; if((R.step*3+mel)%7!==0) tn('square',hz(S.root+12+S.scale[(m+ch)%5]),t,sd*1.8,.06); } }
+        else if(st===1){ if(k%4===0) kick(t); if(k===4||k===12) nz(t,.2,'bandpass',1500,.45); nz(t,.03,'highpass',8000,.08); if(k%2===0) tn('sawtooth',hz(rt-12),t,sd*1.8,.16);
+          if([0,3,6,8,11,14].includes(k)) for(const iv of [0,7,12]) tn('sawtooth',hz(rt+iv),t,sd*2.4,.05); if(bar%4===3&&k%2===0) tn('square',hz(S.root+12+S.scale[(R.step+mel)%5]),t,sd*1.5,.06); }
+        else { if(k===0) kick(t); if(k%4===2) nz(t,.05,'highpass',6000,.06); if(k===0) for(const iv of [0,4,7,11]) tn('sine',hz(rt+iv),t,sd*16,.07,.4); if(k===0||k===8) tn('sine',hz(rt-12),t,sd*7,.22);
+          if(k%4===0&&(R.step+mel)%3===0) tn('triangle',hz(S.root+12+S.scale[(R.step*5+mel*3)%5]),t,sd*5,.07,.05); }
+        R.next+=sd; R.step++; if(R.step>=128){ R.step=0; R.seed=1+Math.floor(Math.random()*9999); S.root+=0; } } },
+    radioSong(){ return this._rad?this._rad.step:0; },
+    // ---- sounds of the world: waves by the sea, birds in the day, the hum of the city ----
+    ambTick(sea,birds,city){ if(!ctx) return; const A=this._amb||(this._amb={}); if(!A.w){ const mk=(type,f,q)=>{ const sr=ctx.createBufferSource(); sr.buffer=nb; sr.loop=true; const fl=ctx.createBiquadFilter(); fl.type=type; fl.frequency.value=f; fl.Q.value=q||.5; const g=ctx.createGain(); g.gain.value=0; sr.connect(fl); fl.connect(g); g.connect(out); sr.start(); return {g,fl}; }; A.w=mk('lowpass',420); A.h=mk('lowpass',140,1.2); A.bt=0; }
+      const now=ctx.currentTime, wv=on?sea*(.28+.18*Math.sin(now*.6)):0; A.w.g.gain.setTargetAtTime(wv,now,.4); A.h.g.gain.setTargetAtTime(on?city*.12:0,now,.6);
+      if(on&&birds>0&&now>A.bt){ A.bt=now+.4+Math.random()*2.5/birds; const f=2200+Math.random()*1800, n=1+Math.floor(Math.random()*3); for(let i=0;i<n;i++) tone('sine',f*(1+Math.random()*.15),f*(.8+Math.random()*.5),.07+Math.random()*.06,.025*birds,i*.11); } },
+    bark(x,z){ const v=att(x,z); if(v<.05||!ok('bark',.3)) return; tone('square',560,320,.07,.16*v); tone('square',520,300,.08,.15*v,.14); },
     thunder(near){ if(!ctx||!on) return; const v=near?1:.55; noise(near?2.6:3.6,'lowpass',near?900:380,40,1.5*v,.6); tone('sine',60,24,near?1.6:2.6,.9*v); },
     pistol(x,z){ const v=att(x,z); if(v<.05||!ok('pistol',.05)) return; noise(.08,'bandpass',1500,400,.6*v,1.2); tone('square',190,60,.05,.18*v); },
     siren(x,z,hi){ const v=att(x,z); if(v<.04) return; const f=hi?960:740; tone('square',f,f,.28,.05*v); tone('sine',f,f,.3,.1*v); },
@@ -3083,6 +3109,7 @@ function updatePerson(p,dt){
   if(p.mode==='drive'||p.mode==='lift') return;
   if(p.dead&&p.zombie&&p.mode!=='ragdoll') deadFall(p);
   if(p.soldier&&!p.zombie&&!p.dead&&p.mode==='walk'){ soldierTick(p,dt); return; }
+  if(p.local&&!p.zombie&&!p.dead&&p.mode==='walk'&&localTick(p,dt)) return;
   if(p.work&&p.mode==='walk'&&!p.g.visible&&!p.zombie&&!p.react){ p.lodSkip=true; return; }
   p.launchCD-=dt; if(p.immune>0) p.immune-=dt;
   if(p.infect>0){ p.infect-=dt; if(p.infect<=0){ p.infect=-1; convertToZombie(p); } }
@@ -4115,6 +4142,13 @@ const ACHL=[
   ['top','Top of the World','Stand at the Mt Tumbleton lookout',300,()=>Math.hypot(player.pos.x-NORTH.look.x,player.pos.z-NORTH.look.z)<16&&player.pos.y>NORTH.look.y],
   ['fort','Raid the Fort','Find the supply cache in Fort Kererū',1000,()=>!!BASES.got],
   ['island','Island Hopper','Set foot on Mōtu Island',300,()=>!activeCar&&Math.hypot(player.pos.x-ISLE.x,player.pos.z-ISLE.z)<ISLE.r],
+  ['rescue','Hero of Tumbleton','Rescue 5 survivors from random events',1500,()=>achSt('rescue')>=5],
+  ['horde','Horde Breaker','Defeat 3 zombie hordes from random events',1500,()=>achSt('horde')>=3],
+  ['drop','Special Delivery From Above','Grab a supply drop',300,()=>achSt('drop')>=1],
+  ['nest1','Fight Back','Blow up your first zombie nest',500,()=>ZONES.freed.length>=1],
+  ['safe','Tumbleton Is Safe','Take back all 7 districts',10000,()=>ZONES.freed.length>=ZONES.list.length],
+  ['dog','Best Friend','Adopt a dog',100,()=>!!DOG.d],
+  ['comp','Squad Up','Have 3 companions at once',800,()=>COMP.list.length>=3],
   ['blood','Blood Moon Survivor','Defeat 30 zombies during one Blood Moon',2000,()=>achSt('blood30')>=1]];
 function achSave(){ try{ localStorage.setItem('tumbleton-ach',JSON.stringify({got:ACH.got,st:ACH.st})); }catch(e){} }
 try{ const q=JSON.parse(localStorage.getItem('tumbleton-ach')||'null'); if(q){ if(Array.isArray(q.got)) ACH.got=q.got.filter(id=>typeof id==='string').slice(0,64); if(q.st&&typeof q.st==='object') for(const k in q.st) if(isFinite(q.st[k])) ACH.st[k]=Math.max(0,Math.floor(q.st[k])); } }catch(e){}
@@ -4189,6 +4223,168 @@ function hatchUse(){ const k=hatchAt(); if(!k) return false; const T=k.T;
   if(k.down){ player.pos.set(T.bx,T.y+HIP+.05,T.bz); flash('Back inside the house'); } else { player.pos.set(T.dx+(T.dx>T.px?-1.6:1.6),T.H+HIP+.05,T.dz+(T.dz>T.pz?-1.6:1.6)); flash('Up on the helipad. E at the hatch to go back down'); }
   player.vel.set(0,0,0); camTarget.copy(player.pos); Snd.tink(player.pos.x,player.pos.z); return true; }
 function hatchPrompt(){ const k=hatchAt(); return k?(k.down?'<kbd>E</kbd> Climb down the hatch into the house':'<kbd>E</kbd> Climb up through the hatch to the helipad'):''; }
+
+/* ---------- Stage 13: random world events: survivors to rescue, hordes, supply drops, army convoys ---------- */
+const EV={on:null,t:45,beam:null,hud:null};
+function evHud(t){ if(!EV.hud){ const d=document.createElement('div'); d.style.cssText='position:fixed;left:50%;top:58px;transform:translateX(-50%);background:rgba(120,30,10,.82);color:#fff;font:700 15px/1.3 system-ui,sans-serif;padding:6px 14px;border-radius:10px;z-index:30;pointer-events:none;text-align:center'; document.body.appendChild(d); EV.hud=d; } EV.hud.style.display=t?'block':'none'; if(t&&EV.hud.textContent!==t) EV.hud.textContent=t; }
+function evBeam(x,z,col){ if(!EV.beam){ const m=new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.6,90,12,1,true),new THREE.MeshBasicMaterial({color:0xff7a1a,transparent:true,opacity:.3,depthWrite:false,side:THREE.DoubleSide,fog:false})); m.renderOrder=4; scene.add(m); EV.beam=m; } EV.beam.material.color.set(col||0xff7a1a); EV.beam.position.set(x,45,z); EV.beam.visible=true; }
+function evOK(x,z){ const p={x,z}; bounds(p,{x:0,z:0}); if(Math.abs(p.x-x)>.1||Math.abs(p.z-z)>.1) return false; if(x>1150) return false; if(Math.min(riverH(z),seaH(x,z))<-.4) return false; for(const y of [.5,1.5,3]) if(solidAt(x,y,z)) return false; for(const S of SALE) if(Math.abs(x-S.cx)<BLOCK/2+2&&Math.abs(z-S.cz)<BLOCK/2+2) return false; return true; }
+function evSpot(minD,maxD){ const pc=activeCar?activeCar.pos:player.pos; for(let k=0;k<40;k++){ let x,z; if(Math.abs(pc.x)<LIM&&Math.abs(pc.z)<LIM&&Math.random()<.8){ const q=ringPointFar(minD,maxD); if(!q) continue; x=q.x; z=q.z; } else { const a=Math.random()*TAU, r=minD+Math.random()*(maxD-minD); x=pc.x+Math.cos(a)*r; z=pc.z+Math.sin(a)*r; } if(evOK(x,z)) return {x,z}; } return null; }
+function evZombie(x,z,k){ const zb=new Person(x,z,{spawned:true,zombie:true,kind:k||pickZKind(3),y:groundHeight(x,z)}); zb.evZ=true; return zb; }
+function evPos(){ return activeCar?activeCar.pos:player.pos; }
+function evStart(){ const roll=Math.random(), pc=evPos(); let E=null;
+  const near=ringNear(pc.x,pc.z); if(near&&roll<.22) E=evConvoy(near);
+  else if(roll<.5){ const p=evSpot(45,110); if(p) E=evRescue(p); }
+  else if(roll<.75){ const p=evSpot(60,120); if(p) E=evHorde(p); }
+  else { const p=evSpot(70,150); if(p) E=evDrop(p); }
+  if(E){ EV.on=E; Snd.sting&&Snd.sting(); } }
+function evEnd(msg){ const E=EV.on; EV.on=null; evHud(''); if(EV.beam) EV.beam.visible=false; if(E&&E.cleanup) E.cleanup(); if(msg) flash(msg); EV.t=70+Math.random()*80; }
+function evRescue(p){ const sv=new Person(p.x,p.z,{spawned:true}); sv.evSurv=true; sv.noFlee=true; say(sv,'Help! Over here!',true); const zs=[]; for(let k=0;k<5;k++){ const a=k/5*TAU; zs.push(evZombie(p.x+Math.cos(a)*9,p.z+Math.sin(a)*9)); }
+  flash('Someone is calling for help! Follow the orange beam'); state.wpDest={x:p.x,z:p.z}; state.shopWpUntil=perfT+150;
+  return {kind:'rescue',x:p.x,z:p.z,t:150,sv,zs,done:false, tick(dt){ const sv=this.sv; if(this.done){ this.t2-=dt; if(this.t2<=0) return 'end'; return null; } if(!people.includes(sv)||sv.dead||sv.zombie) return 'fail';
+      sv.pos.x+=(this.x-sv.pos.x)*Math.min(1,dt*2); sv.pos.z+=(this.z-sv.pos.z)*Math.min(1,dt*2); if(sv.armR) sv.armR.rotation.set(-2.6+Math.sin(perfT*8)*.4,0,.3);
+      const left=people.filter(z=>z.zombie&&!z.dead&&Math.hypot(z.pos.x-sv.pos.x,z.pos.z-sv.pos.z)<18).length, pd=Math.hypot(evPos().x-sv.pos.x,evPos().z-sv.pos.z);
+      evBeam(sv.pos.x,sv.pos.z,0xff7a1a); evHud('🆘 Rescue the survivor · '+(left?left+' zombies near them':'all clear, go to them')+' · '+Math.round(pd)+' m · '+Math.ceil(this.t)+' s');
+      if(!left&&pd<5){ this.done=true; this.t2=6; earn(400); banner('SURVIVOR RESCUED','+$400 · "Thank you! I thought I was done for!"'); say(sv,'Thank you so much!',true); achStat('rescue'); sv.evSurv=false; if(typeof compOffer==='function') compOffer(sv); return null; }
+      this.t-=dt; return this.t<=0?'fail':null; },
+    cleanup(){ if(this.sv&&people.includes(this.sv)&&!this.sv.follow&&this.done===false) removePerson(this.sv); } }; }
+function evHorde(p){ const zs=[]; for(let k=0;k<14;k++){ const a=Math.random()*TAU, r=Math.random()*10; zs.push(evZombie(p.x+Math.cos(a)*r,p.z+Math.sin(a)*r,pickZKind(4))); } for(const z of zs) z.aggro=6;
+  flash('A zombie horde is coming! Take them down'); return {kind:'horde',x:p.x,z:p.z,t:180,zs, tick(dt){ const alive=this.zs.filter(z=>people.includes(z)&&!z.dead&&z.zombie); if(!alive.length){ earn(700); banner('HORDE DEFEATED','+$700 · all 14 zombies taken down'); achStat('horde'); return 'end'; }
+      let cx=0,cz=0; for(const z of alive){ cx+=z.pos.x; cz+=z.pos.z; } cx/=alive.length; cz/=alive.length; evBeam(cx,cz,0xe5484d); evHud('🧟 Zombie horde · '+alive.length+' left · '+Math.ceil(this.t)+' s'); this.t-=dt; return this.t<=0?'gone':null; },
+    cleanup(){ for(const z of this.zs) if(people.includes(z)&&!z.dead&&Math.hypot(z.pos.x-evPos().x,z.pos.z-evPos().z)>40) removePerson(z); } }; }
+function evDrop(p){ const g=new THREE.Group(), crate=new THREE.Mesh(mergeGeos([{g:BX(1.4,1,1.4,0,.5,0),c:'#4b5320'},{g:BX(1.45,.15,1.45,0,1.02,0),c:'#ffb703'}],true),VC), chute=new THREE.Mesh(new THREE.SphereGeometry(2.6,12,6,0,TAU,0,PI/2),lam('#f2f2f2',{side:THREE.DoubleSide})); chute.position.y=5; const lines=new THREE.Mesh(beamGeo(-1.8,5,0,0,1,0,.03).clone(),lam('#888')); g.add(crate,chute,lines); g.position.set(p.x,70,p.z); scene.add(g);
+  const gy=groundHeight(p.x,p.z,200); flash('A supply drop is coming down! Get there first'); state.wpDest={x:p.x,z:p.z}; state.shopWpUntil=perfT+150;
+  return {kind:'drop',x:p.x,z:p.z,gy,t:150,g,chute,landed:false, tick(dt){ const g=this.g; if(!this.landed){ g.position.y=Math.max(this.gy,g.position.y-dt*7); g.rotation.y+=dt*.4; if(g.position.y<=this.gy+.01){ this.landed=true; this.chute.visible=false; for(let k=0;k<5;k++){ const a=Math.random()*TAU; evZombie(this.x+Math.cos(a)*14,this.z+Math.sin(a)*14); } } }
+      else if(Math.random()<dt*6) puff(this.x+R(-.3,.3),this.gy+1.2,this.z+R(-.3,.3),0xff4d4d,.6,false);
+      evBeam(this.x,this.z,0xffd166); const pd=Math.hypot(evPos().x-this.x,evPos().z-this.z); evHud('📦 Supply drop · '+Math.round(pd)+' m · '+Math.ceil(this.t)+' s');
+      if(this.landed&&pd<3.5){ const cash=500+Math.round(Math.random()*10)*100; earn(cash); for(const k in AMMO) if(state.owned[k]){ const A=AMMO[k], a=ammoOf(k); a.mag=A.mag; a.res=A.tot-A.mag; } state.hp=100; save(); banner('SUPPLIES!','+$'+cash.toLocaleString()+', full ammo and health'); achStat('drop'); return 'end'; }
+      this.t-=dt; return this.t<=0?'fail':null; }, cleanup(){ scene.remove(this.g); } }; }
+// the Ring Road: which straight are we near?
+function ringNear(x,z){ if(Math.abs(z+290)<90&&x>-330&&x<770) return {ax:'x',c:-290,lo:-330,hi:776}; if(Math.abs(x-776)<90&&z>-290&&z<330) return {ax:'z',c:776,lo:-290,hi:330}; if(Math.abs(z-330)<90&&x>-330&&x<770) return {ax:'x',c:330,lo:-330,hi:776}; if(Math.abs(x+330)<90&&Math.abs(z)<330) return {ax:'z',c:-330,lo:-290,hi:330}; return null; }
+function evConvoy(R){ const pc=evPos(), along=R.ax==='x'?pc.x:pc.z, dir=Math.random()<.5?1:-1, a0=clamp(along-dir*160,R.lo,R.hi), a1=clamp(along+dir*260,R.lo,R.hi); if(Math.abs(a1-a0)<120) return null;
+  const lane=dir*4*(R.ax==='x'?1:-1), P=t=>R.ax==='x'?[t,R.c+lane]:[R.c+lane,t], cars0=[];
+  ['armedute','tank','armedute'].forEach((v,i)=>{ const st=a0-dir*i*14, p0=P(st), p1=P(a1); try{ const c=new Car(p0[0],p0[1],Math.atan2(p1[0]-p0[0],p1[1]-p0[1]),'free',{variant:v}); c.patrol={pts:[p1],i:0,spd:v==='tank'?9:11,v:0,once:true}; cars0.push(c); }catch(e){} });
+  flash('An army convoy is rolling down the Ring Road'); return {kind:'convoy',t:70,cars:cars0, tick(dt){ this.t-=dt; const live=this.cars.filter(c=>cars.includes(c)&&c.patrol); if(live.length){ const c=live[0]; evHud('🪖 Army convoy on the Ring Road'); } return (!live.length||this.t<=0)?'end':null; },
+    cleanup(){ for(const c of this.cars) if(cars.includes(c)&&c.patrol&&c!==activeCar){ cars.splice(cars.indexOf(c),1); scene.remove(c.g); disposeTree(c.g); } } }; }
+function eventsTick(dt){ if(!state.started||story.on||mpClient()||state.over) return; const E=EV.on;
+  if(E){ const r=E.tick(dt); if(r==='end') evEnd(); else if(r==='fail') evEnd(E.kind==='rescue'?'Too late. The survivor didn\'t make it':E.kind==='drop'?'Someone else got to the supply drop first':''); else if(r==='gone') evEnd('The horde wandered off'); return; }
+  if(RACE.on||TT.on||RIDE.on||GOND.ride||JOB.on||BLOOD.on||player.pos.x>1150||sewSub||state.cine) return; EV.t-=dt; if(EV.t<=0){ EV.t=25; evStart(); } }
+
+/* ---------- Stage 14: life outside the city: traffic, locals, boats and birds; companions and a dog ---------- */
+function dogMesh(col){ const g=new THREE.Group(), dark='#2b2d31', c=col, belly=col==='#2b2d31'?'#5b4636':'#f4e9d0';
+  const body=new THREE.Mesh(mergeGeos([{g:BX(.42,.38,.9,0,.62,0),c},{g:BX(.38,.1,.7,0,.43,0),c:belly},{g:BX(.34,.34,.38,0,.86,.52),c},{g:BX(.2,.16,.22,0,.8,.78),c:belly},{g:BX(.08,.06,.05,0,.84,.9),c:dark},{g:BX(.08,.16,.06,-.13,1.06,.46).rotateZ(.2),c:col==='#c9a24a'?'#8b6b4a':dark},{g:BX(.08,.16,.06,.13,1.06,.46).rotateZ(-.2),c:col==='#c9a24a'?'#8b6b4a':dark},{g:BX(.05,.05,.03,-.09,.92,.71),c:dark},{g:BX(.05,.05,.03,.09,.92,.71),c:dark}],true),VC); g.add(body);
+  const legs=[]; for(const [x,z] of [[-.14,.32],[.14,.32],[-.14,-.32],[.14,-.32]]){ const L=new THREE.Group(); L.position.set(x,.48,z); L.add(new THREE.Mesh(new THREE.BoxGeometry(.11,.48,.11).translate(0,-.24,0),lam(c))); g.add(L); legs.push(L); }
+  const tail=new THREE.Group(); tail.position.set(0,.74,-.45); tail.add(new THREE.Mesh(new THREE.BoxGeometry(.07,.07,.36).translate(0,0,-.18),lam(c))); tail.rotation.x=-.6; g.add(tail);
+  g.traverse(o=>{ if(o.isMesh) o.castShadow=true; }); return {g,legs,tail}; }
+const WLIFE={cars:[],t:0,locals:[],boats:[],birds:null,areas:[{x:-515,z:-87,r:38,n:8},{x:-90,z:358,r:26,n:8},{x:180,z:356,r:24,n:5},{x:676,z:207,r:44,n:10},{x:430,z:205,r:28,n:5},{x:98,z:-610,r:9,n:3},{x:-700,z:200,r:14,n:0}]};
+const AMBR=[['x',-87,-775,-281,2.5],['x',203,-640,-281,2.5],['z',-330,-290,330,4],['x',-290,-330,776,4],['z',776,-290,330,4],['x',330,-330,776,2.5]];
+function wlifeTick(dt){ if(!state.started) return; const pc=evPos(), cityIn=Math.abs(pc.x)<LIM-30&&Math.abs(pc.z)<LIM-30;
+  // traffic on the country roads and the Ring Road
+  WLIFE.cars=WLIFE.cars.filter(c=>{ if(!cars.includes(c)) return false; if(c===activeCar){ c.patrol=null; return false; } if(Math.hypot(c.pos.x-pc.x,c.pos.z-pc.z)>330&&!c.wreck){ cars.splice(cars.indexOf(c),1); scene.remove(c.g); disposeTree(c.g); return false; } return true; });
+  WLIFE.t-=dt; if(WLIFE.t<=0&&!mpClient()){ WLIFE.t=2.5; if(!cityIn&&WLIFE.cars.length<6&&pc.x<1150){ const near=AMBR.filter(r=>{ const a=r[0]==='x'?pc.x:pc.z, b=r[0]==='x'?pc.z:pc.x; return Math.abs(b-r[1])<160&&a>r[2]-80&&a<r[3]+80; });
+      if(near.length){ const R=near[Math.floor(Math.random()*near.length)], along=R[0]==='x'?pc.x:pc.z, dir=Math.random()<.5?1:-1, start=clamp(along+(Math.random()<.5?-1:1)*(150+Math.random()*60),R[2],R[3]), end=dir>0?R[3]:R[2];
+        if(Math.abs(end-start)>60&&Math.abs(start-along)>90){ const lane=R[4]*dir*(R[0]==='x'?1:-1), P=t=>R[0]==='x'?[t,R[1]+lane]:[R[1]+lane,t], p0=P(start), p1=P(end), v=['sedan','sedan','taxi','van','pickup','sports','bus'][Math.floor(Math.random()*7)];
+          try{ const c=new Car(p0[0],p0[1],Math.atan2(p1[0]-p0[0],p1[1]-p0[1]),'free',{variant:v}); c.pos.y=groundHeight(p0[0],p0[1],5); const sp=v==='bus'?11:13+Math.random()*6; c.patrol={pts:[p1],i:0,spd:sp,v:sp,once:true}; c.ambient=true; WLIFE.cars.push(c); }catch(e){} } } } }
+  // locals: townspeople, beachgoers, port workers, theme park visitors
+  for(const A of WLIFE.areas){ if(!A.n) continue; const d=Math.hypot(pc.x-A.x,pc.z-A.z); A.list=(A.list||[]).filter(p=>people.includes(p)&&!p.zombie&&!p.dead);
+    if(d>250&&A.list.length){ for(const p of A.list) removePerson(p); A.list=[]; continue; }
+    if(d<170&&A.list.length<(zoneFree(A.x,A.z)?Math.ceil(A.n*1.5):Math.ceil(A.n*.5))&&!story.on&&!mpClient()&&!BLOOD.on&&(A.t=(A.t||0)-dt)<=0){ A.t=.6; for(let k=0;k<6;k++){ const a=Math.random()*TAU, r=Math.random()*A.r, x=A.x+Math.cos(a)*r, z=A.z+Math.sin(a)*r; if(Math.min(riverH(z),seaH(x,z))<-.3||solidAt(x,.5,z)||solidAt(x,1.5,z)) continue; if(Math.hypot(x-pc.x,z-pc.z)<12) continue; const p=new Person(x,z,{spawned:true,y:groundHeight(x,z,5)}); p.local={x:A.x,z:A.z,r:A.r,t:Math.random()*3}; A.list.push(p); break; } } }
+  // boats sailing in the sea, birds circling overhead
+  for(const B of WLIFE.boats){ B.a+=dt*B.w; const x=B.cx+Math.cos(B.a)*B.r, z=B.cz+Math.sin(B.a)*B.r*.6; B.g.position.set(x,WATER_Y-.15+Math.sin(perfT*1.3+B.cx)*.06,z); B.g.rotation.y=Math.atan2(-Math.sin(B.a)*B.w,Math.cos(B.a)*B.w*.6)+PI; B.g.rotation.z=Math.sin(perfT+B.cx)*.04; }
+  const BR=WLIFE.birds; if(BR){ const day=state.nightT<.5&&!sewSub&&pc.x<1150; BR.g.visible=day; if(day){ BR.cx+=(pc.x+40-BR.cx)*Math.min(1,dt*.05); BR.cz+=(pc.z-30-BR.cz)*Math.min(1,dt*.05); const sea=pc.z>300; if(BR.sea!==sea){ BR.sea=sea; BR.mat.color.set(sea?'#f4f4f2':'#2b2d31'); }
+      BR.list.forEach((b,i)=>{ b.a+=dt*b.w; b.m.position.set(BR.cx+Math.cos(b.a)*b.r,b.h+Math.sin(perfT*.7+i)*2,BR.cz+Math.sin(b.a)*b.r); b.m.rotation.y=-b.a+(b.w>0?0:PI); const f=Math.sin(perfT*9+i*1.7)*.5; b.l.rotation.z=f; b.rw.rotation.z=-f; }); } }
+  compTick(dt); dogTick(dt); }
+function localTick(p,dt){ const L=p.local; for(const z of people){ if(z.zombie&&!z.dead&&Math.abs(z.pos.x-p.pos.x)<14&&Math.abs(z.pos.z-p.pos.z)<14){ p.local=null; return false; } }
+  if(!L.tx||Math.hypot(L.tx-p.pos.x,L.tz-p.pos.z)<.5){ L.t-=dt; p.legL.rotation.x*=.8; p.legR.rotation.x*=.8; if(L.t>0){ p.vel.set(0,0,0); return true; } const a=Math.random()*TAU, r=Math.random()*L.r; const tx=L.x+Math.cos(a)*r, tz=L.z+Math.sin(a)*r; if(solidAt(tx,.6,tz)||solidAt(tx,1.5,tz)||Math.min(riverH(tz),seaH(tx,tz))<-.3){ L.t=.5; return true; } L.tx=tx; L.tz=tz; L.t=1+Math.random()*4; }
+  const dx=L.tx-p.pos.x, dz=L.tz-p.pos.z, d=Math.hypot(dx,dz), st=Math.min(d,dt*1.25), nx=p.pos.x+dx/d*st, nz=p.pos.z+dz/d*st; if(solidAt(nx,.6,nz)){ L.tx=null; L.t=.5; return true; }
+  p.pos.x=nx; p.pos.z=nz; p.pos.y=groundHeight(nx,nz,p.pos.y-HIP+.5)+HIP; p.vel.set(0,0,0); p.yaw=lerpA(p.yaw,Math.atan2(dx,dz),Math.min(1,dt*6)); p.g.quaternion.setFromAxisAngle(UP,p.yaw); p.wph=(p.wph||0)+dt*7; const sw=Math.sin(p.wph)*.5; p.legL.rotation.x=sw; p.legR.rotation.x=-sw; p.armL.rotation.x=-sw*.6; p.armR.rotation.x=sw*.6; return true; }
+function lifeSetup(){ const mk=(cx,cz,r,w,col)=>{ const g=new THREE.Group(); g.add(new THREE.Mesh(mergeGeos([{g:BX(2.2,1,6,0,.4,0),c:col},{g:BX(2.3,.15,6.1,0,.95,0),c:'#f2f2f2'},{g:BX(1.6,1.2,2,0,1.5,-.8),c:'#f2f2f2'},{g:BX(1.62,.4,2.02,0,1.7,-.8),c:'#2c3e50'},{g:BX(.1,3.5,.1,0,2.5,1.2),c:'#5b4636'}],true),VC)); { const sg=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,4.2,1.2),new THREE.Vector3(0,1.2,1.25),new THREE.Vector3(0,1.2,2.8)]); sg.computeVertexNormals(); g.add(new THREE.Mesh(sg,lam('#f4efe4',{side:THREE.DoubleSide}))); }
+    scene.add(g); WLIFE.boats.push({g,cx,cz,r,w,a:Math.random()*TAU}); };
+  mk(-200,470,45,.05,'#2f80ed'); mk(60,520,50,-.04,'#e5484d'); mk(330,480,35,.06,'#2a9d8f'); mk(-420,520,60,-.03,'#ffb703');
+  const mat=lam('#2b2d31'), g=new THREE.Group(), list=[]; for(let i=0;i<14;i++){ const m=new THREE.Group(), l=new THREE.Mesh(new THREE.BoxGeometry(.7,.04,.25).translate(-.35,0,0),mat), rw=new THREE.Mesh(new THREE.BoxGeometry(.7,.04,.25).translate(.35,0,0),mat); m.add(l,rw,new THREE.Mesh(new THREE.BoxGeometry(.12,.1,.4),mat)); g.add(m); list.push({m,l,rw,a:Math.random()*TAU,r:18+Math.random()*30,w:(Math.random()<.5?1:-1)*(.2+Math.random()*.2),h:26+Math.random()*16}); }
+  scene.add(g); WLIFE.birds={g,list,mat,cx:0,cz:0,sea:false};
+  try{ const q=JSON.parse(localStorage.getItem('tumbleton-dog')||'null'); if(q&&q.col) dogAdopt(q.col,true); }catch(e){} }
+// ---- companions: rescued survivors who follow you and shoot zombies ----
+const COMP={list:[]};
+function compOffer(sv){ if(COMP.list.length>=3){ say(sv,'Thanks! I\'ll find my own way from here.',true); return; } sv.follow=true; sv.comp=true; sv.local=null; sv.chp=CIV_HP*3; sv.shootCD=1; copGear(sv); sv.holdR=true; COMP.list.push(sv); setTimeout(()=>{ if(people.includes(sv)) say(sv,'I\'ll stick with you. Let\'s go!',true); },1500); flash('The survivor joined you as a companion! (up to 3)'); }
+function compTick(dt){ COMP.list=COMP.list.filter(p=>{ if(!people.includes(p)||p.dead||p.zombie){ flash('You lost a companion'); return false; } return true; });
+  COMP.list.forEach((p,i)=>{ const ride=!!(activeCar||activeHeli||activeJet||player.mode==='drive');
+    if(ride){ if(p.mode!=='drive'){ p.mode='drive'; p.g.visible=false; } const v=activeCar||activeHeli||activeJet; if(v) p.pos.set(v.pos.x,v.pos.y+1,v.pos.z); return; }
+    if(p.mode==='drive'){ p.mode='walk'; p.g.visible=true; const a=camYaw+PI+(i-1)*.7; p.pos.set(player.pos.x+Math.sin(a)*2.2,player.pos.y,player.pos.z+Math.cos(a)*2.2); p.vel.set(0,0,0); }
+    if(Math.hypot(p.pos.x-player.pos.x,p.pos.z-player.pos.z)>70){ p.pos.set(player.pos.x+1.5,player.pos.y,player.pos.z+1.5); p.vel.set(0,0,0); }
+    if(p.mode!=='walk') return; p.shootCD-=dt; if(p.shootCD<=0){ p.shootCD=.3; let best=null,bd=28*28; for(const z of people){ if(!z.zombie||z.dead) continue; const e=(z.pos.x-p.pos.x)**2+(z.pos.z-p.pos.z)**2; if(e<bd&&losClear(p.pos.x,p.pos.y+.6,p.pos.z,z.pos.x,z.pos.y+.4,z.pos.z)){ bd=e; best=z; } } if(best){ p.yaw=Math.atan2(best.pos.x-p.pos.x,best.pos.z-p.pos.z); p.g.quaternion.setFromAxisAngle(UP,p.yaw); copShoot(p,best); p.shootCD=R(.55,.9); } } }); }
+function compMenu(){ const add=menuOpen('Your companions · '+COMP.list.length+'/3'); for(const p of COMP.list) add('Send one home','They\'ll head off on their own',()=>{ p.follow=false; p.comp=false; COMP.list.splice(COMP.list.indexOf(p),1); say(p,'Stay safe out there!',true); menuDone(); },''); add('Close','',()=>menuDone()); }
+// ---- the dog ----
+const DOG={d:null,col:null,biteT:0,pos:new V3(),yaw:0,hidden:false,ph:0};
+function dogAdopt(col,quiet){ if(DOG.d){ scene.remove(DOG.d.g); } DOG.d=dogMesh(col); DOG.col=col; scene.add(DOG.d.g); DOG.pos.set(player.pos.x+1.5,groundHeight(player.pos.x+1.5,player.pos.z,player.pos.y),player.pos.z); try{ localStorage.setItem('tumbleton-dog',JSON.stringify({col})); }catch(e){} if(!quiet){ flash('Your new dog will follow you everywhere and bite zombies!'); Snd.bark(player.pos.x,player.pos.z); } }
+function dogTick(dt){ const D=DOG; if(!D.d) return; const g=D.d.g, ride=!!(activeCar||activeHeli||activeJet||player.mode==='drive');
+  if(ride){ g.visible=false; D.hidden=true; const v=activeCar||activeHeli||activeJet; if(v) D.pos.set(v.pos.x,v.pos.y,v.pos.z); return; }
+  if(D.hidden){ D.hidden=false; g.visible=true; D.pos.set(player.pos.x-Math.sin(camYaw)*1.8+1,player.pos.y-HIP,player.pos.z-Math.cos(camYaw)*1.8); }
+  let tx=player.pos.x, tz=player.pos.z, near=2.2, run=6.5; let Z=null,bd=12*12; for(const z of people){ if(!z.zombie||z.dead||z.pos.y<-4.2) continue; const e=(z.pos.x-player.pos.x)**2+(z.pos.z-player.pos.z)**2; if(e<bd){ bd=e; Z=z; } }
+  if(Z){ tx=Z.pos.x; tz=Z.pos.z; near=.9; run=8.5; }
+  const dx=tx-D.pos.x, dz=tz-D.pos.z, d=Math.hypot(dx,dz); if(d>60){ D.pos.set(player.pos.x+1,player.pos.y-HIP,player.pos.z+1); }
+  let moving=false; if(d>near){ const st=Math.min(d-near,dt*(d>8?run:run*.6)); D.pos.x+=dx/d*st; D.pos.z+=dz/d*st; D.yaw=lerpA(D.yaw,Math.atan2(dx,dz),Math.min(1,dt*8)); moving=true; }
+  D.pos.y=groundHeight(D.pos.x,D.pos.z,D.pos.y+.6); D.biteT-=dt; if(Z&&d<1.3&&D.biteT<=0){ D.biteT=.9; knock(Z,dx/(d||1)*4,2.5,dz/(d||1)*4,4,1.5); Snd.bark(D.pos.x,D.pos.z); }
+  if(!Z&&Math.random()<dt*.05) Snd.bark(D.pos.x,D.pos.z);
+  g.position.copy(D.pos); g.rotation.y=D.yaw; D.ph+=dt*(moving?14:0); const sw=moving?Math.sin(D.ph)*.6:0; D.d.legs.forEach((L,i)=>L.rotation.x=(i===0||i===3)?sw:-sw); D.d.tail.rotation.y=Math.sin(perfT*(Z?18:8))*.5; }
+function dogNear(){ return !activeCar&&player.mode==='walk'&&Math.hypot(player.pos.x+301,player.pos.z-16)<3.2; }
+function dogMenu(){ const add=menuOpen('Paws Animal Shelter'+(DOG.d?' · you already have a dog':'')); for(const [n,c] of [['Golden retriever','#c9a24a'],['Black lab','#2b2d31'],['Grey heeler','#8d9aa6'],['White fluffball','#f2f2ef']]) add('Adopt a '+n.toLowerCase()+' · $300',DOG.d?'Swap your dog for this one':'Follows you everywhere, rides in your car and bites zombies',()=>{ if(state.money<300){ menuDone('Not enough cash'); return; } state.money-=300; save(); dogAdopt(c); menuDone(); },'',state.money<300); if(DOG.d) add('Leave your dog here','They\'ll be well looked after',()=>{ scene.remove(DOG.d.g); DOG.d=null; try{ localStorage.removeItem('tumbleton-dog'); }catch(e){} menuDone('Your dog is staying at the shelter'); },''); add('Close','',()=>menuDone()); }
+function dogPrompt(){ return dogNear()?'<kbd>E</kbd> Paws Animal Shelter':''; }
+
+/* ---------- Stage 15: the car radio, a talk station, and sounds of the world ---------- */
+const RADIO={st:0,names:['Tumbleton FM · pop','Kiwi Rock 99','Chill Waves','Zombie News Radio','Radio off'],ui:null,talkT:4,songT:0};
+try{ const q=+localStorage.getItem('tumbleton-radio'); if(isFinite(q)&&q>=0&&q<5) RADIO.st=q; }catch(e){}
+function radioUI(show){ if(!RADIO.ui){ const d=document.createElement('div'); d.style.cssText='position:fixed;left:16px;bottom:120px;background:rgba(17,17,17,.78);color:#fff;font:700 14px/1.3 system-ui,sans-serif;padding:7px 12px;border-radius:10px;z-index:30;cursor:pointer;user-select:none;display:none'; d.title='Change station'; d.addEventListener('click',e=>{ e.stopPropagation(); radioNext(1); }); document.body.appendChild(d); RADIO.ui=d; }
+  RADIO.ui.style.display=show?'block':'none'; if(show){ const t='📻 '+RADIO.names[RADIO.st]+'  ·  [ ]'; if(RADIO.ui.textContent!==t) RADIO.ui.textContent=t; } }
+function radioNext(d){ RADIO.st=(RADIO.st+d+5)%5; try{ localStorage.setItem('tumbleton-radio',String(RADIO.st)); }catch(e){} RADIO.talkT=1.2; if(RADIO.st<3) radioSay(['You\'re listening to Tumbleton FM, the sound of the city!','Kiwi Rock 99. Turn it up!','Chill Waves. Take it easy out there.'][RADIO.st]); }
+function radioSay(t){ try{ if(!window.speechSynthesis||!Snd.isOn()) return; speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(t); u.volume=.55*SET.vol/100; u.rate=1.05; u.pitch=1; const vs=speechSynthesis.getVoices().filter(v=>/^en/i.test(v.lang)); if(vs.length) u.voice=vs[0]; speechSynthesis.speak(u); }catch(e){} }
+function radioTalkLine(){ const W=WX.kind, L=[];
+  L.push('This is Zombie News Radio. Stay inside, stay alert, and keep your tank topped up.');
+  L.push({clear:'The weather out there is clear and sunny. Great day for a drive on the Ring Road.',cloudy:'Clouds over Tumbleton today, but no rain just yet.',rain:'Rain is falling across Tumbleton. Roads are slippery, so take it easy on the corners.',storm:'A thunderstorm is over the region. Lightning has been striking the hills. Stay off the high ground.',fog:'Thick fog this morning. You won\'t see the zombies until they\'re right in front of you.'}[W]||'');
+  if(BLOOD.on) L.push('The Blood Moon is up! Do not go outside! Or if you do, take a big gun. Every zombie is worth extra cash tonight.');
+  if(EV.on) L.push({rescue:'We\'re getting reports of a survivor calling for help nearby. Anyone close, please go and help.',horde:'Breaking news: a large horde is moving through the area. Avoid it, or deal with it.',drop:'The army has dropped emergency supplies near you. First come, first served.',convoy:'An army convoy is moving along the Ring Road. Give them room.'}[EV.on.kind]||'');
+  L.push('Camp Kahu reports the west is holding. The soldiers say thanks for the help.','The Kea Coaster at Kiwi Land is still running. Nobody knows who\'s operating it.','A reminder from the council: zombies are not allowed on the gondola.','Tumbleton Furniture Co. has a sale on bar stools. The zombies won\'t sit on them.','The ferry to Mōtu Island is running on time, which is more than we can say for the buses.','Sports now: the Raceway record still stands. Can you beat it?','Fort Kererū is still overrun. Stay away unless you\'re feeling brave.');
+  return L.filter(Boolean)[Math.floor(Math.random()*L.filter(Boolean).length)]; }
+function radioTick(dt){ const inCar=!!(activeCar&&!activeCar.boat)&&state.started&&!state.over&&!state.paused; radioUI(inCar); Snd.radioTick(RADIO.st<3?RADIO.st:-1,inCar);
+  if(inCar&&RADIO.st===3){ RADIO.talkT-=dt; if(RADIO.talkT<=0){ RADIO.talkT=11+Math.random()*6; const t=radioTalkLine(); radioSay(t); flash('📻 '+t); } }
+  else if(!inCar&&RADIO.wasIn){ try{ if(window.speechSynthesis) speechSynthesis.cancel(); }catch(e){} } RADIO.wasIn=inCar;
+  // ambient world sounds
+  const p=evPos(), day=state.nightT<.5, inCity=Math.abs(p.x)<LIM&&Math.abs(p.z)<LIM, sea=clamp(1-Math.abs(p.z-385)/70,0,1)*(p.x<1150?1:0), birds=(day&&!inCity&&p.x<1150&&!sewSub&&WX.rain<.3)?(p.z<-300?1:.7):0, city=inCity&&!sewSub?(day?1:.6):0;
+  Snd.ambTick(sea,birds,city); }
+addEventListener('keydown',e=>{ if((e.code==='BracketRight'||e.code==='BracketLeft')&&activeCar&&state.started){ e.preventDefault(); radioNext(e.code==='BracketRight'?1:-1); } });
+
+/* ---------- Stage 16: Take back Tumbleton: a zombie nest in every district; blow it up to free the area ---------- */
+const ZONES={list:[{id:'cn',n:'Tumbleton North',r:[-279,279,-279,0],p:[-120,-150]},{id:'cs',n:'Tumbleton South',r:[-279,279,0,279],p:[120,140]},{id:'rw',n:'Rangiwai & the farms',r:[-790,-279,-279,90],p:[-620,-30]},{id:'rv',n:'Riverside & Camp Kahu',r:[-790,-279,90,279],p:[-560,150]},
+  {id:'mt',n:'Mt Tumbleton',r:[-284,284,-770,-279],p:[-120,-560]},{id:'sc',n:'The South Coast',r:[-345,790,279,770],p:[-250,372]},{id:'es',n:'The East Side',r:[279,790,-300,279],p:[560,-212]}],freed:[],plant:null,built:false};
+try{ const q=JSON.parse(localStorage.getItem('tumbleton-zones')||'null'); if(Array.isArray(q)) ZONES.freed=q.filter(id=>ZONES.list.some(z=>z.id===id)); }catch(e){}
+function zoneAt(x,z){ return ZONES.list.find(Z=>x>=Z.r[0]&&x<=Z.r[1]&&z>=Z.r[2]&&z<=Z.r[3])||null; }
+function zoneFree(x,z){ const Z=zoneAt(x,z); return !!(Z&&ZONES.freed.includes(Z.id)); }
+function nestSpot(px,pz){ for(let r=0;r<60;r+=2) for(let a=0;a<TAU;a+=r?1/r*2:7){ const x=px+Math.cos(a)*r, z=pz+Math.sin(a)*r; let ok=true; for(let dx=-3;dx<=3&&ok;dx+=1.5) for(let dz=-3;dz<=3&&ok;dz+=1.5){ for(const y of [.5,2]) if(solidAt(x+dx,y,z+dz)) ok=false; if(Math.min(riverH(z+dz),seaH(x+dx,z+dz))<-.3) ok=false; } if(ok){ const p={x,z}; bounds(p,{x:0,z:0}); if(Math.abs(p.x-x)<.1&&Math.abs(p.z-z)<.1) return {x,z}; } } return {x:px,z:pz}; }
+function zonesSetup(){ for(const Z of ZONES.list){ const sp=nestSpot(Z.p[0],Z.p[1]); Z.x=sp.x; Z.z=sp.z; Z.y=groundHeight(sp.x,sp.z,200); Z.zs=[]; Z.t=0;
+    const g=new THREE.Group(), parts=[]; for(let k=0;k<9;k++){ const a=k/9*TAU, r=k?1.6+Math.random():0; parts.push({g:new THREE.SphereGeometry(k?1+Math.random()*.6:2.2,9,7).translate(Math.cos(a)*r,k?.6:1,Math.sin(a)*r),c:k%2?'#5a2a3a':'#7a3a4a'}); }
+    for(let k=0;k<6;k++){ const a=Math.random()*TAU; parts.push({g:new THREE.SphereGeometry(.35,7,5).translate(Math.cos(a)*1.4,1.6+Math.random()*.8,Math.sin(a)*1.4),c:'#c9e265'}); }
+    g.add(new THREE.Mesh(mergeGeos(parts,true),VC)); const glow=new THREE.Mesh(new THREE.SphereGeometry(2.5,12,8),new THREE.MeshBasicMaterial({color:0x9be07a,transparent:true,opacity:.15,depthWrite:false})); glow.position.y=1; g.add(glow); Z.glow=glow;
+    const sg=new THREE.Mesh(new THREE.PlaneGeometry(4,.8),signMat([['ZOMBIE NEST',56]],'#5a1414','#c9e265',512,96)); sg.position.y=4.2; g.add(sg); Z.sign=sg;
+    g.position.set(Z.x,Z.y,Z.z); scene.add(g); Z.g=g; AIR.boxes.push(Z.box={x0:Z.x-2,x1:Z.x+2,z0:Z.z-2,z1:Z.z+2,y0:Z.y,h:Z.y+2.2}); if(Math.abs(Z.x)<HALF&&Math.abs(Z.z)<HALF) Z.cl=cellPush(Z.box);
+    if(ZONES.freed.includes(Z.id)) nestGone(Z,true); } ZONES.built=true; }
+function nestGone(Z,quiet){ if(Z.g){ scene.remove(Z.g); Z.g=null; } const i=AIR.boxes.indexOf(Z.box); if(i>=0) AIR.boxes.splice(i,1); if(Z.cl) cellPull(Z.box,Z.cl);
+  if(!quiet){ if(!ZONES.freed.includes(Z.id)) ZONES.freed.push(Z.id); try{ localStorage.setItem('tumbleton-zones',JSON.stringify(ZONES.freed)); }catch(e){} earn(2500); const n=ZONES.freed.length, N=ZONES.list.length;
+    banner(n>=N?'TUMBLETON IS SAFE!':Z.n.toUpperCase()+' IS FREE','+$2,500 · '+n+' of '+N+' districts taken back'+(n>=N?' · You did it!':'. People are coming back')); Snd.fanfare(); } }
+function zonesTick(dt){ if(!ZONES.built||!state.started) return; const pc=evPos();
+  for(const Z of ZONES.list){ if(!Z.g) continue; const d=Math.hypot(pc.x-Z.x,pc.z-Z.z); Z.glow.scale.setScalar(1+Math.sin(perfT*3+Z.x)*.12); Z.sign.lookAt(camera.position.x,Z.y+4.2,camera.position.z);
+    Z.zs=Z.zs.filter(z=>people.includes(z)&&!z.dead);
+    if(d<150&&!story.on&&!mpClient()&&!state.over){ Z.t-=dt; if(Z.t<=0&&Z.zs.length<10){ Z.t=2.5; const a=Math.random()*TAU, x=Z.x+Math.cos(a)*4, z=Z.z+Math.sin(a)*4; if(!solidAt(x,1,z)){ const zb=new Person(x,z,{spawned:true,zombie:true,kind:pickZKind(5),y:groundHeight(x,z,Z.y+2)}); zb.aggro=8; Z.zs.push(zb); puff(x,Z.y+.5,z,0x7bc950,1,false); } } }
+    else if(d>260&&Z.zs.length){ for(const z of Z.zs) removePerson(z); Z.zs=[]; } }
+  const P=ZONES.plant; if(P){ P.t-=dt; if(Math.floor(P.t*2)!==P.lb){ P.lb=Math.floor(P.t*2); Snd.beep(P.Z.x,P.Z.z); } P.m.material.emissiveIntensity=1+Math.sin(perfT*20); evHud('💣 Explosives planted · '+Math.max(0,P.t).toFixed(1)+' s · get clear!');
+    if(P.t<=0){ ZONES.plant=null; evHud(''); scene.remove(P.m); const Z=P.Z; explode(Z.x,Z.y+1,Z.z,1.6); for(const z of Z.zs) if(people.includes(z)&&!z.dead) knock(z,R(-8,8),9,R(-8,8),10,10); nestGone(Z); } } }
+function nestNear(){ if(activeCar||player.mode!=='walk'||ZONES.plant||story.on) return null; for(const Z of ZONES.list) if(Z.g&&Math.hypot(player.pos.x-Z.x,player.pos.z-Z.z)<4.5) return Z; return null; }
+function nestLeft(Z){ return people.filter(z=>z.zombie&&!z.dead&&Math.hypot(z.pos.x-Z.x,z.pos.z-Z.z)<16).length; }
+function nestUse(){ const Z=nestNear(); if(!Z) return false; const n=nestLeft(Z); if(n){ flash('Clear the zombies around the nest first ('+n+' left)'); return true; }
+  const m=new THREE.Mesh(BX(.5,.35,.3,0,0,0),lam('#d62828',{emissive:new THREE.Color('#ff2020'),emissiveIntensity:1})); m.position.set(player.pos.x+(Z.x-player.pos.x)*.4,Z.y+.2,player.pos.z+(Z.z-player.pos.z)*.4); scene.add(m); ZONES.plant={Z,t:6,m,lb:-1}; flash('Explosives planted! Run!'); return true; }
+function nestPrompt(){ const Z=nestNear(); if(!Z) return ''; const n=nestLeft(Z); return n?'Zombie nest · clear the '+n+' zombies around it first':'<kbd>E</kbd> Plant explosives on the zombie nest'; }
+function zonesMenu(){ const add=menuOpen('Take back Tumbleton · '+ZONES.freed.length+' of '+ZONES.list.length+' districts free');
+  for(const Z of ZONES.list){ const free=ZONES.freed.includes(Z.id); add((free?'✅ ':'🧟 ')+Z.n,free?'Safe again. People are coming back':'Overrun. Find the zombie nest, clear the zombies around it and blow it up · '+Math.round(Math.hypot(Z.x-player.pos.x,Z.z-player.pos.z))+' m',()=>{ menuDone(free?'':'The nest is marked'); if(!free){ state.wpDest={x:Z.x,z:Z.z}; state.shopWpUntil=perfT+180; } },''); }
+  add('Close','',()=>menuDone()); }
 let rescueI=0;
 function underOK(x,z,y){ if(Math.abs(x)<HALF+12&&Math.abs(z)<HALF+12) return true; if(x>1150) return true; if(z<-LIM&&Math.abs(x)<290){ const r=roadNear(x,z); if(r&&r.tun&&r.d<6) return true; } return false; }
 function rescueTick(dt){ const n=people.length+cars.length; if(!n) return; const per=Math.max(4,Math.ceil(n*dt*4));
@@ -4196,7 +4392,7 @@ function rescueTick(dt){ const n=people.length+cars.length; if(!n) return; const
     if(o.isPerson){ if(o.mode==='drive'||o.mode==='lift'||o.mode==='sit'||o.net||o.npc) continue; const x=o.pos.x, z=o.pos.z; if(underOK(x,z)) continue; const top=groundHeight(x,z), foot=o.pos.y-HIP; if(foot<top-1.4){ o.pos.y=top+HIP+.05; if(o.vel) o.vel.y=Math.max(0,o.vel.y); } }
     else { if(o.boat||o.display||o.ride) continue; const x=o.pos.x, z=o.pos.z; if(underOK(x,z)) continue; const top=groundHeight(x,z); if(o.pos.y<top-1.4){ o.pos.y=top+.1; o.vy=0; o.air=true; } } }
   if(!activeCar&&player.mode==='walk'){ const x=player.pos.x, z=player.pos.z; if(!underOK(x,z)){ const top=groundHeight(x,z); if(player.pos.y-HIP<top-1.4){ player.pos.y=top+HIP+.05; player.vel.y=0; } } } }
-function setupCountry(){ try{ houseFloors(); }catch(e){ console.warn('floors',e); } try{ for(const S of SALE) furnBuild(S); }catch(e){ console.warn('furniture',e); } try{ for(const S of SALE) homeUpBuild(S); }catch(e){ console.warn('homeup',e); } try{ setupJobs(); }catch(e){ console.warn('jobs',e); } try{ setupBases(); }catch(e){ console.warn('bases',e); } try{ setupEast(); }catch(e){ console.warn('east',e); } try{ setupNorth(); }catch(e){ console.warn('north',e); } try{ setupSouth(); try{ SOUTH.got=localStorage.getItem('tumbleton-island')==='1'; }catch(e){} if(!SOUTH.got){ const ch=new THREE.Mesh(new THREE.BoxGeometry(1.2,.8,.8),lam('#8b5a2b',{emissive:new THREE.Color('#ffcc33'),emissiveIntensity:.25})); ch.position.set(ISLE.x-20,.4,ISLE.z+22); scene.add(ch); SOUTH.chest=ch; } }catch(e){ console.warn('south',e); } try{ trainSetup(); }catch(e){ console.warn('train',e); } try{ setupPlanes(); }catch(e){ console.warn('planes',e); } for(const P of COUNTRY.paddocks) for(let k=0;k<P.n;k++){ const g=animalMesh(P.kind), a={kind:P.kind,P,g,pos:g.position,vel:new V3(),yaw:Math.random()*TAU,t:Math.random()*4,tx:0,tz:0,air:false,down:0,spin:0};
+function setupCountry(){ try{ zonesSetup(); }catch(e){ console.warn('zones',e); } try{ lifeSetup(); }catch(e){ console.warn('life',e); } try{ houseFloors(); }catch(e){ console.warn('floors',e); } try{ for(const S of SALE) furnBuild(S); }catch(e){ console.warn('furniture',e); } try{ for(const S of SALE) homeUpBuild(S); }catch(e){ console.warn('homeup',e); } try{ setupJobs(); }catch(e){ console.warn('jobs',e); } try{ setupBases(); }catch(e){ console.warn('bases',e); } try{ setupEast(); }catch(e){ console.warn('east',e); } try{ setupNorth(); }catch(e){ console.warn('north',e); } try{ setupSouth(); try{ SOUTH.got=localStorage.getItem('tumbleton-island')==='1'; }catch(e){} if(!SOUTH.got){ const ch=new THREE.Mesh(new THREE.BoxGeometry(1.2,.8,.8),lam('#8b5a2b',{emissive:new THREE.Color('#ffcc33'),emissiveIntensity:.25})); ch.position.set(ISLE.x-20,.4,ISLE.z+22); scene.add(ch); SOUTH.chest=ch; } }catch(e){ console.warn('south',e); } try{ trainSetup(); }catch(e){ console.warn('train',e); } try{ setupPlanes(); }catch(e){ console.warn('planes',e); } for(const P of COUNTRY.paddocks) for(let k=0;k<P.n;k++){ const g=animalMesh(P.kind), a={kind:P.kind,P,g,pos:g.position,vel:new V3(),yaw:Math.random()*TAU,t:Math.random()*4,tx:0,tz:0,air:false,down:0,spin:0};
       a.pos.set(P.x0+Math.random()*(P.x1-P.x0),0,P.z0+Math.random()*(P.z1-P.z0)); a.tx=a.pos.x; a.tz=a.pos.z; scene.add(g); ANIMALS.push(a); }
   GREET.country=['Kia ora! Not much happens out here.','Watch out for the sheep on the road.','Zombies are worse past the town, mate.','Best pies in the district, these.'];
   for(const S of COUNTRY.shops.slice(0,6)){ try{ const q=new Person(S.x+(Math.random()-.5)*4,S.z,{}); q.work={x:q.pos.x,z:S.z,y:0,yaw:Math.random()*TAU,kind:'shop',greet:'country'}; q.phase0=Math.random()*5; dressWorker(q,q.work); }catch(e){} }
@@ -4214,7 +4410,7 @@ function countryTick(dt){ if(!state.started) return; const px=player.pos.x, pz=p
     const dx=a.tx-a.pos.x, dz=a.tz-a.pos.z, d=Math.hypot(dx,dz); if(d>.3){ const v=(flee?4.5:1.1)*(a.kind==='cow'?.8:1), want=Math.atan2(dx,dz); a.yaw+=wrapA(want-a.yaw)*Math.min(1,dt*5); a.pos.x+=Math.sin(a.yaw)*v*dt; a.pos.z+=Math.cos(a.yaw)*v*dt; a.g.position.y=Math.abs(Math.sin(perfT*9+a.t))*.06; }
     a.g.rotation.set(0,a.yaw,0); }
   ctryT-=dt; if(ctryT>0) return; ctryT=5; const south=pz>LIM+15&&Math.abs(px)<LIM+5, north=pz<-LIM-15&&Math.abs(px)<LIM+5; if((!out&&!south&&!north)||story.on||mpClient()||state.over||FERRY.ride||GOND.ride) return;
-  const lim=north?Math.min(12,3+Math.floor((-pz-LIM)/70)):south?Math.min(8,3+Math.floor((pz-LIM)/120)):Math.min(14,4+Math.floor((-px-LIM)/70)); let n=0; for(const q of people) if(q.zombie&&!q.dead&&q.pos.x<-LIM&&Math.hypot(q.pos.x-px,q.pos.z-pz)<90) n++;
+  let lim=north?Math.min(12,3+Math.floor((-pz-LIM)/70)):south?Math.min(8,3+Math.floor((pz-LIM)/120)):Math.min(14,4+Math.floor((-px-LIM)/70)); if(zoneFree(px,pz)) lim=Math.ceil(lim/3); let n=0; for(const q of people) if(q.zombie&&!q.dead&&q.pos.x<-LIM&&Math.hypot(q.pos.x-px,q.pos.z-pz)<90) n++;
   for(let k=0;k<2&&n<lim;k++,n++){ const a=Math.random()*TAU, r=35+Math.random()*25, x=(south||north)?clamp(px+Math.cos(a)*r,-LIM+6,LIM-6):clamp(px+Math.cos(a)*r,-785,-LIM-6), z=north?clamp(pz+Math.sin(a)*r,-765,-LIM-8):south?clamp(pz+Math.sin(a)*r,LIM+8,375):clamp(pz+Math.sin(a)*r,-LIM+6,LIM-6); if(Math.abs(z-RIVER_Z)<RIV_OUT+2) continue;
     if(south&&(z<0||seaH(x,z)<-.5||Math.abs(x)>LIM)) continue; const zb=new Person(x,z,{spawned:true,zombie:true,kind:pickZKind(1+Math.floor((-px-LIM)/120)),y:north?northH(x,z):undefined}); zb.aggro=8; } }
 function autoPark(dt){ const c=activeCar; if(!c||state.paused||state.cine) return; if(padHere()==='park'&&Math.hypot(c.vel.x,c.vel.z)<.6){ c.parkT=(c.parkT||0)+dt; if(c.parkT>.9){ c.parkT=0; padUse(); } } else if((c.parkT||0)>0) c.parkT=0; }
@@ -4234,7 +4430,7 @@ function setupMotor(){ try{ setupSale(); }catch(e){ console.warn('houses',e); } 
   GREET.cars=['G\'day! Every vehicle comes with a free garage delivery.','Tanks are on special this week. Well, not really.','Have a look around, they don\'t bite.','Need a house first? Check the FOR SALE signs in the suburbs.'];
   GREET.motor=['Drive into a bay and press F.','Left bay for mods, right bay for repairs.','We fix anything that isn\'t a smoking crater.','Zombie rammer? Best money you\'ll ever spend.'];
   try{ for(const site of [0,1]){ const S=SITES[site]; if(!S) continue; const x=lotC(S[0]), z=lotC(S[1]); roadPark(x+10,z+24,site?'digger':'bulldozer'); } }catch(e){ console.warn('site vehicles',e); } }
-function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); southTick(dt); northTick(dt); eastTick(dt); basesTick(dt); rescueTick(dt); keepTick(dt); jobsTick(dt); homeTick(dt); bloodTick(dt); achTick(dt); furnTick(dt); keepOffProps(); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
+function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); southTick(dt); northTick(dt); eastTick(dt); basesTick(dt); rescueTick(dt); keepTick(dt); jobsTick(dt); homeTick(dt); bloodTick(dt); achTick(dt); furnTick(dt); keepOffProps(); eventsTick(dt); wlifeTick(dt); radioTick(dt); zonesTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
   const c=activeCar;
   if(c&&c.emerg==='fire'&&use){ camera.getWorldDirection(_ewd); let dx=_ewd.x, dy=_ewd.y+.16, dz=_ewd.z; const l=Math.hypot(dx,dy,dz)||1; hoseSpray(nozzleWorld(c),{x:dx/l,y:Math.max(-.35,dy/l),z:dz/l},dt,true); }
   if(c&&c.emerg==='tow'){ if(use&&!c.useW){ if(c.towed){ towRelease(c); flash('Let go of the car'); } else { const h=hookWorld(c); let best=null,bd=4.6;
@@ -4344,7 +4540,7 @@ function updateCar(c,dt){
   if(c.flipAng){ const h=(c.top||1.9)*.45; _cfq.copy(c.g.quaternion); _cfv.set(0,h,0).applyQuaternion(_cfq); c.g.quaternion.multiply(_cfq2.setFromAxisAngle(_cfax[c.flipAx],c.flipAng*c.flipDir)); _cfv2.set(0,h,0).applyQuaternion(c.g.quaternion);
     c.visO=c.visO||new V3(); c.visO.subVectors(_cfv,_cfv2); c.pos.add(c.visO); }
 }
-function patrolDrive(c,dt){ const P=c.patrol, q=P.pts[P.i]; let dx=q[0]-c.pos.x, dz=q[1]-c.pos.z; if(Math.hypot(dx,dz)<6){ P.i=(P.i+1)%P.pts.length; return; }
+function patrolDrive(c,dt){ const P=c.patrol, q=P.pts[P.i]; let dx=q[0]-c.pos.x, dz=q[1]-c.pos.z; if(Math.hypot(dx,dz)<6){ if(P.once&&P.i>=P.pts.length-1){ const k=cars.indexOf(c); if(k>=0&&Math.hypot(c.pos.x-player.pos.x,c.pos.z-player.pos.z)>30){ cars.splice(k,1); scene.remove(c.g); disposeTree(c.g); } else c.patrol=null; return; } P.i=(P.i+1)%P.pts.length; return; }
   const err=wrapA(Math.atan2(dx,dz)-c.yaw), rate=c.tank?.7:1.2; c.yaw+=clamp(err,-rate*dt,rate*dt); let tgt=P.spd*(Math.abs(err)>.6?.3:1);
   const fx=Math.sin(c.yaw), fz=Math.cos(c.yaw), ax=player.pos.x-c.pos.x, az=player.pos.z-c.pos.z, ahead=ax*fx+az*fz; if(!activeCar&&ahead>0&&ahead<9&&Math.abs(ax*fz-az*fx)<2.5) tgt=0;
   P.v+=clamp(tgt-P.v,-8*dt,3*dt); c.vel.set(fx*P.v,c.vel.y||0,fz*P.v); }
@@ -4792,8 +4988,10 @@ function enterExit(){
   if(RIDE.on) return;
   if(HOMEUP.place&&sentryTryPlace()) return;
   if(hatchAt()&&hatchUse()) return;
+  if(nestNear()&&!nearestCar()&&nestUse()) return;
   if(FP.mode&&furnUse()) return;
   if(fstoreNear()&&!nearestCar()){ fstoreMenu(); return; }
+  if(dogNear()&&!nearestCar()){ dogMenu(); return; }
   { const jb=jobBoardNear(); if(jb&&!nearestCar()){ jobMenu(jb); return; } }
   { const rk=rideNear(); if(rk&&!nearestCar()){ rideOn(rk); return; } }
   if(GOND.ride){ gondOff(); return; }
@@ -5039,6 +5237,9 @@ function findMenu(){ if(!state.started||state.over||!cfEl.hidden) return; const 
   const add=menuOpen('Find a place · the arrow shows the way');
   { const S=onProp(); if(S) add('🛋 Your furniture','Place, move or pick up furniture in '+S.D.name,()=>{ menuDone(); furnMenu(S); },'pick-go'); }
   if(FP.mode) add('Stop placing furniture','',()=>{ furnStop(); menuDone(); },'');
+  if(COMP.list.length) add('🧑‍🤝‍🧑 Your companions ('+COMP.list.length+')','Survivors you rescued who follow you',()=>{ menuDone(); compMenu(); },'');
+  add('Paws Animal Shelter','Adopt a dog that follows you and bites zombies · '+dist(-301,16),go(-301,16,'The animal shelter is marked, next to the furniture store'));
+  if(!story.on) add('🏴 Take back Tumbleton ('+ZONES.freed.length+'/'+ZONES.list.length+')','Blow up the zombie nest in each district to make it safe again',()=>{ menuDone(); zonesMenu(); },'pick-go');
   add('📖 How to play','A guide to everything in Tumbleton',()=>{ menuDone(); guideOpen(); },'');
   add('🏆 Achievements ('+ACH.got.length+'/'+ACHL.length+')','Challenges all over the map, each with a cash reward',()=>{ menuDone(); achMenu(); },'pick-go');
   if(STORE) add('Hardware & Arms store','Weapons, ammo and building blocks · '+dist(STORE.door.x,STORE.door.z),()=>{ menuDone(); findStore(); });
@@ -5412,6 +5613,8 @@ const GUIDE=[
  ['Your house',`<ul><li>Houses for sale have gold beams and FOR SALE signs. They get bigger and better the more they cost, up to the Pōhutukawa Mansion.</li><li>E at the garage entrance opens the house menu: more garage spaces, an armoury, a medical bay, and <b>yard upgrades</b>.</li><li><b>Yard upgrades:</b> up to 4 sentry guns (you choose where, press E), an electric fence that zaps zombies, a trampoline, and a rooftop helipad with stairs and your own helicopter.</li></ul>`],
  ['Furniture',`<ul><li>Buy furniture at <b>Tumbleton Furniture Co.</b>, just west of the city (B menu shows the way). Press E at the counter.</li><li>At your house, press <b>B → 🛋 Your furniture</b> and pick a piece. A green outline shows where it goes: <b>turn to rotate it</b>, and press <b>E</b> to place it. Red means something is in the way.</li><li>Place it anywhere on your property, inside or out, on any floor.</li><li><b>Pick up or move furniture</b> puts a piece back in your stock so you can place it again.</li><li>There are 24 pieces: a full kitchen (stove, range hood, fridge-freezer, drawers, sink, spice shelf, island, bar stools), lounge, bedroom, dining room, and a staircase.</li></ul>`],
  ['Danger',`<ul><li><b>Weather</b> changes every few minutes. Rain makes roads slippery, and storms bring lightning that can strike nearby.</li><li><b>Blood Moon:</b> sometimes when night falls (N) the sky turns red. Lots more zombies come, and each one pays an extra $20.</li><li><b>Fort Kererū</b> is crawling with zombies. <b>Camp Kahu</b> has friendly soldiers and free ammo and first aid.</li></ul>`],
+ ['Take back Tumbleton',`<p>Every district has a <b>zombie nest</b> that keeps spawning zombies (Sandbox). Press <b>B → 🏴 Take back Tumbleton</b> to see them and mark one. Clear the zombies around it, press <b>E</b> to plant explosives, and run. You get $2,500 for each district.</p><p>Free districts get much quieter, and more people come back to the towns, the beach and the theme park. Free all 7 for a big reward.</p>`],
+ ['Events & friends',`<ul><li><b>Random events</b> pop up near you every few minutes: a <b>survivor</b> calling for help (clear the zombies and reach them), a <b>zombie horde</b>, a <b>supply drop</b> on a parachute (cash, ammo and health), and <b>army convoys</b> on the Ring Road. Follow the orange beam.</li><li>Survivors you rescue <b>join you as companions</b> (up to 3). They follow you, ride in your car and shoot zombies. Send them home from the B menu.</li><li>Adopt a <b>dog</b> at the Paws Animal Shelter next to the furniture store. It follows you everywhere, rides along and bites zombies.</li><li>In a car, the <b>radio</b> plays: Tumbleton FM, Kiwi Rock 99, Chill Waves and Zombie News Radio. Press <b>[</b> or <b>]</b>, or click the radio, to change station.</li></ul>`],
  ['Online',`<p>Press <b>J</b> to play online with friends: join a public server, join a private one with its code, or make your own. <b>Enter</b> chats.</p>`]];
 function guideOpen(tab){ const el=$('guide'); if(!el.hidden&&tab===undefined) return; if(el.hidden){ GUIDE.prev=state.paused; state.paused=true; for(const k in keys) keys[k]=false; try{ document.exitPointerLock&&document.exitPointerLock(); }catch(e){} }
   el.hidden=false; const T=$('guidetabs'), B=$('guidebody'); T.textContent=''; const cur=tab||0; GUIDE.forEach(([n],i)=>{ const b=document.createElement('button'); b.type='button'; b.textContent=n; b.setAttribute('aria-pressed',String(i===cur)); b.addEventListener('click',()=>guideOpen(i)); T.appendChild(b); });
@@ -5436,7 +5639,7 @@ function updateHUD(){
   if(zs!==lastZ||state.defeated!==lastD){ lastZ=zs; lastD=state.defeated; zcEl.textContent=zs; zdEl.textContent=state.defeated; zplateEl.hidden=!(zs||state.defeated); }
   let pr='';
   if(state.msgT>0&&state.started&&!state.over) pr=state.msg; else
-  if(state.started){ const stp=jetPrompt()||cranePrompt()||storyPrompt()||storePrompt()||motorPrompt()||trainPrompt()||ferryPrompt()||gondPrompt()||ridePrompt()||jobPrompt()||sentryPrompt()||hatchPrompt()||furnPrompt()||fstorePrompt()||sewerPrompt(); if(stp) pr=stp; else if(activeHeli) pr='<kbd>E</kbd> Get out · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>Click</kbd> guns · <kbd>Right-click</kbd> rockets';  else if(player.chute) pr='<kbd>WASD</kbd> steer · <kbd>Space</kbd> cut away';
+  if(state.started){ const stp=jetPrompt()||cranePrompt()||storyPrompt()||storePrompt()||motorPrompt()||trainPrompt()||ferryPrompt()||gondPrompt()||ridePrompt()||jobPrompt()||sentryPrompt()||nestPrompt()||hatchPrompt()||furnPrompt()||fstorePrompt()||dogPrompt()||sewerPrompt(); if(stp) pr=stp; else if(activeHeli) pr='<kbd>E</kbd> Get out · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>Click</kbd> guns · <kbd>Right-click</kbd> rockets';  else if(player.chute) pr='<kbd>WASD</kbd> steer · <kbd>Space</kbd> cut away';
     else if(player.mode==='walk'&&!player.ground&&player.vel.y<-2&&player.pos.y-HIP-groundHeight(player.pos.x,player.pos.z,player.pos.y-HIP)>3.5) pr='<kbd>Space</kbd> Open parachute';
     else if(activeCar) pr=activeCar.boat?'<kbd>W</kbd><kbd>S</kbd> throttle · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>E</kbd> Get out':'<kbd>E</kbd> Get out'+keepHint(activeCar); else if(state.downT>0) pr='Knocked out. Heading back to the plaza…'; else if(state.over) pr=''; else if(player.mode==='held') pr=player.heldBy&&!player.heldBy.zombie?'They grabbed you! Brace for the throw…':'A grabber has you! Brace for the throw…'; else if(player.mode==='ragdoll'||player.mode==='getup') pr='Ouch. Getting back up…'; else if(player.immune>0&&people.some(q=>q.zombie)) pr='Back on your feet. Run!'; else if(player.mode==='walk'&&liftNear()){ const n=liftNear(); pr=n.L.v!==0?(n.inside?'Going '+(n.L.v>0?'up':'down')+'…':'Lift is moving…'):Math.abs(n.L.y-n.lvl)>.05?'<kbd>E</kbd> Call the lift':n.inside?'<kbd>E</kbd> Ride the lift '+(n.lvl===0?'up':'down'):'Step into the lift'; } else if(player.mode==='walk'&&nearestHeli()) pr='<kbd>E</kbd> Fly the helicopter'; else if(nearestCar()) pr=nearestCar().boat?'<kbd>E</kbd> Drive this boat':'<kbd>E</kbd> Drive this car'; }
   if(pr!==lastPrompt){ lastPrompt=pr; promptEl.innerHTML=pr; promptEl.hidden=!pr; }
