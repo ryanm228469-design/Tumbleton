@@ -610,7 +610,7 @@ const AX6=[new V3(1,0,0),new V3(-1,0,0),new V3(0,1,0),new V3(0,-1,0),new V3(0,0,
 const AXZ=[new V3(0,0,1),new V3(0,0,-1)];
 const _v=new V3(), _v2=new V3(), _q=new THREE.Quaternion(), _q2=new THREE.Quaternion();
 const SYS_REDUCE=!!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
-const SET_DEF={fov:62,sens:1,inv:false,tsens:1,vol:100,res:100,view:'normal',weather:'auto',shake:true,fps:false,touch:'auto',tsize:1,bind:{}};
+const SET_DEF={fov:62,sens:1,inv:false,tsens:1,vol:100,res:100,view:'normal',weather:'auto',daynight:'auto',shake:true,fps:false,touch:'auto',tsize:1,bind:{}};
 const SET=(()=>{ let o={}; try{ o=JSON.parse(localStorage.getItem('tumbleton-settings')||'{}')||{}; }catch(e){} const r=Object.assign({},SET_DEF,o); r.bind=Object.assign({},o.bind||{}); return r; })();
 let reduceMotion=SYS_REDUCE||!SET.shake;
 
@@ -2618,7 +2618,7 @@ function civReact(p,dt){ const Rc=p.react; Rc.t+=dt; _crv.x=0; _crv.z=0;
 function civPunchHit(p){ const Rc=p.react, dx=player.pos.x-p.pos.x, dz=player.pos.z-p.pos.z, d=Math.hypot(dx,dz)||1;
   if(d<1.85&&Math.abs(player.pos.y-p.pos.y)<1.3&&player.mode==='walk'&&!activeCar&&!activeHeli&&!state.over){ player.vel.x+=dx/d*4.5; player.vel.z+=dz/d*4.5; damagePlayer(6); state.shake=Math.max(state.shake,.14); Snd.punch(true); if(Rc&&Rc.k==='fight') Rc.hits++; } }
 function hitByPlayer(o,kind){
-  if(!o||!o.isPerson||o.zombie||o.isPlayer) return;
+  if(!o||!o.isPerson||o.zombie||o.isPlayer||o.raider) return;
   if(o.cop&&!o.dead){ say(o,pickL('cop')); if(!story.on&&!mpClient()&&state.started) startWanted(); return; }
   if(o.vip&&!o.dead){ say(o,pickL('ally')); return; }
   if(o.follow&&!o.dead){ fine(o,kind); say(o,pickL('ally')); return; }
@@ -3110,6 +3110,7 @@ function updatePerson(p,dt){
   if(p.dead&&p.zombie&&p.mode!=='ragdoll') deadFall(p);
   if(p.soldier&&!p.zombie&&!p.dead&&p.mode==='walk'){ soldierTick(p,dt); return; }
   if(p.local&&!p.zombie&&!p.dead&&p.mode==='walk'&&localTick(p,dt)) return;
+  if(p.raider&&!p.dead&&p.mode==='walk'&&raiderTick(p,dt)) return;
   if(p.work&&p.mode==='walk'&&!p.g.visible&&!p.zombie&&!p.react){ p.lodSkip=true; return; }
   p.launchCD-=dt; if(p.immune>0) p.immune-=dt;
   if(p.infect>0){ p.infect-=dt; if(p.infect<=0){ p.infect=-1; convertToZombie(p); } }
@@ -3586,7 +3587,7 @@ function buildGarageRoom(S){ const O=gOrigin(S), g=new THREE.Group(), T=S.i, B=A
   for(let k=0;k<6;k++){ for(const sx of [-1,1]){ const z=-19+k*7; bx(sx*13.9-.02,sx*13.9+.02,.6,2.2,z-.9,z+.9,trimM,false); bx(sx*4.6-.06,sx*4.6+.06,.01,.02,z-3.4,z+3.4,M('#f2f2f2'),false); } bx(-1.2,1.2,4.7,4.78,-21+k*7,-19.6+k*7,lightM,false); }
   for(const z of [-22.5,-15.5,-8.5,-1.5,5.5,12.5,19.5]) for(const sx of [-1,1]) bx(sx*4.6-.35,sx*4.6+.35,0,4.8,z-.35,z+.35,wallM,true);
   // the ramp up to the street
-  for(let k=0;k<16;k++) B.push({x0:O.x-3.5,x1:O.x+3.5,z0:O.z+22+k,z1:O.z+39,y0:0,h:.26*(k+1)});
+  ramps.push({x:O.x,z:O.z+30,y:0,L:16,W:7,H:4.16,c:0,s:-1,garage:true}); B.push({x0:O.x-3.5,x1:O.x+3.5,z0:O.z+38,z1:O.z+39.2,y0:0,h:4.16});
   const rp=new THREE.Mesh(new THREE.BoxGeometry(7,.3,16.6),floorM); rp.position.set(O.x,2.1,O.z+30.2); rp.rotation.x=-Math.atan2(4.16,16); g.add(rp);
   for(let k=0;k<5;k++){ const cn=new THREE.Mesh(new THREE.ConeGeometry(.5,.8,3).rotateX(-PI/2),trimM); cn.position.set(O.x,.6+k*.8+.25,O.z+24+k*3); cn.rotation.x=-.25; g.add(cn); }
   bx(-3.9,-3.5,0,9,22,40,wallM,true); bx(3.5,3.9,0,9,22,40,wallM,true); B.push({x0:O.x-3.9,x1:O.x+3.9,z0:O.z+39.2,z1:O.z+40,y0:0,h:9}); bx(-3.9,3.9,4.8,9,22.4,22.8,wallM,false);
@@ -3633,7 +3634,7 @@ function garageTick2(dt){ const S=GAR_IN.S; if(!S) return; const O=gOrigin(S);
   if(!activeCar&&player.mode==='walk'&&player.pos.z>O.z+35.5&&Math.abs(player.pos.x-O.x)<4){ garageLeaveFoot(); flash('Out on the street'); return; }
   if(!activeCar&&(player.pos.y<-1.5||Math.abs(player.pos.x-O.x)>15.5||player.pos.z<O.z-27||player.pos.z>O.z+41)){ player.pos.set(O.x,HIP,O.z-22); player.vel.set(0,0,0); camTarget.copy(player.pos); }
   let bi=0; for(const q of cars){ if(!q.inGarage) continue; const b=GBAYS[bi++%GBAYS.length]; if(q!==activeCar&&(q.pos.y<-1.5||Math.abs(q.pos.x-O.x)>15||q.pos.z<O.z-27||q.pos.z>O.z+40)){ q.pos.set(O.x+b.x,0,O.z+b.z); q.yaw=b.yaw; q.vel.set(0,0,0); q.air=false; q.vy=0; } }
-  const c=activeCar; if(c&&c.inGarage&&c.pos.z>O.z+35){ const e=GAR.cars.find(e=>e.id===c.gid); c.inGarage=false; garageClear(c); if(e) e.out=true;
+  const c=activeCar; if(c&&c.inGarage&&c.pos.z>O.z+32.5){ const e=GAR.cars.find(e=>e.id===c.gid); c.inGarage=false; garageClear(c); if(e) e.out=true;
     c.pos.set(S.padP.x,0,S.padP.z+2.5); c.yaw=S.exitYaw; c.vel.set(Math.sin(c.yaw)*7,0,Math.cos(c.yaw)*7); c.spin=0; c.air=false; c.vy=0; c.prevSp=0; c.parkT=-3; camYaw=c.yaw; camTarget.set(c.pos.x,c.pos.y+1.7,c.pos.z); flash('Out on the street!'); } }
 function houseMarks(){ if(!state.started||state.cine){ for(const S of SALE) if(S.mk) S.mk.hidden=true; return; } const w=canvas.clientWidth, h=canvas.clientHeight; camera.updateMatrixWorld();
   for(const S of SALE){ if(!S.mk){ S.mk=document.createElement('div'); S.mk.className='mark'; marksEl.appendChild(S.mk); } const own=GAR.h[S.i]&&GAR.h[S.i].own, txt=(own?'🏠 Your home · ':'🏠 For sale · ')+S.D.name+(own?'':' · '+money(S.D.price));
@@ -4149,6 +4150,9 @@ const ACHL=[
   ['safe','Tumbleton Is Safe','Take back all 7 districts',10000,()=>ZONES.freed.length>=ZONES.list.length],
   ['dog','Best Friend','Adopt a dog',100,()=>!!DOG.d],
   ['comp','Squad Up','Have 3 companions at once',800,()=>COMP.list.length>=3],
+  ['quest5','Good Neighbour','Finish 5 quests for townsfolk',1500,()=>achSt('quest')>=5],
+  ['raid','Raider Hunter','Defeat 3 raider gangs',1500,()=>achSt('raid')>=3],
+  ['boss','Giant Slayer','Defeat a nest boss',1000,()=>achSt('boss')>=1],
   ['blood','Blood Moon Survivor','Defeat 30 zombies during one Blood Moon',2000,()=>achSt('blood30')>=1]];
 function achSave(){ try{ localStorage.setItem('tumbleton-ach',JSON.stringify({got:ACH.got,st:ACH.st})); }catch(e){} }
 try{ const q=JSON.parse(localStorage.getItem('tumbleton-ach')||'null'); if(q){ if(Array.isArray(q.got)) ACH.got=q.got.filter(id=>typeof id==='string').slice(0,64); if(q.st&&typeof q.st==='object') for(const k in q.st) if(isFinite(q.st[k])) ACH.st[k]=Math.max(0,Math.floor(q.st[k])); } }catch(e){}
@@ -4234,7 +4238,8 @@ function evZombie(x,z,k){ const zb=new Person(x,z,{spawned:true,zombie:true,kind
 function evPos(){ return activeCar?activeCar.pos:player.pos; }
 function evStart(){ const roll=Math.random(), pc=evPos(); let E=null;
   const near=ringNear(pc.x,pc.z); if(near&&roll<.22) E=evConvoy(near);
-  else if(roll<.5){ const p=evSpot(45,110); if(p) E=evRescue(p); }
+  else if(roll<.42){ const p=evSpot(45,110); if(p) E=evRescue(p); }
+  else if(roll<.58){ const p=evSpot(70,120); if(p) E=evRaid(p); }
   else if(roll<.75){ const p=evSpot(60,120); if(p) E=evHorde(p); }
   else { const p=evSpot(70,150); if(p) E=evDrop(p); }
   if(E){ EV.on=E; Snd.sting&&Snd.sting(); } }
@@ -4312,7 +4317,7 @@ function compTick(dt){ COMP.list=COMP.list.filter(p=>{ if(!people.includes(p)||p
     if(ride){ if(p.mode!=='drive'){ p.mode='drive'; p.g.visible=false; } const v=activeCar||activeHeli||activeJet; if(v) p.pos.set(v.pos.x,v.pos.y+1,v.pos.z); return; }
     if(p.mode==='drive'){ p.mode='walk'; p.g.visible=true; const a=camYaw+PI+(i-1)*.7; p.pos.set(player.pos.x+Math.sin(a)*2.2,player.pos.y,player.pos.z+Math.cos(a)*2.2); p.vel.set(0,0,0); }
     if(Math.hypot(p.pos.x-player.pos.x,p.pos.z-player.pos.z)>70){ p.pos.set(player.pos.x+1.5,player.pos.y,player.pos.z+1.5); p.vel.set(0,0,0); }
-    if(p.mode!=='walk') return; p.shootCD-=dt; if(p.shootCD<=0){ p.shootCD=.3; let best=null,bd=28*28; for(const z of people){ if(!z.zombie||z.dead) continue; const e=(z.pos.x-p.pos.x)**2+(z.pos.z-p.pos.z)**2; if(e<bd&&losClear(p.pos.x,p.pos.y+.6,p.pos.z,z.pos.x,z.pos.y+.4,z.pos.z)){ bd=e; best=z; } } if(best){ p.yaw=Math.atan2(best.pos.x-p.pos.x,best.pos.z-p.pos.z); p.g.quaternion.setFromAxisAngle(UP,p.yaw); copShoot(p,best); p.shootCD=R(.55,.9); } } }); }
+    if(p.mode!=='walk') return; p.shootCD-=dt; if(p.shootCD<=0){ p.shootCD=.3; let best=null,bd=28*28; for(const z of people){ if(!(z.zombie||z.raider)||z.dead) continue; const e=(z.pos.x-p.pos.x)**2+(z.pos.z-p.pos.z)**2; if(e<bd&&losClear(p.pos.x,p.pos.y+.6,p.pos.z,z.pos.x,z.pos.y+.4,z.pos.z)){ bd=e; best=z; } } if(best){ p.yaw=Math.atan2(best.pos.x-p.pos.x,best.pos.z-p.pos.z); p.g.quaternion.setFromAxisAngle(UP,p.yaw); if(best.raider){ civHurt(best,1.5); knock(best,0,1,0,2); } else copShoot(p,best); p.shootCD=R(.55,.9); } } }); }
 function compMenu(){ const add=menuOpen('Your companions · '+COMP.list.length+'/3'); for(const p of COMP.list) add('Send one home','They\'ll head off on their own',()=>{ p.follow=false; p.comp=false; COMP.list.splice(COMP.list.indexOf(p),1); say(p,'Stay safe out there!',true); menuDone(); },''); add('Close','',()=>menuDone()); }
 // ---- the dog ----
 const DOG={d:null,col:null,biteT:0,pos:new V3(),yaw:0,hidden:false,ph:0};
@@ -4373,18 +4378,85 @@ function nestGone(Z,quiet){ if(Z.g){ scene.remove(Z.g); Z.g=null; } const i=AIR.
 function zonesTick(dt){ if(!ZONES.built||!state.started) return; const pc=evPos();
   for(const Z of ZONES.list){ if(!Z.g) continue; const d=Math.hypot(pc.x-Z.x,pc.z-Z.z); Z.glow.scale.setScalar(1+Math.sin(perfT*3+Z.x)*.12); Z.sign.lookAt(camera.position.x,Z.y+4.2,camera.position.z);
     Z.zs=Z.zs.filter(z=>people.includes(z)&&!z.dead);
+    if(d<110&&!Z.boss&&!story.on&&!mpClient()) Z.boss=bossSpawn(Z); if(Z.boss&&(Z.boss.dead||!people.includes(Z.boss))&&!Z.bossPaid){ Z.bossPaid=true; if(Z.boss.dead){ earn(500); banner('BOSS DOWN','+$500 · the '+Z.n+' nest\'s guardian is gone'); achStat('boss'); } }
     if(d<150&&!story.on&&!mpClient()&&!state.over){ Z.t-=dt; if(Z.t<=0&&Z.zs.length<10){ Z.t=2.5; const a=Math.random()*TAU, x=Z.x+Math.cos(a)*4, z=Z.z+Math.sin(a)*4; if(!solidAt(x,1,z)){ const zb=new Person(x,z,{spawned:true,zombie:true,kind:pickZKind(5),y:groundHeight(x,z,Z.y+2)}); zb.aggro=8; Z.zs.push(zb); puff(x,Z.y+.5,z,0x7bc950,1,false); } } }
     else if(d>260&&Z.zs.length){ for(const z of Z.zs) removePerson(z); Z.zs=[]; } }
   const P=ZONES.plant; if(P){ P.t-=dt; if(Math.floor(P.t*2)!==P.lb){ P.lb=Math.floor(P.t*2); Snd.beep(P.Z.x,P.Z.z); } P.m.material.emissiveIntensity=1+Math.sin(perfT*20); evHud('💣 Explosives planted · '+Math.max(0,P.t).toFixed(1)+' s · get clear!');
     if(P.t<=0){ ZONES.plant=null; evHud(''); scene.remove(P.m); const Z=P.Z; explode(Z.x,Z.y+1,Z.z,1.6); for(const z of Z.zs) if(people.includes(z)&&!z.dead) knock(z,R(-8,8),9,R(-8,8),10,10); nestGone(Z); } } }
 function nestNear(){ if(activeCar||player.mode!=='walk'||ZONES.plant||story.on) return null; for(const Z of ZONES.list) if(Z.g&&Math.hypot(player.pos.x-Z.x,player.pos.z-Z.z)<4.5) return Z; return null; }
-function nestLeft(Z){ return people.filter(z=>z.zombie&&!z.dead&&Math.hypot(z.pos.x-Z.x,z.pos.z-Z.z)<16).length; }
+function nestLeft(Z){ if(Z.boss&&people.includes(Z.boss)&&!Z.boss.dead) return 1+people.filter(z=>z!==Z.boss&&z.zombie&&!z.dead&&Math.hypot(z.pos.x-Z.x,z.pos.z-Z.z)<16).length; return people.filter(z=>z.zombie&&!z.dead&&Math.hypot(z.pos.x-Z.x,z.pos.z-Z.z)<16).length; }
 function nestUse(){ const Z=nestNear(); if(!Z) return false; const n=nestLeft(Z); if(n){ flash('Clear the zombies around the nest first ('+n+' left)'); return true; }
   const m=new THREE.Mesh(BX(.5,.35,.3,0,0,0),lam('#d62828',{emissive:new THREE.Color('#ff2020'),emissiveIntensity:1})); m.position.set(player.pos.x+(Z.x-player.pos.x)*.4,Z.y+.2,player.pos.z+(Z.z-player.pos.z)*.4); scene.add(m); ZONES.plant={Z,t:6,m,lb:-1}; flash('Explosives planted! Run!'); return true; }
 function nestPrompt(){ const Z=nestNear(); if(!Z) return ''; const n=nestLeft(Z); return n?'Zombie nest · clear the '+n+' zombies around it first':'<kbd>E</kbd> Plant explosives on the zombie nest'; }
 function zonesMenu(){ const add=menuOpen('Take back Tumbleton · '+ZONES.freed.length+' of '+ZONES.list.length+' districts free');
   for(const Z of ZONES.list){ const free=ZONES.freed.includes(Z.id); add((free?'✅ ':'🧟 ')+Z.n,free?'Safe again. People are coming back':'Overrun. Find the zombie nest, clear the zombies around it and blow it up · '+Math.round(Math.hypot(Z.x-player.pos.x,Z.z-player.pos.z))+' m',()=>{ menuDone(free?'':'The nest is marked'); if(!free){ state.wpDest={x:Z.x,z:Z.z}; state.shopWpUntil=perfT+180; } },''); }
   add('Close','',()=>menuDone()); }
+
+/* ---------- Stage 17: day and night, townsfolk quests, raiders, nest bosses, zombie animals and a shark ---------- */
+const DAY={t:9/24,len:1200,clock:null};
+function dayAuto(){ return (SET.daynight||'auto')==='auto'&&!story.on&&state.started&&!mpClient(); }
+function dayDark(t){ const h=t*24; if(h<5||h>20.5) return 1; if(h<7) return 1-(h-5)/2; if(h>18.5) return (h-18.5)/2; return 0; }
+function dayClock(){ if(!DAY.clock){ const d=document.createElement('div'); d.style.cssText='position:fixed;right:84px;top:14px;background:rgba(17,17,17,.7);color:#fff;font:700 13px/1.3 system-ui,sans-serif;padding:4px 10px;border-radius:9px;z-index:30;pointer-events:none'; document.body.appendChild(d); DAY.clock=d; }
+  const on=dayAuto()&&!state.over; DAY.clock.style.display=on?'block':'none'; if(!on) return; const m=Math.floor(DAY.t*1440), h=Math.floor(m/60), mm=m%60, t=(h<6||h>=19?'🌙 ':'☀️ ')+((h%12)||12)+':'+String(mm).padStart(2,'0')+(h<12?' am':' pm'); if(DAY.clock.textContent!==t) DAY.clock.textContent=t; }
+// ---- quests from townsfolk ----
+const QST={on:null,hud:null,beam:null,bang:null,cd:20,done:0};
+function qHud(t){ if(!QST.hud){ const d=document.createElement('div'); d.style.cssText='position:fixed;left:50%;top:96px;transform:translateX(-50%);background:rgba(20,70,110,.85);color:#fff;font:700 14px/1.3 system-ui,sans-serif;padding:5px 12px;border-radius:10px;z-index:30;pointer-events:none;text-align:center'; document.body.appendChild(d); QST.hud=d; } QST.hud.style.display=t?'block':'none'; if(t&&QST.hud.textContent!==t) QST.hud.textContent=t; }
+function qBeam(x,z){ if(!QST.beam){ const m=new THREE.Mesh(new THREE.CylinderGeometry(1.2,1.2,80,10,1,true),new THREE.MeshBasicMaterial({color:0x4fc3ff,transparent:true,opacity:.3,depthWrite:false,side:THREE.DoubleSide,fog:false})); m.renderOrder=4; scene.add(m); QST.beam=m; } if(x===null){ QST.beam.visible=false; return; } QST.beam.position.set(x,40,z); QST.beam.visible=true; }
+function bangSprite(){ if(!QST.bang){ const c=document.createElement('canvas'); c.width=c.height=64; const g=c.getContext('2d'); g.fillStyle='#ffd166'; g.beginPath(); g.arc(32,32,28,0,TAU); g.fill(); g.fillStyle='#111'; g.font='bold 44px sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('!',32,35); QST.bang=new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false}); } const sp=new THREE.Sprite(QST.bang); sp.scale.set(.7,.7,.7); sp.position.y=1.8; sp.renderOrder=6; return sp; }
+function questGiverTick(dt){ QST.cd-=dt; if(QST.on||QST.cd>0||story.on) return; for(const A of WLIFE.areas){ if(!A.list||!A.list.length) continue; if(A.giver&&people.includes(A.giver)&&!A.giver.dead&&!A.giver.zombie) continue; const p=A.list[Math.floor(Math.random()*A.list.length)]; if(!p.local) continue; A.giver=p; p.giver=A; const sp=bangSprite(); p.g.add(sp); p.bang=sp; } }
+function giverNear(){ if(activeCar||player.mode!=='walk'||QST.on) return null; for(const A of WLIFE.areas){ const p=A.giver; if(p&&people.includes(p)&&!p.dead&&!p.zombie&&Math.hypot(p.pos.x-player.pos.x,p.pos.z-player.pos.z)<3) return p; } return null; }
+function questOffer(p){ const A=p.giver, others=WLIFE.areas.filter(a=>a!==A&&a.n); const kinds=['dog','crates','clear','letter'], k=kinds[Math.floor(Math.random()*kinds.length)];
+  const txt={dog:['My dog ran off when the zombies came! Can you find her and bring her back?',350],crates:['Supplies fell off a truck around here. Find the 3 crates and bring them back to me?',400],clear:['Zombies have taken over the place next door. Can you clear them out?',350],letter:['Could you take this letter to someone in another town? The post doesn\'t run anymore.',250]}[k];
+  const add=menuOpen('A local needs help'); add('"'+txt[0]+'"','Reward: '+money(txt[1]),()=>{ menuDone(); questStart(p,k,txt[1],others); },'pick-go'); add('Not right now','',()=>menuDone()); }
+function questStart(p,k,pay,others){ const A=p.giver, gx=p.pos.x, gz=p.pos.z, Q={k,pay,giver:p,gx,gz,stage:0,t:600}; say(p,'Thank you! Please hurry.',true);
+  if(k==='dog'){ const sp=evSpot(80,170)||{x:gx+90,z:gz}; const d=dogMesh(['#c9a24a','#2b2d31','#8d9aa6','#f2f2ef'][Math.floor(Math.random()*4)]); d.g.position.set(sp.x,groundHeight(sp.x,sp.z,200),sp.z); scene.add(d.g); Q.dog=d; Q.dx=sp.x; Q.dz=sp.z; Q.dy=d.g.position.y; }
+  if(k==='crates'){ Q.crates=[]; for(let i=0;i<3;i++){ const sp=evSpot(40,120); if(!sp) continue; const m=new THREE.Mesh(mergeGeos([{g:BX(.9,.7,.9,0,.35,0),c:'#a5764a'},{g:BX(.95,.08,.95,0,.72,0),c:'#5b4636'}],true),VC); m.position.set(sp.x,groundHeight(sp.x,sp.z,200),sp.z); scene.add(m); Q.crates.push(m); } Q.got=0; }
+  if(k==='clear'){ const sp=evSpot(50,100)||{x:gx+60,z:gz}; Q.zs=[]; for(let i=0;i<8;i++){ const a=Math.random()*TAU; Q.zs.push(evZombie(sp.x+Math.cos(a)*5,sp.z+Math.sin(a)*5)); } Q.cx=sp.x; Q.cz=sp.z; }
+  if(k==='letter'){ const T=others[Math.floor(Math.random()*others.length)]; Q.tx=T.x; Q.tz=T.z; }
+  if(p.bang){ p.g.remove(p.bang); p.bang=null; } A.giver=null; p.giver=null; QST.on=Q; }
+function questEnd(win){ const Q=QST.on; QST.on=null; qHud(''); qBeam(null); QST.cd=40; if(!Q) return; if(Q.dog&&!win) scene.remove(Q.dog.g); if(Q.crates) for(const m of Q.crates) scene.remove(m);
+  if(win){ earn(Q.pay); QST.done++; achStat('quest'); banner('QUEST COMPLETE','+'+money(Q.pay)+' · "You\'re a lifesaver!"'); if(Q.giver&&people.includes(Q.giver)) say(Q.giver,'Thank you so much!',true); if(Q.dog){ const g=Q.dog.g; setTimeout(()=>scene.remove(g),8000); } } else flash('Quest abandoned'); }
+function questTick(dt){ questGiverTick(dt); const Q=QST.on; if(!Q) return; const pc=evPos(), back=()=>{ const g=Q.giver&&people.includes(Q.giver)&&!Q.giver.dead?Q.giver.pos:{x:Q.gx,z:Q.gz}; return g; };
+  Q.t-=dt; if(Q.t<=0) return questEnd(false);
+  if(Q.k==='dog'){ const g=Q.dog.g; if(Q.stage===0){ qBeam(Q.dx,Q.dz); qHud('🐕 Find the lost dog · '+Math.round(Math.hypot(pc.x-Q.dx,pc.z-Q.dz))+' m'); g.rotation.y+=dt; if(Math.hypot(player.pos.x-Q.dx,player.pos.z-Q.dz)<3&&!activeCar){ Q.stage=1; Snd.bark(Q.dx,Q.dz); flash('Found her! She\'ll follow you. Take her home'); } }
+    else { const b=back(); qBeam(b.x,b.z); qHud('🐕 Take the dog home · '+Math.round(Math.hypot(pc.x-b.x,pc.z-b.z))+' m'); const dx=player.pos.x-g.position.x, dz=player.pos.z-g.position.z, d=Math.hypot(dx,dz); if(activeCar){ g.position.set(pc.x,pc.y,pc.z); g.visible=false; } else { g.visible=true; if(d>30){ g.position.x=player.pos.x-dx/d*3; g.position.z=player.pos.z-dz/d*3; } else if(d>2){ const st=Math.min(d-2,dt*Math.max(7,d*1.2)); g.position.x+=dx/d*st; g.position.z+=dz/d*st; g.rotation.y=Math.atan2(dx,dz); } g.position.y=groundHeight(g.position.x,g.position.z,g.position.y+.6); }
+      if(Math.hypot(g.position.x-b.x,g.position.z-b.z)<6&&!activeCar) questEnd(true); } }
+  else if(Q.k==='crates'){ for(let i=Q.crates.length-1;i>=0;i--){ const m=Q.crates[i]; m.rotation.y+=dt; if(Math.hypot(pc.x-m.position.x,pc.z-m.position.z)<2.8){ scene.remove(m); Q.crates.splice(i,1); Q.got++; Snd.tink(pc.x,pc.z); flash('Crate '+Q.got+'/3'); } }
+    if(Q.crates.length){ const m=Q.crates[0]; qBeam(m.position.x,m.position.z); qHud('📦 Find the crates · '+Q.got+'/3'); } else { const b=back(); qBeam(b.x,b.z); qHud('📦 Bring the crates back · '+Math.round(Math.hypot(pc.x-b.x,pc.z-b.z))+' m'); if(Math.hypot(pc.x-b.x,pc.z-b.z)<5) questEnd(true); } }
+  else if(Q.k==='clear'){ const left=Q.zs.filter(z=>people.includes(z)&&!z.dead).length; qBeam(Q.cx,Q.cz); qHud('🧟 Clear out the zombies · '+left+' left'); if(!left) questEnd(true); }
+  else if(Q.k==='letter'){ qBeam(Q.tx,Q.tz); qHud('✉️ Deliver the letter · '+Math.round(Math.hypot(pc.x-Q.tx,pc.z-Q.tz))+' m'); if(Math.hypot(pc.x-Q.tx,pc.z-Q.tz)<10) questEnd(true); } }
+function questPrompt(){ return giverNear()?'<kbd>E</kbd> Talk to them, they need help':''; }
+// ---- raiders: hostile survivors who shoot at you ----
+function raiderMk(x,z){ const sk=SKIN[Math.floor(Math.random()*SKIN.length)], p=new Person(x,z,{spawned:true,y:groundHeight(x,z,5),colors:[sk,'#1b1b1b','#2b2d31','#111111']}); p.raider=true; p.chp=CIV_HP*1.4; p.shootCD=R(1,2); copGear(p); p.holdR=true;
+  const band=new THREE.Mesh(new THREE.BoxGeometry(.5,.14,.52),lam('#b5201f')); if(p.head){ band.position.set(0,-.05,.02); p.head.add(band); } else if(p.rig){ band.position.set(0,POLY?1.1:1.28,.02); (p.headIn||p.rig).add(band); } return p; }
+function raiderTick(p,dt){ const tg=activeCar?activeCar.pos:player.pos, dx=tg.x-p.pos.x, dz=tg.z-p.pos.z, d=Math.hypot(dx,dz); p.vel.set(0,0,0); p.yaw=lerpA(p.yaw,Math.atan2(dx,dz),Math.min(1,dt*6)); p.g.quaternion.setFromAxisAngle(UP,p.yaw);
+  if(d>13&&d<220){ const st=Math.min(d-13,dt*3.4), nx=p.pos.x+dx/d*st, nz=p.pos.z+dz/d*st; if(!solidAt(nx,p.pos.y-HIP+.6,nz)){ p.pos.x=nx; p.pos.z=nz; p.pos.y=groundHeight(nx,nz,p.pos.y-HIP+.6)+HIP; } p.wph=(p.wph||0)+dt*9; const sw=Math.sin(p.wph)*.5; p.legL.rotation.x=sw; p.legR.rotation.x=-sw; } else { p.legL.rotation.x=0; p.legR.rotation.x=0; }
+  p.armR.rotation.set(d<40?-1.5:-.2,0,0); p.shootCD-=dt; if(d<38&&p.shootCD<=0&&!state.over&&!(player.immune>0)&&losClear(p.pos.x,p.pos.y+.6,p.pos.z,tg.x,tg.y+.6,tg.z)){ p.shootCD=R(.9,1.5); const hx=p.pos.x+Math.sin(p.yaw)*.6, hz=p.pos.z+Math.cos(p.yaw)*.6, hy=p.pos.y+.45, miss=Math.random()<.55;
+    const tx=tg.x+(miss?R(-2,2):0), ty=tg.y+(miss?R(-.5,1.5):.3), tz=tg.z+(miss?R(-2,2):0), tr=new THREE.Mesh(beamGeo(hx,hy,hz,tx,ty,tz,.04),copTracerMat); scene.add(tr); tracers.push({m:tr,t:.05}); Snd.pistol(hx,hz);
+    if(!miss){ if(activeCar) vehDmg(activeCar,4); else damagePlayer(6); } } return true; }
+function evRaid(p){ const rs=[]; for(let k=0;k<4;k++){ const a=Math.random()*TAU; rs.push(raiderMk(p.x+Math.cos(a)*4,p.z+Math.sin(a)*4)); } try{ const c=new Car(p.x+6,p.z+6,Math.random()*TAU,'free',{variant:'pickup',color:'#1b1b1b'}); c.parked=true; }catch(e){}
+  say(rs[0],'Hand over your stuff!',true); flash('Raiders! They\'re after your stuff. Take them down');
+  return {kind:'raid',t:200,rs,paid:new Set(), tick(dt){ for(const r of this.rs) if(r.dead&&!this.paid.has(r)){ this.paid.add(r); earn(150); }
+      const alive=this.rs.filter(r=>people.includes(r)&&!r.dead); if(!alive.length){ earn(300); banner('RAIDERS DEFEATED','+$300 bonus · the town is safer'); achStat('raid'); return 'end'; }
+      let cx=0,cz=0; for(const r of alive){ cx+=r.pos.x; cz+=r.pos.z; } evBeam(cx/alive.length,cz/alive.length,0xb5201f); evHud('🔫 Raiders · '+alive.length+' left'); this.t-=dt; const far=Math.hypot(evPos().x-cx/alive.length,evPos().z-cz/alive.length)>220; return (this.t<=0||far)?'gone':null; },
+    cleanup(){ for(const r of this.rs) if(people.includes(r)&&!r.dead) removePerson(r); } }; }
+// ---- nest bosses ----
+function bossSpawn(Z){ const a=Math.random()*TAU, x=Z.x+Math.cos(a)*7, z=Z.z+Math.sin(a)*7, b=new Person(x,z,{spawned:true,zombie:true,kind:'brute',y:groundHeight(x,z,Z.y+3)}); b.hp=60; b.boss=true; b.zdmg=45; b.r=1.3; b.reward=200; b.g.scale.setScalar(2.2); b.aggro=10; say(b,'RRRAAAARGH!',false); Snd.groan(x,z); flash('A huge zombie is guarding the nest!'); return b; }
+// ---- zombie animals on the farms, and a shark round Mōtu Island ----
+const ZA={list:[],shark:null};
+function zAnimal(kind,x,z){ const p=new Person(x,z,{spawned:true,zombie:true,kind:kind==='sheep'?'runner':'normal',y:groundHeight(x,z,5)}); p.g.traverse(o=>{ if(o.isMesh) o.visible=false; }); const sheep=kind==='sheep', W=sheep?'#9aa58a':'#6b6f5a';
+  const m=new THREE.Mesh(mergeGeos([{g:BX(sheep?.7:.9,sheep?.6:.8,sheep?1.1:1.6,0,sheep?.7:.95,0),c:W},{g:BX(.32,.32,.4,0,sheep?.95:1.25,sheep?.65:.95),c:'#3b3d2a'},{g:BX(.08,.08,.03,-.09,sheep?1:1.3,sheep?.86:1.16),c:'#ff2020'},{g:BX(.08,.08,.03,.09,sheep?1:1.3,sheep?.86:1.16),c:'#ff2020'},...[[-.2,.35],[.2,.35],[-.2,-.35],[.2,-.35]].map(([a,b])=>({g:BX(.12,sheep?.45:.6,.12,a,sheep?.22:.3,b*(sheep?1:1.4)),c:'#3b3d2a'})),{g:BX(.1,.12,.02,0,sheep?.9:1.15,sheep?.86:1.16),c:'#7a0f0f'}],true),VC);
+  m.position.y=-HIP; p.g.add(m); p.zanimal=kind; p.reward=25; return p; }
+function zaTick(dt){ if(story.on||mpClient()||!state.started) return; const pc=evPos(); ZA.list=ZA.list.filter(p=>people.includes(p)&&!p.dead);
+  for(const [kind,F,n] of [['sheep',COUNTRY.farmA,5],['cow',COUNTRY.farmB,3]]){ const d=Math.hypot(pc.x-F.x,pc.z-F.z), have=ZA.list.filter(p=>p.zanimal===kind);
+    if(d<140&&!zoneFree(F.x,F.z)&&have.length<n&&Math.random()<dt*.5){ const a=Math.random()*TAU, x=F.x+Math.cos(a)*25, z=F.z+Math.sin(a)*20; if(!solidAt(x,1,z)) ZA.list.push(zAnimal(kind,x,z)); }
+    else if(d>240) for(const p of have) removePerson(p); }
+  // the shark
+  const swim=!activeCar&&player.pos.y-HIP<WATER_Y-.2, ski=activeCar&&activeCar.boat, nearI=Math.hypot(pc.x-ISLE.x,pc.z-ISLE.z)<160&&pc.z>420;
+  if(nearI&&(swim||ski)){ if(!ZA.shark){ const g=new THREE.Group(); g.add(new THREE.Mesh(new THREE.ConeGeometry(.5,1.3,4).scale(.25,1,1).translate(0,.4,0),lam('#5a6b5a'))); g.add(new THREE.Mesh(BX(.9,.6,3.4,0,-.4,0),lam('#3f4d3f'))); scene.add(g); ZA.shark={g,a:Math.random()*TAU,r:16,bite:4}; }
+    const S=ZA.shark; S.r=Math.max(2.5,S.r-dt*1.2); S.a+=dt*(6/S.r); S.g.position.set(pc.x+Math.cos(S.a)*S.r,WATER_Y-.1,pc.z+Math.sin(S.a)*S.r); S.g.rotation.y=-S.a; S.bite-=dt;
+    if(S.r<3&&S.bite<=0){ S.bite=5; S.r=14; puff(pc.x,WATER_Y+.2,pc.z,0xdff3ff,1.5,false); if(swim){ damagePlayer(15); flash('A zombie shark! Get out of the water!'); } else { vehDmg(activeCar,12); activeCar.vel.x+=R(-6,6); activeCar.vel.z+=R(-6,6); flash('The zombie shark rammed your jet ski!'); } } }
+  else if(ZA.shark){ scene.remove(ZA.shark.g); ZA.shark=null; } }
 let rescueI=0;
 function underOK(x,z,y){ if(Math.abs(x)<HALF+12&&Math.abs(z)<HALF+12) return true; if(x>1150) return true; if(z<-LIM&&Math.abs(x)<290){ const r=roadNear(x,z); if(r&&r.tun&&r.d<6) return true; } return false; }
 function rescueTick(dt){ const n=people.length+cars.length; if(!n) return; const per=Math.max(4,Math.ceil(n*dt*4));
@@ -4410,7 +4482,7 @@ function countryTick(dt){ if(!state.started) return; const px=player.pos.x, pz=p
     const dx=a.tx-a.pos.x, dz=a.tz-a.pos.z, d=Math.hypot(dx,dz); if(d>.3){ const v=(flee?4.5:1.1)*(a.kind==='cow'?.8:1), want=Math.atan2(dx,dz); a.yaw+=wrapA(want-a.yaw)*Math.min(1,dt*5); a.pos.x+=Math.sin(a.yaw)*v*dt; a.pos.z+=Math.cos(a.yaw)*v*dt; a.g.position.y=Math.abs(Math.sin(perfT*9+a.t))*.06; }
     a.g.rotation.set(0,a.yaw,0); }
   ctryT-=dt; if(ctryT>0) return; ctryT=5; const south=pz>LIM+15&&Math.abs(px)<LIM+5, north=pz<-LIM-15&&Math.abs(px)<LIM+5; if((!out&&!south&&!north)||story.on||mpClient()||state.over||FERRY.ride||GOND.ride) return;
-  let lim=north?Math.min(12,3+Math.floor((-pz-LIM)/70)):south?Math.min(8,3+Math.floor((pz-LIM)/120)):Math.min(14,4+Math.floor((-px-LIM)/70)); if(zoneFree(px,pz)) lim=Math.ceil(lim/3); let n=0; for(const q of people) if(q.zombie&&!q.dead&&q.pos.x<-LIM&&Math.hypot(q.pos.x-px,q.pos.z-pz)<90) n++;
+  let lim=north?Math.min(12,3+Math.floor((-pz-LIM)/70)):south?Math.min(8,3+Math.floor((pz-LIM)/120)):Math.min(14,4+Math.floor((-px-LIM)/70)); if(zoneFree(px,pz)) lim=Math.ceil(lim/3); if(state.night) lim=Math.ceil(lim*1.4); let n=0; for(const q of people) if(q.zombie&&!q.dead&&q.pos.x<-LIM&&Math.hypot(q.pos.x-px,q.pos.z-pz)<90) n++;
   for(let k=0;k<2&&n<lim;k++,n++){ const a=Math.random()*TAU, r=35+Math.random()*25, x=(south||north)?clamp(px+Math.cos(a)*r,-LIM+6,LIM-6):clamp(px+Math.cos(a)*r,-785,-LIM-6), z=north?clamp(pz+Math.sin(a)*r,-765,-LIM-8):south?clamp(pz+Math.sin(a)*r,LIM+8,375):clamp(pz+Math.sin(a)*r,-LIM+6,LIM-6); if(Math.abs(z-RIVER_Z)<RIV_OUT+2) continue;
     if(south&&(z<0||seaH(x,z)<-.5||Math.abs(x)>LIM)) continue; const zb=new Person(x,z,{spawned:true,zombie:true,kind:pickZKind(1+Math.floor((-px-LIM)/120)),y:north?northH(x,z):undefined}); zb.aggro=8; } }
 function autoPark(dt){ const c=activeCar; if(!c||state.paused||state.cine) return; if(padHere()==='park'&&Math.hypot(c.vel.x,c.vel.z)<.6){ c.parkT=(c.parkT||0)+dt; if(c.parkT>.9){ c.parkT=0; padUse(); } } else if((c.parkT||0)>0) c.parkT=0; }
@@ -4430,7 +4502,7 @@ function setupMotor(){ try{ setupSale(); }catch(e){ console.warn('houses',e); } 
   GREET.cars=['G\'day! Every vehicle comes with a free garage delivery.','Tanks are on special this week. Well, not really.','Have a look around, they don\'t bite.','Need a house first? Check the FOR SALE signs in the suburbs.'];
   GREET.motor=['Drive into a bay and press F.','Left bay for mods, right bay for repairs.','We fix anything that isn\'t a smoking crater.','Zombie rammer? Best money you\'ll ever spend.'];
   try{ for(const site of [0,1]){ const S=SITES[site]; if(!S) continue; const x=lotC(S[0]), z=lotC(S[1]); roadPark(x+10,z+24,site?'digger':'bulldozer'); } }catch(e){ console.warn('site vehicles',e); } }
-function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); southTick(dt); northTick(dt); eastTick(dt); basesTick(dt); rescueTick(dt); keepTick(dt); jobsTick(dt); homeTick(dt); bloodTick(dt); achTick(dt); furnTick(dt); keepOffProps(); eventsTick(dt); wlifeTick(dt); radioTick(dt); zonesTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
+function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); southTick(dt); northTick(dt); eastTick(dt); basesTick(dt); rescueTick(dt); keepTick(dt); jobsTick(dt); homeTick(dt); bloodTick(dt); achTick(dt); furnTick(dt); keepOffProps(); eventsTick(dt); wlifeTick(dt); radioTick(dt); zonesTick(dt); questTick(dt); zaTick(dt); dayClock(); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
   const c=activeCar;
   if(c&&c.emerg==='fire'&&use){ camera.getWorldDirection(_ewd); let dx=_ewd.x, dy=_ewd.y+.16, dz=_ewd.z; const l=Math.hypot(dx,dy,dz)||1; hoseSpray(nozzleWorld(c),{x:dx/l,y:Math.max(-.35,dy/l),z:dz/l},dt,true); }
   if(c&&c.emerg==='tow'){ if(use&&!c.useW){ if(c.towed){ towRelease(c); flash('Let go of the car'); } else { const h=hookWorld(c); let best=null,bd=4.6;
@@ -4989,6 +5061,7 @@ function enterExit(){
   if(HOMEUP.place&&sentryTryPlace()) return;
   if(hatchAt()&&hatchUse()) return;
   if(nestNear()&&!nearestCar()&&nestUse()) return;
+  { const gv=giverNear(); if(gv&&!nearestCar()){ questOffer(gv); return; } }
   if(FP.mode&&furnUse()) return;
   if(fstoreNear()&&!nearestCar()){ fstoreMenu(); return; }
   if(dogNear()&&!nearestCar()){ dogMenu(); return; }
@@ -5410,7 +5483,7 @@ addEventListener('keydown',e=>{
   else if(c==='KeyY') toggle('slow');
   else if(c==='KeyT') openRestart();
   else if(c==='KeyG') toggle('low');
-  else if(c==='KeyN') toggle('night');
+  else if(c==='KeyN'){ if(dayAuto()){ DAY.t=state.night?7/24:20.7/24; flash(state.night?'Skipping to morning':'Skipping to night'); } else toggle('night'); }
   else if(c==='KeyC'){ if(story.on) flash('Clearing is only in Sandbox mode'); else clearSpawned(); }
   else if(c==='KeyR'){ if(activeHeli) heliReload(); else if(!activeCar&&AMMO[state.weapon]&&(player.mode==='walk'||player.mode==='lift')){ const A=AMMO[state.weapon], a=ammoOf(state.weapon);
       if(!startReload()&&player.reloadT<=0) flash(a.mag>=A.mag?'Magazine is already full':'No spare ammo. Buy more at the Hardware & Arms store (B shows the way)'); } else resetPlayer(); }
@@ -5582,6 +5655,7 @@ function renderSettings(){ const tabs=$('settabs'), list=$('setlist'); tabs.text
     { const d=document.createElement('div'); d.className='seg'; for(const [v,t] of [[true,'High'],[false,'Low']]){ const b=document.createElement('button'); b.type='button'; b.textContent=t; b.setAttribute('aria-pressed',String(state.gfxHi===v)); b.addEventListener('click',()=>{ if(state.gfxHi!==v) toggleGfx(); applySettings(); renderSettings(); }); d.appendChild(b); } row('Graphics','High has shadows and sharper edges. Low runs faster',d,''); }
     slider('Resolution','Lower makes the picture softer but the game smoother',"res",40,100,5,v=>v+'%');
     seg('View distance','How far you can see before the haze','view',[['near','Near'],['normal','Normal'],['far','Far']]);
+    seg('Day and night','A full day passes every 20 minutes, or only change it with N','daynight',[['auto','Changing'],['manual','N key only']]);
     seg('Weather','Changing weather, or keep it one way','weather',[['auto','Changing'],['clear','Clear'],['rain','Rain'],['storm','Storm'],['fog','Fog']],()=>{ WX.t=0; }); }
   else if(T==='sound'){
     slider('Volume','How loud everything is',"vol",0,100,1,v=>v+'%');
@@ -5614,7 +5688,7 @@ const GUIDE=[
  ['Furniture',`<ul><li>Buy furniture at <b>Tumbleton Furniture Co.</b>, just west of the city (B menu shows the way). Press E at the counter.</li><li>At your house, press <b>B → 🛋 Your furniture</b> and pick a piece. A green outline shows where it goes: <b>turn to rotate it</b>, and press <b>E</b> to place it. Red means something is in the way.</li><li>Place it anywhere on your property, inside or out, on any floor.</li><li><b>Pick up or move furniture</b> puts a piece back in your stock so you can place it again.</li><li>There are 24 pieces: a full kitchen (stove, range hood, fridge-freezer, drawers, sink, spice shelf, island, bar stools), lounge, bedroom, dining room, and a staircase.</li></ul>`],
  ['Danger',`<ul><li><b>Weather</b> changes every few minutes. Rain makes roads slippery, and storms bring lightning that can strike nearby.</li><li><b>Blood Moon:</b> sometimes when night falls (N) the sky turns red. Lots more zombies come, and each one pays an extra $20.</li><li><b>Fort Kererū</b> is crawling with zombies. <b>Camp Kahu</b> has friendly soldiers and free ammo and first aid.</li></ul>`],
  ['Take back Tumbleton',`<p>Every district has a <b>zombie nest</b> that keeps spawning zombies (Sandbox). Press <b>B → 🏴 Take back Tumbleton</b> to see them and mark one. Clear the zombies around it, press <b>E</b> to plant explosives, and run. You get $2,500 for each district.</p><p>Free districts get much quieter, and more people come back to the towns, the beach and the theme park. Free all 7 for a big reward.</p>`],
- ['Events & friends',`<ul><li><b>Random events</b> pop up near you every few minutes: a <b>survivor</b> calling for help (clear the zombies and reach them), a <b>zombie horde</b>, a <b>supply drop</b> on a parachute (cash, ammo and health), and <b>army convoys</b> on the Ring Road. Follow the orange beam.</li><li>Survivors you rescue <b>join you as companions</b> (up to 3). They follow you, ride in your car and shoot zombies. Send them home from the B menu.</li><li>Adopt a <b>dog</b> at the Paws Animal Shelter next to the furniture store. It follows you everywhere, rides along and bites zombies.</li><li>In a car, the <b>radio</b> plays: Tumbleton FM, Kiwi Rock 99, Chill Waves and Zombie News Radio. Press <b>[</b> or <b>]</b>, or click the radio, to change station.</li></ul>`],
+ ['Events & friends',`<ul><li><b>Random events</b> pop up near you every few minutes: a <b>survivor</b> calling for help (clear the zombies and reach them), a <b>zombie horde</b>, a <b>supply drop</b> on a parachute (cash, ammo and health), and <b>army convoys</b> on the Ring Road. Follow the orange beam.</li><li>Survivors you rescue <b>join you as companions</b> (up to 3). They follow you, ride in your car and shoot zombies. Send them home from the B menu.</li><li>Adopt a <b>dog</b> at the Paws Animal Shelter next to the furniture store. It follows you everywhere, rides along and bites zombies.</li><li>In a car, the <b>radio</b> plays: Tumbleton FM, Kiwi Rock 99, Chill Waves and Zombie News Radio. Press <b>[</b> or <b>]</b>, or click the radio, to change station.</li><li><b>Day and night:</b> a full day takes about 20 minutes (clock at the top). More zombies roam the country at night. N skips ahead. Switch it off in Settings.</li><li><b>Quests:</b> locals with a yellow <b>!</b> need help: find a lost dog, collect supply crates, clear out zombies or deliver a letter. E to talk.</li><li><b>Raiders</b> in black with red bandanas shoot at you. Take them out for a reward.</li><li><b>Bosses:</b> a giant zombie guards each nest. <b>Zombie sheep and cows</b> roam the farms, and a <b>zombie shark</b> hunts swimmers and jet skis near Mōtu Island.</li></ul>`],
  ['Online',`<p>Press <b>J</b> to play online with friends: join a public server, join a private one with its code, or make your own. <b>Enter</b> chats.</p>`]];
 function guideOpen(tab){ const el=$('guide'); if(!el.hidden&&tab===undefined) return; if(el.hidden){ GUIDE.prev=state.paused; state.paused=true; for(const k in keys) keys[k]=false; try{ document.exitPointerLock&&document.exitPointerLock(); }catch(e){} }
   el.hidden=false; const T=$('guidetabs'), B=$('guidebody'); T.textContent=''; const cur=tab||0; GUIDE.forEach(([n],i)=>{ const b=document.createElement('button'); b.type='button'; b.textContent=n; b.setAttribute('aria-pressed',String(i===cur)); b.addEventListener('click',()=>guideOpen(i)); T.appendChild(b); });
@@ -5639,7 +5713,7 @@ function updateHUD(){
   if(zs!==lastZ||state.defeated!==lastD){ lastZ=zs; lastD=state.defeated; zcEl.textContent=zs; zdEl.textContent=state.defeated; zplateEl.hidden=!(zs||state.defeated); }
   let pr='';
   if(state.msgT>0&&state.started&&!state.over) pr=state.msg; else
-  if(state.started){ const stp=jetPrompt()||cranePrompt()||storyPrompt()||storePrompt()||motorPrompt()||trainPrompt()||ferryPrompt()||gondPrompt()||ridePrompt()||jobPrompt()||sentryPrompt()||nestPrompt()||hatchPrompt()||furnPrompt()||fstorePrompt()||dogPrompt()||sewerPrompt(); if(stp) pr=stp; else if(activeHeli) pr='<kbd>E</kbd> Get out · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>Click</kbd> guns · <kbd>Right-click</kbd> rockets';  else if(player.chute) pr='<kbd>WASD</kbd> steer · <kbd>Space</kbd> cut away';
+  if(state.started){ const stp=jetPrompt()||cranePrompt()||storyPrompt()||storePrompt()||motorPrompt()||trainPrompt()||ferryPrompt()||gondPrompt()||ridePrompt()||jobPrompt()||sentryPrompt()||nestPrompt()||questPrompt()||hatchPrompt()||furnPrompt()||fstorePrompt()||dogPrompt()||sewerPrompt(); if(stp) pr=stp; else if(activeHeli) pr='<kbd>E</kbd> Get out · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>Click</kbd> guns · <kbd>Right-click</kbd> rockets';  else if(player.chute) pr='<kbd>WASD</kbd> steer · <kbd>Space</kbd> cut away';
     else if(player.mode==='walk'&&!player.ground&&player.vel.y<-2&&player.pos.y-HIP-groundHeight(player.pos.x,player.pos.z,player.pos.y-HIP)>3.5) pr='<kbd>Space</kbd> Open parachute';
     else if(activeCar) pr=activeCar.boat?'<kbd>W</kbd><kbd>S</kbd> throttle · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>E</kbd> Get out':'<kbd>E</kbd> Get out'+keepHint(activeCar); else if(state.downT>0) pr='Knocked out. Heading back to the plaza…'; else if(state.over) pr=''; else if(player.mode==='held') pr=player.heldBy&&!player.heldBy.zombie?'They grabbed you! Brace for the throw…':'A grabber has you! Brace for the throw…'; else if(player.mode==='ragdoll'||player.mode==='getup') pr='Ouch. Getting back up…'; else if(player.immune>0&&people.some(q=>q.zombie)) pr='Back on your feet. Run!'; else if(player.mode==='walk'&&liftNear()){ const n=liftNear(); pr=n.L.v!==0?(n.inside?'Going '+(n.L.v>0?'up':'down')+'…':'Lift is moving…'):Math.abs(n.L.y-n.lvl)>.05?'<kbd>E</kbd> Call the lift':n.inside?'<kbd>E</kbd> Ride the lift '+(n.lvl===0?'up':'down'):'Step into the lift'; } else if(player.mode==='walk'&&nearestHeli()) pr='<kbd>E</kbd> Fly the helicopter'; else if(nearestCar()) pr=nearestCar().boat?'<kbd>E</kbd> Drive this boat':'<kbd>E</kbd> Drive this car'; }
   if(pr!==lastPrompt){ lastPrompt=pr; promptEl.innerHTML=pr; promptEl.hidden=!pr; }
@@ -5862,7 +5936,7 @@ function ringPointFar(minD,maxD){ for(let t=0;t<40;t++){ const i=Math.floor(Math
     const x=lotC(i)+(CX[e]+(CX[(e+1)%4]-CX[e])*f)*s, z=lotC(j)+(CZ[e]+(CZ[(e+1)%4]-CZ[e])*f)*s; const fp=mpRingC||(activeCar?activeCar.pos:player.pos), d=Math.hypot(x-fp.x,z-fp.z);
     if(d>=minD&&d<=maxD) return {x,z}; } return null; }
 function updateWorld(dt){
-  state.nightT+=((state.night?1:0)-state.nightT)*Math.min(1,dt*1.6);
+  if(dayAuto()){ DAY.t=(DAY.t+dt/DAY.len)%1; const n=dayDark(DAY.t); state.night=n>.5; state.nightT+=(n-state.nightT)*Math.min(1,dt*1.6); } else state.nightT+=((state.night?1:0)-state.nightT)*Math.min(1,dt*1.6);
   const t=state.nightT;
   skyCol.copy(SKY_DAY).lerp(SKY_NIGHT,t); scene.fog.color.copy(skyCol); scene.fog.density=(.0035+.0022*t)*({near:1.7,normal:1,far:.55}[SET.view]||1);
   skyU.top.value.copy(SKY_TOP_D).lerp(SKY_TOP_N,t); skyU.hor.value.copy(skyCol).lerp(SKY_HOR_N,t*.5); skyU.night.value=t; skyDome.position.copy(camera.position);
