@@ -1737,6 +1737,37 @@ function clothGeo(id){ const D=CLOTH[id]; if(!D) return null; const c=D[4], B=(w
   else if(id==='hockey'){ L.push({g:B(1.75,2.05,.16,0,-.05,1.08),c}); for(const [x,y] of [[-.45,.3],[.45,.3]]) L.push({g:B(.5,.3,.05,x,y,1.17),c:'#1b1b1b'}); for(let k=0;k<5;k++) L.push({g:B(.12,.12,.05,-.5+k*.25,-.6,1.17),c:'#1b1b1b'}); L.push({g:B(.15,.4,.05,-.55,.75,1.17),c:'#d62828'},{g:B(.15,.4,.05,.55,.75,1.17),c:'#d62828'}); }
   if(!L.length) return null; return mergeGeos(L,true); }
 
+const FUN={court:{x:-301,z:79,hz:85.45,spot:{x:-301,z:80.6}},arcade:{x0:-530,x1:-516,z0:-78,z1:-66,cab:[{x:-525.5,z:-67.6},{x:-520.5,z:-67.6}]},drive:{x:-626,z:-190,sx:-655.2},surf:{x:-150,z:388},fish:{x:20,z:472.6}};
+function buildFun(){ const B=AIR.boxes, box=(x0,x1,y0,y1,z0,z1,m,col)=>{ addS(BX(x1-x0,y1-y0,z1-z0,(x0+x1)/2,(y0+y1)/2,(z0+z1)/2),m); if(col!==false) B.push({x0,x1,z0,z1,y0,h:y1}); }, dk=lam('#2b2d31'), wt=lam('#f2f2ee');
+  // basketball court behind Kia Ora Threads
+  { const C=FUN.court; addS(PL(15,15,C.x,.05,C.z),flat(lam('#3d6b8c',{roughness:.9}))); addS(PL(15.6,15.6,C.x,.04,C.z),flat(lam('#f2f2ee'))); addS(PL(4.2,5.4,C.x,.055,C.hz-2.6),flat(lam('#c0603a',{roughness:.9})));
+    for(const [w,d,x,z] of [[15,.12,C.x,C.z-7.5],[.12,15,C.x-7.5,C.z],[.12,15,C.x+7.5,C.z],[4.4,.12,C.x,C.hz-5.3]]) addS(PL(w,d,x,.06,z),flat(wt));
+    box(C.x-.15,C.x+.15,0,3.6,C.hz+1.15,C.hz+1.45,dk); box(C.x-.9,C.x+.9,2.85,3.95,C.hz+.42,C.hz+.5,wt,false); addS(BX(.6,.45,.02,C.x,3.25,C.hz+.41),lam('#d62828')); addS(BX(.5,.35,.025,C.x,3.25,C.hz+.405),wt);
+    addS(new THREE.TorusGeometry(.24,.025,6,18).rotateX(PI/2).translate(C.x,3.05,C.hz),lam('#ff7a1a')); addS(BX(.04,.04,.4,C.x,3.05,C.hz+.25),dk);
+    addS(new THREE.CylinderGeometry(.25,.16,.42,10,1,true).translate(C.x,2.82,C.hz),lam('#f2f2ee',{side:THREE.DoubleSide,transparent:true,opacity:.7}));
+    addS(BX(3,.7,.08,C.x-5,1.0,C.z-7.4),signMat([['TUMBLETON HOOPS · E to shoot',40]],'#1d3a8a','#ffffff',512,96)); box(C.x-6.4,C.x-6.3,0,1.4,C.z-7.45,C.z-7.35,dk,false); box(C.x-3.7,C.x-3.6,0,1.4,C.z-7.45,C.z-7.35,dk,false); }
+  // Rangiwai Arcade
+  { const A=FUN.arcade, m=lam('#2b1d4a'), H=4.6; addS(PL(A.x1-A.x0,A.z1-A.z0,(A.x0+A.x1)/2,.06,(A.z0+A.z1)/2),flat(lam('#1b1b2a')));
+    box(A.x0,A.x1,0,H,A.z1-.3,A.z1,m); box(A.x0,A.x0+.3,0,H,A.z0,A.z1,m); box(A.x1-.3,A.x1,0,H,A.z0,A.z1,m); box(A.x0,A.x0+5,0,H,A.z0,A.z0+.3,m); box(A.x1-5,A.x1,0,H,A.z0,A.z0+.3,m); box(A.x0+5,A.x1-5,3,H,A.z0,A.z0+.3,m);
+    box(A.x0-.3,A.x1+.3,H,H+.35,A.z0-.3,A.z1+.3,lam('#ece6da'),false);
+    addS(BX(12,1.3,.12,(A.x0+A.x1)/2,H-.85,A.z0-.08),signMat([['RANGIWAI ARCADE',72],['Kiwi Dash · high scores pay cash',30]],'#ff2bd6','#ffffff',768,128));
+    for(const c of A.cab){ box(c.x-.6,c.x+.6,0,1.9,c.z-.55,c.z+.55,lam('#111827')); addS(BX(.9,.6,.04,c.x,1.45,c.z-.57),lam('#3ad1ff',{emissive:new THREE.Color('#2ab0ff'),emissiveIntensity:1})); addS(BX(1.0,.25,.05,c.x,2.0,c.z-.53),lam('#ff2bd6',{emissive:new THREE.Color('#ff2bd6'),emissiveIntensity:.8})); addS(BX(1.1,.08,.35,c.x,1.0,c.z-.7),lam('#2b2d31')); }
+    for(let k=0;k<4;k++) addS(BX(.06,1.2,.6,A.x0+.33,1.6,A.z0+2+k*2.6),lam(['#ffd166','#3ad1ff','#ff2bd6','#27ae60'][k],{emissive:new THREE.Color(['#ffd166','#3ad1ff','#ff2bd6','#27ae60'][k]),emissiveIntensity:.5})); }
+  // Tumbleton Drive-in
+  { const D=FUN.drive, X0=-652, X1=-598, Z0=-214, Z1=-166; addS(PL(X1-X0,Z1-Z0,(X0+X1)/2,.05,(Z0+Z1)/2),matAsphalt); addS(PL(6,8,-595,.05,-190),matAsphalt);
+    for(const x of [-641,-629,-617,-605]) for(let z=Z0+6;z<Z1-4;z+=5){ box(x-.08,x+.08,0,1.1,z-.08,z+.08,dk,false); addS(BX(.3,.22,.2,x,1.2,z),lam('#9ea3a8')); }
+    for(const x of [-645,-633,-621,-609]) addS(PL(.12,Z1-Z0-8,x,.06,(Z0+Z1)/2),flat(lam('#e9e6df')));
+    box(D.sx-.6,D.sx,2,13,-200,-180,dk); for(const z of [-199,-181]) box(D.sx-.8,D.sx+.2,0,13,z-.4,z+.4,lam('#9ea3a8')); box(D.sx-1.2,D.sx+.4,0,2,-200,-180,lam('#7a7f87'));
+    const cv=document.createElement('canvas'); cv.width=512; cv.height=256; const tx=new THREE.CanvasTexture(cv); const scr=new THREE.Mesh(new THREE.PlaneGeometry(19,10.4),new THREE.MeshBasicMaterial({map:tx})); scr.rotation.y=PI/2; scr.position.set(D.sx+.02,7.5,-190); scene.add(scr); D.cv=cv; D.tx=tx; D.scr=scr;
+    box(-610,-602,0,3,-212,-206,lam('#d62828')); box(-610.4,-601.6,3,3.3,-212.4,-205.6,lam('#f2f2ee'),false); addS(BX(.1,1,6,-601.55,2.2,-209),signMat([['SNACKS · E',60]],'#ffd166','#d62828',512,96));
+    box(-597,-596.6,0,6.5,-197,-196.6,dk); box(-597,-596.6,0,6.5,-183.4,-183,dk); addS(BX(.2,3,14,-596.8,6.6,-190),signMat([['TUMBLETON DRIVE-IN',64],['Now showing: ATTACK OF THE ZOMBIE SHEEP',30]],'#1b1b1b','#ffd166',1024,224)); }
+  // surf hire on the beach
+  { const S=FUN.surf; box(S.x-2,S.x+2,0,2.4,S.z-5,S.z-3,lam('#2a9d8f')); box(S.x-2.3,S.x+2.3,2.4,2.7,S.z-5.3,S.z-2.7,lam('#f6d860'),false); addS(BX(3.8,.8,.08,S.x,1.9,S.z-2.95),signMat([['SURF HIRE · $50 · E',44]],'#f6d860','#1d3a8a',512,96));
+    for(const [k,c] of [[0,'#e63946'],[1,'#ffb703'],[2,'#3a86ff']]){ const g=new THREE.CylinderGeometry(.3,.3,2.2,10).scale(1,1,.15).translate(0,1.1,0); g.rotateZ(.12); g.translate(S.x+2.6+k*.5,0,S.z-4); addS(g,lam(c)); } }
+  // the fishing spot at the end of the pier
+  { const F=FUN.fish; addS(BX(1.6,.6,.06,F.x-2.2,1.9,F.z-.3),signMat([['FISHING · E',44]],'#1d3a8a','#ffffff',256,96)); box(F.x-2.25,F.x-2.15,1.2,1.6,F.z-.35,F.z-.25,dk,false); addS(BX(.5,.4,.4,F.x+1.6,1.4,F.z-.6),lam('#e9e6df')); }
+}
+
 function buildCountry(){ const keep=_rngF; _rngF=mulberry32(4242); try{
   const B=AIR.boxes, box=(x0,x1,y0,y1,z0,z1,m,col)=>{ addS(BX(x1-x0,y1-y0,z1-z0,(x0+x1)/2,(y0+y1)/2,(z0+z1)/2),m); if(col!==false) B.push({x0,x1,z0,z1,y0,h:y1}); };
   const white=lam('#f2f2f2',{roughness:.6}), yel=lam('#ffcc33',{roughness:.6}), dirt=flat(lam('#a68a64',{roughness:1})), gravel=flat(lam('#b9b2a4',{roughness:1})), conc=lam('#b8bab6',{roughness:.9}), dark=lam('#2b2d31',{roughness:.6});
@@ -2286,7 +2317,7 @@ for(let k=0;k<46;k++){ const a=k/46*TAU+rr(-.05,.05), rad=rr(LIM+70,LIM+130), w=
 buildRiver();
 airportBuild();
 if(POLY){ detailPass(); aoPass(); }
-buildCountry(); buildSouth(); buildNorth(); buildEast(); buildBases(); buildRing(); buildFurniStore();
+buildCountry(); buildSouth(); buildNorth(); buildEast(); buildBases(); buildRing(); buildFurniStore(); buildFun();
 flushS(); SEW.surf=scene.children.filter(m=>m.isMesh&&m!==skyDome);
 sealCells(); staticSealed=true;
 
@@ -2825,6 +2856,10 @@ function makeCarMesh(color,variant){
     for(const sx of [-1.75,1.75]) for(let z=-2.2;z<=2.3;z+=.9) parts.push({g:B(.06,.5,.5,sx,.5,z),c:'#4a4e44'});
     lights=[B(.3,.18,.05,-1.0,1.25,3.12),B(.3,.18,.05,1.0,1.25,3.12)];
     dims={off:1.6,offs:[-1,0,1],cr:1.65,top:2.3,mass:60,acc:9,topv:16,steer:1.3,grip:14,monster:true,climb:1.0,stab:6,tank:true,armor:.22,seat:[0,1.7,-.4]};
+  } else if(variant==='surf'){
+    parts=[{g:new THREE.CylinderGeometry(.34,.34,2.3,12,1).scale(1,1,.16).rotateX(PI/2).rotateY(0).translate(0,.1,0).scale(1,.5,1),c:color},{g:B(.08,.02,2.0,0,.16,0),c:'#f2f2ee'},{g:new THREE.ConeGeometry(.22,.6,10).scale(1,1,.16).rotateX(PI/2).translate(0,.1,1.43),c:color},{g:B(.03,.22,.2,0,-.05,-.9),c:dark}];
+    lights=[B(.04,.02,.04,0,.05,1.2)];
+    dims={off:.7,cr:.45,top:.4,mass:1.2,acc:8,topv:12,steer:2.8,grip:3,ride:true,stand:true,seat:[0,.98,-.05],hunch:.08};
   } else if(variant==='jetski'){
     parts=[{g:B(1.0,.42,2.5,0,.22,0),c:color},{g:B(.76,.3,.6,0,.3,1.35),c:color},{g:B(.92,.1,1.7,0,.47,-.2),c:'#f2f2f2'},{g:B(.36,.16,.95,0,.6,-.4),c:dark},
       {g:B(.5,.34,.4,0,.62,.55),c:color},{g:B(.7,.05,.05,0,.9,.62),c:dark},{g:B(.12,.06,.04,0,.5,-1.27),c:tail}];
@@ -3512,6 +3547,7 @@ function carSkid(c,dt,amt){ if(amt<=0||c.air||!c.g.visible) return; const fx=Mat
 /* ---------- riders: bikes, quads and go-karts show who's riding ---------- */
 const _rdv=new V3();
 function poseRider(p,d,t){ const ped=d.pedal&&t!==undefined, s=ped?Math.sin(t):0;
+  if(d.stand){ p.legL.rotation.set(-.15,0,-.22); p.legR.rotation.set(.15,0,.22); if(p.shinL){ p.shinL.rotation.set(.35,0,0); p.shinR.rotation.set(.35,0,0); } p.armL.rotation.set(0,0,-1.25); p.armR.rotation.set(0,0,1.25); if(p.foreL){ p.foreL.rotation.set(0,0,-.2); p.foreR.rotation.set(0,0,.2); } if(p.rig){ p.rig.position.y=0; p.rig.rotation.set(.12,0,0); } return; }
   if(d.sit){ p.legL.rotation.set(-1.45,0,-.14); p.legR.rotation.set(-1.45,0,.14); p.shinL.rotation.set(.22,0,0); p.shinR.rotation.set(.22,0,0); }
   else { p.legL.rotation.set(-1.15+s*.38,0,-.17); p.legR.rotation.set(-1.15-s*.38,0,.17); p.shinL.rotation.set(1.35-s*.42,0,0); p.shinR.rotation.set(1.35+s*.42,0,0); }
   const ar=d.sit?-1.0:-1.2; p.armL.rotation.set(ar,0,-.1); p.armR.rotation.set(ar,0,.1); p.foreL.rotation.set(-.35,0,0); p.foreR.rotation.set(-.35,0,0);
@@ -4227,6 +4263,7 @@ const ACHL=[
   ['mansion','Living Large','Own the Pōhutukawa Mansion',2000,()=>!!(GAR.h[3]&&GAR.h[3].own)],
   ['yard','Fortress Home','Give one house a sentry gun, electric fence, trampoline and rooftop helipad',3000,()=>Object.values(GAR.h).some(h=>h&&h.own&&h.sentryN>0&&h.fence&&h.tramp&&h.heli)],
   ['garage','Car Collector','Keep 6 vehicles in your garages',1500,()=>GAR.cars.length>=6],
+  ['fish10','Gone Fishing','Catch 10 things off the pier',400,()=>achSt('fish')>=10],['hoops','Nothing but Net','Make all 5 shots at the basketball court',300,()=>achSt('hoops')>=1],['surf','Hang Ten','Win cash surfing at Tumbleton Beach',300,()=>achSt('surf')>=1],['arcade','Arcade Legend','Score 500 at Kiwi Dash',500,()=>achSt('arcade')>=1],
   ['kiwi10','Kiwi Spotter','Find 10 hidden kiwis',500,()=>KIWI.got.length>=10],['kiwi50','Kiwi Whisperer','Find all 50 hidden kiwis',5000,()=>KIWI.got.length>=KIWI.N&&KIWI.N>0],['dressup','Dressed to Kill','Wear a hat, a mask and a new top at the same time',300,()=>!!(OUTFIT.hat&&OUTFIT.mask&&OUTFIT.top!=='top_orange')],
   ['tank','Heavy Metal','Drive a tank',300,()=>!!(activeCar&&activeCar.variant==='tank')],
   ['plane','Taking Off','Fly a small plane from the airstrip',500,()=>!!(activeJet&&activeJet.small&&!activeJet.ground)],
@@ -4608,6 +4645,102 @@ function kiwiTick(dt){ if(!KIWI.im||!state.started) return; KIWI.t+=dt; kiwiMats
   if(near<22&&KIWI.callT<=0){ KIWI.callT=4; Snd.tink&&Snd.tink(pc.x+(Math.random()-.5)*4,pc.z+(Math.random()-.5)*4); } }
 function kiwiSync(){ KIWI.got=[]; KIWI.spots.forEach((q,i)=>{ if(KIWI.keys.has(q.k)) KIWI.got.push(i); }); }
 function kiwiNearest(){ const pc=player.pos; let b=null,bd=1e9; for(let i=0;i<KIWI.N;i++){ if(KIWI.got.includes(i)) continue; const S=KIWI.spots[i], d=Math.hypot(pc.x-S.x,pc.z-S.z); if(d<bd){ bd=d; b=S; } } return b; }
+/* ---------- fishing off the pier ---------- */
+const FISH={on:null,n:0,bob:null,line:null};
+const FISHES=[['a kahawai',25,30],['a snapper',40,25],['a gurnard',35,15],['an old gumboot',0,10],['a kingfish',120,12],['a stingray (you let it go)',0,6],['a GOLDEN SNAPPER',1000,1]];
+function fishNear(){ return !activeCar&&player.mode==='walk'&&Math.hypot(player.pos.x-FUN.fish.x,player.pos.z-FUN.fish.z)<2.6&&player.pos.y>1.5; }
+function fishPrompt(){ if(FISH.on) return FISH.on.ph==='bite'?'<kbd>E</kbd> Reel it in!':'Fishing… <kbd>E</kbd> reel in'; return fishNear()?'<kbd>E</kbd> Cast a line':''; }
+function fishE(){ const F=FISH.on;
+  if(!F){ if(!FISH.bob){ const b=new THREE.Mesh(mergeGeos([{g:new THREE.SphereGeometry(.12,8,6),c:'#d62828'},{g:new THREE.SphereGeometry(.12,8,6,0,TAU,0,PI/2).translate(0,.001,0),c:'#f2f2ee'}],true),VC); scene.add(b); FISH.bob=b;
+      const lg=new THREE.BufferGeometry().setFromPoints([new V3(),new V3()]); FISH.line=new THREE.Line(lg,new THREE.LineBasicMaterial({color:0xeeeeee})); scene.add(FISH.line); }
+    FISH.on={ph:'wait',t:R(3,8),bx:FUN.fish.x+R(-1.5,1.5),bz:FUN.fish.z+R(7,10)}; FISH.bob.visible=FISH.line.visible=true; Snd.swing&&Snd.swing(); flash('Cast! Wait for a bite…'); return; }
+  if(F.ph==='bite'){ let tot=0; for(const f of FISHES) tot+=f[2]; let u=Math.random()*tot, got=FISHES[0]; for(const f of FISHES){ if(u<f[2]){ got=f; break; } u-=f[2]; }
+    fishStop(); FISH.n++; achStat&&achStat('fish'); if(got[1]>0) earn(got[1]); banner('YOU CAUGHT '+got[0].toUpperCase().replace(/^(A|AN) /,'')+'!',got[1]>0?'+'+money(got[1]):'Better luck next cast',false); return; }
+  fishStop(); flash('You reeled in. Nothing this time'); }
+function fishStop(){ FISH.on=null; if(FISH.bob){ FISH.bob.visible=false; FISH.line.visible=false; } }
+function fishTick(dt){ const F=FISH.on; if(!F) return; if(!fishNear()){ fishStop(); return; } F.t-=dt; const y=WATER_Y+.05+(F.ph==='bite'?-.18+Math.sin(perfT*30)*.05:Math.sin(perfT*2)*.03);
+  FISH.bob.position.set(F.bx,y,F.bz); const a=FISH.line.geometry.attributes.position; a.setXYZ(0,player.pos.x,player.pos.y+.9,player.pos.z+.6); a.setXYZ(1,F.bx,y+.1,F.bz); a.needsUpdate=true;
+  if(F.ph==='wait'&&F.t<=0){ F.ph='bite'; F.t=1.4; Snd.tink&&Snd.tink(F.bx,F.bz); puff(F.bx,WATER_Y+.1,F.bz,0xdff3ff,.5,false); flash('Something\'s biting! Press E!'); }
+  else if(F.ph==='bite'&&F.t<=0){ F.ph='wait'; F.t=R(3,8); flash('It got away. Wait for another bite…'); } }
+
+/* ---------- surfing ---------- */
+const SURF={board:null,score:0,foam:[],t:0};
+function surfNear(){ return !activeCar&&player.mode==='walk'&&Math.hypot(player.pos.x-FUN.surf.x,player.pos.z-(FUN.surf.z-2))<3; }
+function surfPrompt(){ if(activeCar&&activeCar===SURF.board) return 'Ride the waves in to shore · <kbd>E</kbd> get off'; return surfNear()?'<kbd>E</kbd> Hire a surfboard · $50':''; }
+function surfHire(){ if(state.money<50){ flash('You need $50 to hire a board'); return; } state.money-=50; save(); if(SURF.board&&cars.includes(SURF.board)){ const i=cars.indexOf(SURF.board); cars.splice(i,1); scene.remove(SURF.board.g); }
+  const x=FUN.surf.x, z=416; const b=new Car(x,z,0,'free',{variant:'surf',color:['#e63946','#ffb703','#3a86ff','#2a9d8f'][Math.floor(Math.random()*4)]}); Object.assign(b,{boat:true,baseY:WATER_Y-.05,ph:Math.random()*6,surf:true}); b.pos.y=b.baseY; SURF.board=b; SURF.score=0;
+  player.pos.set(x+1,WATER_Y+.5,z); player.vel.set(0,0,0); enterExit(); if(activeCar!==b){ player.pos.set(x,HIP,FUN.surf.z); flash('Your board is in the water. Swim out and press E'); } else flash('Paddle out with W, then turn round and ride a wave in!'); }
+function surfTick(dt){ SURF.t+=dt; const near=Math.hypot(player.pos.x-FUN.surf.x,player.pos.z-430)<260;
+  if(near&&!SURF.foam.length){ for(let k=0;k<4;k++){ const m=new THREE.Mesh(new THREE.PlaneGeometry(220,2.2).rotateX(-PI/2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.5,depthWrite:false})); m.position.set(-140,WATER_Y+.06,470); scene.add(m); SURF.foam.push(m); } }
+  for(let k=0;k<SURF.foam.length;k++){ const m=SURF.foam[k], ph=((SURF.t*.09+k/4)%1); m.position.z=480-ph*85; m.material.opacity=.55*Math.sin(ph*PI); m.visible=near; }
+  const b=SURF.board; if(!b) return; if(!cars.includes(b)){ SURF.board=null; return; }
+  if(activeCar===b){ if(b.pos.z>395&&b.pos.z<482&&b.pos.x>-262&&b.pos.x<-18){ let on=false; for(let k=0;k<4;k++){ const ph=((SURF.t*.09+k/4)%1), wz=480-ph*85; if(Math.abs(b.pos.z-wz)<3.2&&ph>.1){ on=true; break; } }
+      const vz=-b.vel.z; if(on){ b.vel.z-=9*dt; if(vz>4){ SURF.score+=dt*vz*.9; if(Math.random()<dt*8) puff(b.pos.x,WATER_Y+.2,b.pos.z+1,0xffffff,.5,false); } } }
+    if(SURF.score>0&&Math.floor(SURF.score/10)!==Math.floor((SURF.score-dt*12)/10)) flash('Surf score: '+Math.round(SURF.score)); }
+  else if(SURF.score>0){ const pay=Math.min(400,Math.round(SURF.score)); SURF.score=0; if(pay>=5){ earn(pay); banner('NICE SURFING!','Wave score +'+money(pay)); achStat&&achStat('surf'); } }
+  if(activeCar!==b&&Math.hypot(b.pos.x-player.pos.x,b.pos.z-player.pos.z)>150){ const i=cars.indexOf(b); if(i>=0) cars.splice(i,1); scene.remove(b.g); SURF.board=null; } }
+
+/* ---------- basketball ---------- */
+const BB={on:null,ball:null,best:0,el:null};
+function bbNear(){ const C=FUN.court; return !activeCar&&player.mode==='walk'&&Math.hypot(player.pos.x-C.spot.x,player.pos.z-C.spot.z)<2.2; }
+function bbPrompt(){ if(BB.on) return BB.on.ph==='aim'?'<kbd>E</kbd> Shoot! Stop the marker in the green':'Shot '+Math.min(5,BB.on.shot+1)+' of 5'; return bbNear()?'<kbd>E</kbd> Shoot hoops · 5 shots, $25 a basket':''; }
+function bbHud(show){ if(!BB.el){ const d=document.createElement('div'); d.style.cssText='position:fixed;left:50%;bottom:150px;transform:translateX(-50%);width:260px;height:22px;border-radius:11px;background:#222a;border:2px solid #fff;z-index:31;pointer-events:none;overflow:hidden'; d.innerHTML='<div style="position:absolute;left:41%;width:18%;top:0;bottom:0;background:#27ae60"></div><div id="bbm" style="position:absolute;top:-2px;bottom:-2px;width:6px;margin-left:-3px;background:#ffd166;border-radius:3px"></div>'; document.body.appendChild(d); BB.el=d; } BB.el.style.display=show?'block':'none'; }
+function bbStart(){ const C=FUN.court; BB.on={shot:0,made:0,ph:'aim',m:0,dir:1,t:0}; player.pos.set(C.spot.x,player.pos.y,C.spot.z); player.vel.set(0,0,0); camYaw=0; bbHud(true); flash('Press E when the marker is in the green'); }
+function bbShoot(){ const B=BB.on; if(!B||B.ph!=='aim') return; const C=FUN.court, err=B.m-.5, good=Math.abs(err)<.09+(B.shot===0?.02:0); B.ph='fly'; B.t=0; B.good=good; B.err=err;
+  if(!BB.ball){ BB.ball=new THREE.Mesh(new THREE.SphereGeometry(.13,10,8),lam('#e76f2c')); BB.ball.castShadow=true; scene.add(BB.ball); } BB.ball.visible=true; B.from=new V3(player.pos.x,player.pos.y+.9,player.pos.z+.3); B.to=new V3(C.x+(good?0:err*1.2),3.05,C.hz+(good?0:(err>0?.35:-.45))); Snd.swing&&Snd.swing(); }
+function bbTick(dt){ const B=BB.on; if(!B) return; const C=FUN.court; if(!bbNear()&&B.ph==='aim'){ BB.on=null; bbHud(false); if(BB.ball) BB.ball.visible=false; return; } player.vel.x=0; player.vel.z=0;
+  if(B.ph==='aim'){ const sp=1.1+B.shot*.18; B.m+=B.dir*dt*sp; if(B.m>1){ B.m=1; B.dir=-1; } if(B.m<0){ B.m=0; B.dir=1; } const mk=document.getElementById('bbm'); if(mk) mk.style.left=(B.m*100)+'%'; }
+  else if(B.ph==='fly'){ B.t+=dt/.95; const u=Math.min(1,B.t); BB.ball.position.lerpVectors(B.from,B.to,u); BB.ball.position.y+=Math.sin(u*PI)*2.4;
+    if(u>=1){ if(B.good){ B.made++; Snd.pop&&Snd.pop(); flash('SWISH! '+B.made+' made'); puff(B.to.x,B.to.y-.3,B.to.z,0xffffff,.4,false); } else { Snd.bonk&&Snd.bonk(B.to.x,B.to.z,4); flash(B.err>0?'Too hard! Off the back of the rim':'Too soft! Short'); }
+      B.ph='drop'; B.t=0; B.vy=0; } }
+  else if(B.ph==='drop'){ B.t+=dt; B.vy-=G*dt; BB.ball.position.y=Math.max(.13,BB.ball.position.y+B.vy*dt); if(BB.ball.position.y<=.13) B.vy=Math.abs(B.vy)*.55;
+    if(B.t>1.1){ B.shot++; if(B.shot>=5){ const pay=B.made*25+(B.made===5?100:0); if(pay) earn(pay); BB.best=Math.max(BB.best,B.made); banner(B.made+' OF 5',B.made===5?'Perfect! +'+money(pay):pay?'+'+money(pay):'Have another go',B.made===0); if(B.made===5) achStat&&achStat('hoops'); BB.on=null; bbHud(false); BB.ball.visible=false; }
+      else { B.ph='aim'; B.m=0; B.dir=1; } } } }
+
+/* ---------- Rangiwai Arcade: Kiwi Dash ---------- */
+const ARC={el:null,cv:null,best:0,run:null,raf:0,prevPause:false};
+try{ ARC.best=+(localStorage.getItem('tumbleton-arcade')||0)||0; }catch(e){}
+function arcNear(){ if(activeCar||player.mode!=='walk') return false; return FUN.arcade.cab.some(c=>Math.hypot(player.pos.x-c.x,player.pos.z-(c.z-1.3))<1.6); }
+function arcPrompt(){ return arcNear()?'<kbd>E</kbd> Play Kiwi Dash · $2':''; }
+function arcOpen(){ if(state.money<2){ flash('You need $2 for the arcade'); return; } state.money-=2; save(); ARC.prevPause=state.paused; state.paused=true; for(const k in keys) keys[k]=false; try{ document.exitPointerLock&&document.exitPointerLock(); }catch(e){}
+  if(!ARC.el){ const d=document.createElement('div'); d.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:80;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;font:600 15px system-ui,sans-serif;color:#fff';
+    const cv=document.createElement('canvas'); cv.width=640; cv.height=300; cv.style.cssText='width:min(92vw,720px);border:4px solid #ff2bd6;border-radius:10px;background:#0b1026;touch-action:none'; d.appendChild(cv);
+    const tip=document.createElement('div'); tip.textContent='Space, ↑, click or tap to jump · Esc to leave'; d.appendChild(tip); document.body.appendChild(d); ARC.el=d; ARC.cv=cv;
+    const jump=()=>{ const R=ARC.run; if(!R) return; if(R.over){ if(R.t>.8) arcRestart(); return; } if(R.y<=0.01){ R.vy=12.5; } };
+    cv.addEventListener('pointerdown',e=>{ e.preventDefault(); jump(); });
+    window.addEventListener('keydown',e=>{ if(!ARC.run) return; if(e.code==='Escape'){ arcClose(); } else if(e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW'||e.code==='Enter'){ jump(); } e.preventDefault(); e.stopImmediatePropagation(); },true); }
+  ARC.el.style.display='flex'; arcRestart(true); let last=performance.now(); const loop=now=>{ if(!ARC.run) return; const dt=Math.min(.05,(now-last)/1000); last=now; arcStep(dt); arcDraw(); ARC.raf=requestAnimationFrame(loop); }; ARC.raf=requestAnimationFrame(loop); }
+function arcRestart(free){ if(!free){ if(state.money<2){ arcClose(); flash('Out of coins'); return; } state.money-=2; save(); } ARC.run={y:0,vy:0,x:0,sp:7,obs:[],next:1.2,score:0,over:false,t:0,paid:false}; }
+function arcClose(){ const R=ARC.run; ARC.run=null; cancelAnimationFrame(ARC.raf); if(ARC.el) ARC.el.style.display='none'; state.paused=ARC.prevPause; if(R&&!R.paid) arcPay(R); }
+function arcPay(R){ R.paid=true; const sc=Math.floor(R.score); if(sc>ARC.best){ ARC.best=sc; try{ localStorage.setItem('tumbleton-arcade',String(sc)); }catch(e){} } const pay=Math.min(150,Math.floor(sc/20)); if(pay>0) earn(pay); R.pay=pay; if(sc>=500) achStat&&achStat('arcade'); }
+function arcStep(dt){ const R=ARC.run; R.t+=dt; if(R.over) return; R.sp+=dt*.25; R.score+=dt*R.sp*2; R.vy-=34*dt; R.y=Math.max(0,R.y+R.vy*dt); if(R.y===0) R.vy=0;
+  R.next-=dt; if(R.next<=0){ const k=Math.random(); R.obs.push({x:22,w:k<.25?1.6:.9,h:k<.25?1.0:k<.6?1.5:1.1,fly:k>.85}); R.next=Math.max(.55,1.7-R.sp*.05)+Math.random()*.9; }
+  for(const o of R.obs) o.x-=R.sp*dt; R.obs=R.obs.filter(o=>o.x>-3);
+  for(const o of R.obs){ const oy=o.fly?1.7:0; if(o.x<1.35&&o.x+o.w>.5&&R.y<oy+o.h&&R.y+1.0>oy){ R.over=true; R.t=0; arcPay(R); Snd.bonk&&Snd.bonk(player.pos.x,player.pos.z,5); break; } } }
+function arcDraw(){ const R=ARC.run, c=ARC.cv, x=c.getContext('2d'), W=c.width, H=c.height, U=40, gy=H-50; x.fillStyle='#0b1026'; x.fillRect(0,0,W,H);
+  x.fillStyle='#fff'; for(let k=0;k<30;k++){ const sx=((k*97-R.t*8*(k%3+1))%W+W)%W; x.fillRect(sx,(k*53)%(gy-20),2,2); }
+  x.fillStyle='#1f6b3a'; x.fillRect(0,gy,W,H-gy); x.fillStyle='#2e8b57'; for(let k=0;k<20;k++){ const sx=((k*60-R.t*R.sp*U*.999)%W+W)%W; x.fillRect(sx,gy,30,4); }
+  const kx=40+U*.5, ky=gy-R.y*U; x.fillStyle='#7a5a3a'; x.beginPath(); x.ellipse(kx+18,ky-20,22,17,0,0,TAU); x.fill(); x.beginPath(); x.arc(kx+38,ky-30,9,0,TAU); x.fill(); x.strokeStyle='#e9d8a6'; x.lineWidth=3; x.beginPath(); x.moveTo(kx+45,ky-30); x.lineTo(kx+62,ky-22); x.stroke();
+  x.strokeStyle='#d9a441'; x.beginPath(); const lg=R.y>0?0:Math.sin(R.t*20)*5; x.moveTo(kx+12,ky-6); x.lineTo(kx+8+lg,ky); x.moveTo(kx+24,ky-6); x.lineTo(kx+28-lg,ky); x.stroke(); x.fillStyle='#000'; x.fillRect(kx+40,ky-33,3,3);
+  for(const o of R.obs){ const ox=40+o.x*U, oy=gy-(o.fly?1.7:0)*U; x.fillStyle=o.fly?'#9b51e0':'#6aa84f'; x.fillRect(ox,oy-o.h*U,o.w*U,o.h*U); x.fillStyle='#ff2020'; x.fillRect(ox+6,oy-o.h*U+8,5,5); x.fillRect(ox+o.w*U-11,oy-o.h*U+8,5,5); x.fillStyle='#3b5d2a'; x.fillRect(ox-8,oy-o.h*U*.6,10,5); }
+  x.fillStyle='#fff'; x.font='bold 20px system-ui'; x.textAlign='left'; x.fillText('KIWI DASH',14,28); x.textAlign='right'; x.fillText('Score '+Math.floor(R.score)+'   Best '+ARC.best,W-14,28);
+  if(R.over){ x.fillStyle='rgba(0,0,0,.6)'; x.fillRect(0,0,W,H); x.fillStyle='#ffd166'; x.textAlign='center'; x.font='bold 34px system-ui'; x.fillText('GAME OVER',W/2,H/2-30); x.fillStyle='#fff'; x.font='bold 18px system-ui'; x.fillText('Score '+Math.floor(R.score)+(R.pay?' · you won '+money(R.pay):' · score 20+ to win cash'),W/2,H/2+4); x.fillText('Jump to play again ($2) · Esc to leave',W/2,H/2+34); } }
+
+/* ---------- the drive-in movie ---------- */
+const DRIVE={t:0,acc:0,shown:false};
+function driveTick(dt){ const D=FUN.drive; if(!D.cv) return; const pc=activeCar?activeCar.pos:player.pos, d=Math.hypot(pc.x-D.x,pc.z-D.z); if(d>170) return; DRIVE.t+=dt; DRIVE.acc+=dt; if(DRIVE.acc<.08) return; DRIVE.acc=0; drawMovie(DRIVE.t);
+  const inLot=pc.x>-652&&pc.x<-598&&pc.z>-214&&pc.z<-166; if(inLot&&!DRIVE.shown){ DRIVE.shown=true; flash('Now showing: ATTACK OF THE ZOMBIE SHEEP'); } if(!inLot) DRIVE.shown=false; }
+function drawMovie(t){ const D=FUN.drive, c=D.cv, x=c.getContext('2d'), W=c.width, H=c.height, L=36, u=t%L; x.fillStyle='#000'; x.fillRect(0,0,W,H);
+  const title=(a,b)=>{ x.fillStyle='#111'; x.fillRect(0,0,W,H); x.fillStyle='#ffd166'; x.textAlign='center'; x.font='bold 40px Georgia,serif'; x.fillText(a,W/2,H/2-6); x.fillStyle='#fff'; x.font='22px Georgia,serif'; x.fillText(b,W/2,H/2+30); };
+  if(u<5) title('ATTACK OF THE','ZOMBIE SHEEP');
+  else if(u<29){ const k=u-5; x.fillStyle='#0c1838'; x.fillRect(0,0,W,H); x.fillStyle='#f5f3ce'; x.beginPath(); x.arc(420,60,28,0,TAU); x.fill(); x.fillStyle='#163d22'; x.fillRect(0,H-60,W,60);
+    const sx=(k*40)%(W+160)-80, kx=W-((k*55)%(W+160))+80; // a zombie sheep chases, a brave kiwi runs the other way
+    x.fillStyle='#9aa58a'; for(let i=0;i<5;i++){ x.beginPath(); x.arc(sx+i*14,H-90+Math.sin(i+k*9)*3,16,0,TAU); x.fill(); } x.fillStyle='#3b3d2a'; x.fillRect(sx+62,H-104,22,20); x.fillStyle='#ff2020'; x.fillRect(sx+75,H-100,5,5); x.fillStyle='#3b3d2a'; for(let i=0;i<4;i++) x.fillRect(sx+4+i*16,H-76,5,18+Math.sin(k*14+i)*3);
+    if(k>8){ x.fillStyle='#7a5a3a'; x.beginPath(); x.ellipse(kx,H-80,24,18,0,0,TAU); x.fill(); x.beginPath(); x.arc(kx-20,H-92,10,0,TAU); x.fill(); x.strokeStyle='#e9d8a6'; x.lineWidth=3; x.beginPath(); x.moveTo(kx-28,H-92); x.lineTo(kx-46,H-84); x.stroke(); }
+    if(k>16){ x.fillStyle='#fff'; x.textAlign='center'; x.font='bold 24px system-ui'; x.fillText(k<22?'"BAAAAAAINS!"':'"Not today, sheep!"',W/2,60); } }
+  else title('THE END','Starring a very brave kiwi');
+  x.fillStyle='rgba(255,255,255,.04)'; for(let i=0;i<6;i++) x.fillRect(Math.random()*W,0,1,H); D.tx.needsUpdate=true; }
+
 let rescueI=0;
 function underOK(x,z,y){ if(Math.abs(x)<HALF+12&&Math.abs(z)<HALF+12) return true; if(x>1150) return true; if(z<-LIM&&Math.abs(x)<290){ const r=roadNear(x,z); if(r&&r.tun&&r.d<6) return true; } return false; }
 function rescueTick(dt){ const n=people.length+cars.length; if(!n) return; const per=Math.max(4,Math.ceil(n*dt*4));
@@ -4653,7 +4786,7 @@ function setupMotor(){ try{ setupSale(); }catch(e){ console.warn('houses',e); } 
   GREET.cars=['G\'day! Every vehicle comes with a free garage delivery.','Tanks are on special this week. Well, not really.','Have a look around, they don\'t bite.','Need a house first? Check the FOR SALE signs in the suburbs.'];
   GREET.motor=['Drive into a bay and press F.','Left bay for mods, right bay for repairs.','We fix anything that isn\'t a smoking crater.','Zombie rammer? Best money you\'ll ever spend.'];
   try{ for(const site of [0,1]){ const S=SITES[site]; if(!S) continue; const x=lotC(S[0]), z=lotC(S[1]); roadPark(x+10,z+24,site?'digger':'bulldozer'); } }catch(e){ console.warn('site vehicles',e); } }
-function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); southTick(dt); northTick(dt); eastTick(dt); basesTick(dt); rescueTick(dt); keepTick(dt); jobsTick(dt); homeTick(dt); bloodTick(dt); achTick(dt); furnTick(dt); keepOffProps(); eventsTick(dt); wlifeTick(dt); radioTick(dt); zonesTick(dt); questTick(dt); zaTick(dt); dayClock(); modTick(dt); kiwiTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
+function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); southTick(dt); northTick(dt); eastTick(dt); basesTick(dt); rescueTick(dt); keepTick(dt); jobsTick(dt); homeTick(dt); bloodTick(dt); achTick(dt); furnTick(dt); keepOffProps(); eventsTick(dt); wlifeTick(dt); radioTick(dt); zonesTick(dt); questTick(dt); zaTick(dt); dayClock(); modTick(dt); kiwiTick(dt); fishTick(dt); surfTick(dt); bbTick(dt); driveTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
   const c=activeCar;
   if(c&&c.emerg==='fire'&&use){ camera.getWorldDirection(_ewd); let dx=_ewd.x, dy=_ewd.y+.16, dz=_ewd.z; const l=Math.hypot(dx,dy,dz)||1; hoseSpray(nozzleWorld(c),{x:dx/l,y:Math.max(-.35,dy/l),z:dz/l},dt,true); }
   if(c&&c.emerg==='tow'){ if(use&&!c.useW){ if(c.towed){ towRelease(c); flash('Let go of the car'); } else { const h=hookWorld(c); let best=null,bd=4.6;
@@ -5214,6 +5347,11 @@ function enterExit(){
   if(nestNear()&&!nearestCar()&&nestUse()) return;
   { const gv=giverNear(); if(gv&&!nearestCar()){ questOffer(gv); return; } }
   if(FP.mode&&furnUse()) return;
+  if(BB.on){ bbShoot(); return; }
+  if(FISH.on||fishNear()&&!nearestCar()){ fishE(); return; }
+  if(bbNear()&&!nearestCar()){ bbStart(); return; }
+  if(surfNear()&&!nearestCar()){ surfHire(); return; }
+  if(arcNear()){ arcOpen(); return; }
   if(fstoreNear()&&!nearestCar()){ fstoreMenu(); return; }
   if(clothesNear()&&!nearestCar()){ clothesMenu(); return; }
   if(dogNear()&&!nearestCar()){ dogMenu(); return; }
@@ -5487,6 +5625,9 @@ function findMenu(){ if(!state.started||state.over||!cfEl.hidden) return; const 
   add('Quarry','A deep rock quarry with a digger · '+dist(NORTH.quarry.x,NORTH.quarry.z),go(NORTH.quarry.x,NORTH.quarry.z,'The quarry is marked'));
   { const n=KIWI.got.length; add('🥝 Kiwi hunt · '+n+' of '+KIWI.N+' found',n>=KIWI.N?'You found them all!':'Mark the nearest kiwi for $250. Listen for the chirp when you\'re close',()=>{ const k=kiwiNearest(); if(!k){ menuDone('You found them all!'); return; } if(state.money<250){ menuDone('You need $250 for a hint'); return; } state.money-=250; save(); go(k.x,k.z,'The nearest kiwi is marked')(); },'',n>=KIWI.N); }
   add('Kia Ora Threads','Clothes shop next to the furniture store: hats, masks, tops and pants · '+dist(THREADS.x,THREADS.z),go(THREADS.x,THREADS.z+2,'Kia Ora Threads is marked'));
+  add('Fun & games','Fishing off the pier, surf hire, basketball hoops, Rangiwai Arcade and the drive-in',()=>{ const prev=cfPrevPaused, a2=menuOpen('Fun & games'); cfPrevPaused=prev; a2('🎣 Fishing','End of the Tumbleton Beach pier · '+dist(FUN.fish.x,FUN.fish.z),go(FUN.fish.x,FUN.fish.z,'The end of the pier is marked'));
+    a2('🏄 Surf hire','Tumbleton Beach · ride the waves for cash · '+dist(FUN.surf.x,FUN.surf.z),go(FUN.surf.x,FUN.surf.z-3,'The surf hire is marked')); a2('🏀 Basketball hoops','Behind Kia Ora Threads · '+dist(FUN.court.x,FUN.court.z),go(FUN.court.spot.x,FUN.court.spot.z,'The court is marked'));
+    a2('🕹 Rangiwai Arcade','Kiwi Dash. High scores pay cash · '+dist(-523,-80),go(-523,-80,'The arcade is marked')); a2('🎬 Tumbleton Drive-in','Park up and watch a movie · '+dist(FUN.drive.x,FUN.drive.z),go(-600,-190,'The drive-in is marked')); a2('Back','',()=>{ menuDone(); findMenu(); }); },'pick-go');
   add('Tumbleton Beach','Sand, surf club, pier and jet skis · '+dist(SOUTH.beach.x,SOUTH.beach.z),go(SOUTH.beach.x,SOUTH.beach.z,'Tumbleton Beach is marked. Head south'));
   add('Tumbleton Port','Containers, cranes and a cargo ship · '+dist(SOUTH.harbour.x,SOUTH.harbour.z),go(SOUTH.harbour.x,SOUTH.harbour.z,'The port is marked'));
   add('Ferry to Mōtu Island','Ride out to the island and its lighthouse · '+dist(SOUTH.ferry.x,SOUTH.ferry.z),go(SOUTH.ferry.x,SOUTH.ferry.z,'The ferry terminal is marked'));
@@ -5843,6 +5984,7 @@ const GUIDE=[
  ['Danger',`<ul><li><b>Weather</b> changes every few minutes. Rain makes roads slippery, and storms bring lightning that can strike nearby.</li><li><b>Blood Moon:</b> sometimes when night falls (N) the sky turns red. Lots more zombies come, and each one pays an extra $20.</li><li><b>Fort Kererū</b> is crawling with zombies. <b>Camp Kahu</b> has friendly soldiers and free ammo and first aid.</li></ul>`],
  ['Take back Tumbleton',`<p>Every district has a <b>zombie nest</b> that keeps spawning zombies (Sandbox). Press <b>B → 🏴 Take back Tumbleton</b> to see them and mark one. Clear the zombies around it, press <b>E</b> to plant explosives, and run. You get $2,500 for each district.</p><p>Free districts get much quieter, and more people come back to the towns, the beach and the theme park. Free all 7 for a big reward.</p>`],
  ['Events & friends',`<ul><li><b>Random events</b> pop up near you every few minutes: a <b>survivor</b> calling for help (clear the zombies and reach them), a <b>zombie horde</b>, a <b>supply drop</b> on a parachute (cash, ammo and health), and <b>army convoys</b> on the Ring Road. Follow the orange beam.</li><li>Survivors you rescue <b>join you as companions</b> (up to 3). They follow you, ride in your car and shoot zombies. Send them home from the B menu.</li><li>Adopt a <b>dog</b> at the Paws Animal Shelter next to the furniture store. It follows you everywhere, rides along and bites zombies.</li><li>In a car, the <b>radio</b> plays: Tumbleton FM, Kiwi Rock 99, Chill Waves and Zombie News Radio. Press <b>[</b> or <b>]</b>, or click the radio, to change station.</li><li><b>Day and night:</b> a full day takes about 20 minutes (clock at the top). More zombies roam the country at night. N skips ahead. Switch it off in Settings.</li><li><b>Quests:</b> locals with a yellow <b>!</b> need help: find a lost dog, collect supply crates, clear out zombies or deliver a letter. E to talk.</li><li><b>Raiders</b> in black with red bandanas shoot at you. Take them out for a reward.</li><li><b>Bosses:</b> a giant zombie guards each nest. <b>Zombie sheep and cows</b> roam the farms, and a <b>zombie shark</b> hunts swimmers and jet skis near Mōtu Island.</li></ul>`],
+ ['Fun & games',`<ul><li><b>Fishing:</b> walk to the end of the Tumbleton Beach pier and press E to cast. When something bites, press E fast. Fish sell straight away (look out for the golden snapper).</li><li><b>Surfing:</b> hire a board at the beach ($50), paddle out with W, turn round and ride the white waves in to shore. Faster rides score more cash when you get off.</li><li><b>Basketball:</b> the court behind Kia Ora Threads. Press E to shoot, then E again when the marker is in the green. 5 shots, $25 a basket, $100 bonus for all 5.</li><li><b>Rangiwai Arcade:</b> Kiwi Dash costs $2. Jump the zombies. Every 20 points pays $1 (up to $150).</li><li><b>Tumbleton Drive-in</b> out west past Rangiwai: park up and watch the movie.</li></ul>`],
  ['Kiwis & clothes',`<ul><li><b>50 kiwi statues</b> are hidden all over the map: in the city, on the farms, at the beach, up the mountain and out east. Walk or drive into one to collect it ($100). You hear a little chirp when one is close.</li><li>Bonuses at 10 and 25 kiwis. Find all 50 for <b>$10,000</b>, a <b>golden crown</b> and a <b>Golden Kiwi sports car</b>.</li><li>Stuck? B Find Places can mark the nearest kiwi for $250.</li><li><b>Kia Ora Threads</b>, next to the furniture store, sells hats, sunglasses, bandanas, masks, tops and pants. What you buy is yours to swap any time.</li><li>Some hats are only sold at the markets in towns you've freed from the zombies.</li></ul>`],
  ['Online',`<p>Press <b>J</b> to play online with friends: join a public server, join a private one with its code, or make your own. <b>Enter</b> chats.</p>`]];
 function guideOpen(tab){ const el=$('guide'); if(!el.hidden&&tab===undefined) return; if(el.hidden){ GUIDE.prev=state.paused; state.paused=true; for(const k in keys) keys[k]=false; try{ document.exitPointerLock&&document.exitPointerLock(); }catch(e){} }
@@ -5868,7 +6010,7 @@ function updateHUD(){
   if(zs!==lastZ||state.defeated!==lastD){ lastZ=zs; lastD=state.defeated; zcEl.textContent=zs; zdEl.textContent=state.defeated; zplateEl.hidden=!(zs||state.defeated); }
   let pr='';
   if(state.msgT>0&&state.started&&!state.over) pr=state.msg; else
-  if(state.started){ const stp=jetPrompt()||cranePrompt()||storyPrompt()||storePrompt()||motorPrompt()||trainPrompt()||ferryPrompt()||gondPrompt()||ridePrompt()||jobPrompt()||sentryPrompt()||nestPrompt()||questPrompt()||hatchPrompt()||furnPrompt()||fstorePrompt()||clothesPrompt()||dogPrompt()||sewerPrompt(); if(stp) pr=stp; else if(activeHeli) pr='<kbd>E</kbd> Get out · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>Click</kbd> guns · <kbd>Right-click</kbd> rockets';  else if(player.chute) pr='<kbd>WASD</kbd> steer · <kbd>Space</kbd> cut away';
+  if(state.started){ const stp=jetPrompt()||cranePrompt()||storyPrompt()||storePrompt()||motorPrompt()||trainPrompt()||ferryPrompt()||gondPrompt()||ridePrompt()||jobPrompt()||sentryPrompt()||nestPrompt()||questPrompt()||hatchPrompt()||furnPrompt()||fstorePrompt()||clothesPrompt()||fishPrompt()||surfPrompt()||bbPrompt()||arcPrompt()||dogPrompt()||sewerPrompt(); if(stp) pr=stp; else if(activeHeli) pr='<kbd>E</kbd> Get out · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>Click</kbd> guns · <kbd>Right-click</kbd> rockets';  else if(player.chute) pr='<kbd>WASD</kbd> steer · <kbd>Space</kbd> cut away';
     else if(player.mode==='walk'&&!player.ground&&player.vel.y<-2&&player.pos.y-HIP-groundHeight(player.pos.x,player.pos.z,player.pos.y-HIP)>3.5) pr='<kbd>Space</kbd> Open parachute';
     else if(activeCar) pr=activeCar.boat?'<kbd>W</kbd><kbd>S</kbd> throttle · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>E</kbd> Get out':'<kbd>E</kbd> Get out'+keepHint(activeCar); else if(state.downT>0) pr='Knocked out. Heading back to the plaza…'; else if(state.over) pr=''; else if(player.mode==='held') pr=player.heldBy&&!player.heldBy.zombie?'They grabbed you! Brace for the throw…':'A grabber has you! Brace for the throw…'; else if(player.mode==='ragdoll'||player.mode==='getup') pr='Ouch. Getting back up…'; else if(player.immune>0&&people.some(q=>q.zombie)) pr='Back on your feet. Run!'; else if(player.mode==='walk'&&liftNear()){ const n=liftNear(); pr=n.L.v!==0?(n.inside?'Going '+(n.L.v>0?'up':'down')+'…':'Lift is moving…'):Math.abs(n.L.y-n.lvl)>.05?'<kbd>E</kbd> Call the lift':n.inside?'<kbd>E</kbd> Ride the lift '+(n.lvl===0?'up':'down'):'Step into the lift'; } else if(player.mode==='walk'&&nearestHeli()) pr='<kbd>E</kbd> Fly the helicopter'; else if(nearestCar()) pr=nearestCar().boat?'<kbd>E</kbd> Drive this boat':'<kbd>E</kbd> Drive this car'; }
   if(pr!==lastPrompt){ lastPrompt=pr; promptEl.innerHTML=pr; promptEl.hidden=!pr; }
