@@ -5581,7 +5581,7 @@ function capSpawned(){ const sp=props.filter(o=>o.spawned); if(sp.length>220) re
   const pp=people.filter(o=>o.spawned); if(pp.length>90){ const o=pp[0]; scene.remove(o.g); people.splice(people.indexOf(o),1); } }
 function clearSpawned(){
   for(let i=props.length-1;i>=0;i--) if(props[i].spawned) removeProp(props[i]);
-  for(let i=people.length-1;i>=0;i--){ const q=people[i]; if(q.spawned||q.zombie||q.corpse){ if(q.zombie) puff(q.pos.x,q.pos.y,q.pos.z,0x9be07a,.35,false); scene.remove(q.g); people.splice(i,1); } }
+  for(let i=people.length-1;i>=0;i--){ const q=people[i]; if((q.boss||q.named)&&!q.dead) continue; if(q.spawned||q.zombie||q.corpse){ if(q.zombie) puff(q.pos.x,q.pos.y,q.pos.z,0x9be07a,.35,false); scene.remove(q.g); people.splice(i,1); } }
   for(const q of people) q.infect=-1;
   for(let i=cars.length-1;i>=0;i--) if(cars[i].spawned&&cars[i]!==activeCar){ scene.remove(cars[i].g); cars.splice(i,1); }
   for(let i=ramps.length-1;i>=0;i--) if(ramps[i].spawned){ scene.remove(ramps[i].m); ramps.splice(i,1); }
