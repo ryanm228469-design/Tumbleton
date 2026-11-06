@@ -6930,7 +6930,7 @@ function remapKey(e){ if(e.__tb||!e.code) return; if(e.target&&(e.target.tagName
   if(to===undefined) return; const ev=new KeyboardEvent(e.type,{code:to,key:to,repeat:e.repeat,bubbles:true,cancelable:true}); ev.__tb=1; dispatchEvent(ev); if(ev.defaultPrevented) e.preventDefault(); }
 addEventListener('keydown',remapKey,true); addEventListener('keyup',remapKey,true);
 function saveSettings(){ try{ localStorage.setItem('tumbleton-settings',JSON.stringify(SET)); }catch(e){} }
-function applySettings(){ reduceMotion=SYS_REDUCE||!SET.shake; renderer.setPixelRatio((state.gfxHi?PR_MAX():SET.res/100)*prScale); resize(); Snd.vol(); fovNow=SET.fov; camera.fov=SET.fov; camera.updateProjectionMatrix();
+function applySettings(){ reduceMotion=SYS_REDUCE||!SET.shake; renderer.setPixelRatio((state.gfxHi?PR_MAX():SET.res/100)*prScale); resize(); Snd.vol(); fovNow=SET.fov; camera.fov=SET.fov; camera.near=clamp(.3*Math.tan(31*PI/180)/Math.tan(SET.fov*PI/360),.06,.3); camera.updateProjectionMatrix();
   $('fps').hidden=!SET.fps; document.documentElement.style.setProperty('--tsize',SET.tsize); }
 const SETUI={tab:'game',waiting:null,prevPaused:false};
 function openSettings(){ if(!$('settings').hidden) return; SETUI.prevPaused=state.paused; state.paused=true; for(const k in keys) keys[k]=false; state.mouseHeld=false; state.aimHeld=false; try{ if(document.exitPointerLock) document.exitPointerLock(); }catch(e){}
@@ -7166,7 +7166,7 @@ function updateCamera(dt){
   { const W=WEAPONS[state.weapon], on=state.started&&!state.over&&!state.paused&&!activeCar&&!activeHeli&&!!W.ranged&&player.mode==='walk';
     if(!on) state.aimHeld=false; shoulderK+=((on?1:0)-shoulderK)*Math.min(1,dt*6); aimK+=((on&&state.aimHeld?1:0)-aimK)*Math.min(1,dt*9); }
   { const sp=activeCar?Math.hypot(activeCar.vel.x,activeCar.vel.z):Math.hypot(player.vel.x,player.vel.z), sprint=!activeCar&&sp>7;
-    const fovT=SET.fov+(activeCar?Math.min(12,sp*.28):sprint&&aimK<.1?5:0)-aimK*(fp?24:16); fovNow+=(fovT-fovNow)*Math.min(1,dt*3); if(Math.abs(camera.fov-fovNow)>.01){ camera.fov=fovNow; camera.updateProjectionMatrix(); } }
+    const fovT=SET.fov+(activeCar?Math.min(12,sp*.28):sprint&&aimK<.1?5:0)-aimK*(fp?24:16); fovNow+=(fovT-fovNow)*Math.min(1,dt*3); if(Math.abs(camera.fov-fovNow)>.01){ camera.fov=fovNow; camera.near=clamp(.3*Math.tan(31*PI/180)/Math.tan(fovNow*PI/360),.06,.3); camera.updateProjectionMatrix(); } }
   const fpOn=fp&&state.started&&!state.over&&(activeCar||activeHeli||player.mode!=='drive');
   player.g.visible=(!activeCar||!!activeCar.ride)&&!fpOn; if(activeCar&&activeCar.ride) riderPose(activeCar,dt); if(MPG.id!==null) gunnerTick(dt);
   if(activeJet&&!state.cine){ player.g.visible=false; detachCockpits(null); showShell(null); jetCamera(dt); return; }
