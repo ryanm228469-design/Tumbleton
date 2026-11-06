@@ -5778,10 +5778,12 @@ function xpSave(){ try{ localStorage.setItem('tumbleton-explore',JSON.stringify(
 function xpFind(id,name,sub,cash){ if(XP.found[id]) return false; XP.found[id]=1; xpSave(); if(cash) earn(cash); banner('DISCOVERED · '+name,sub+(cash?' · +'+money(cash):'')); Snd.sting&&Snd.sting(); achStat('explore'); return true; }
 function xpRelic(id,name){ if(XP.relics[id]) return; XP.relics[id]=name; xpSave(); banner('RELIC FOUND',name+' · added to your Expedition Journal'); achStat('relic'); }
 // a builder: boxes merged into one mesh, with solid boxes for walking into
+const XP_CAMB=[];
+function xpCamBlock(x,y,z){ if(x>1500) return false; const W=CAVE.fallW, P=player.pos; if(W&&P.z<W.z&&Math.abs(P.x-W.x)<3&&Math.abs(P.z-W.z)<8&&z>W.z-.3&&Math.abs(x-W.x)<3.4&&y<16) return true; for(const b of XP_CAMB){ if(x>b.x0+.2&&x<b.x1-.2&&z>b.z0+.2&&z<b.z1-.2&&y>b.y0&&y<b.h) return true; } return false; }
 function xpB(ox,oy,oz,group){ return {ox,oy,oz,P:[],group:group||scene,
   box(w,h,d,x,y,z,c,solid){ this.P.push({g:new THREE.BoxGeometry(w,h,d).translate(this.ox+x,this.oy+y,this.oz+z),c}); if(solid) this.solid(x-w/2,x+w/2,z-d/2,z+d/2,y-h/2,y+h/2); },
   geo(g,c){ g.translate(this.ox,this.oy,this.oz); this.P.push({g,c}); },
-  solid(x0,x1,z0,z1,y0,y1){ AIR.boxes.push({x0:this.ox+x0,x1:this.ox+x1,z0:this.oz+z0,z1:this.oz+z1,y0:this.oy+y0,h:this.oy+y1}); OUTG.n=-1; },
+  solid(x0,x1,z0,z1,y0,y1){ const b={x0:this.ox+x0,x1:this.ox+x1,z0:this.oz+z0,z1:this.oz+z1,y0:this.oy+y0,h:this.oy+y1}; AIR.boxes.push(b); XP_CAMB.push(b); OUTG.n=-1; },
   done(shadow,recv){ if(!this.P.length) return null; const m=new THREE.Mesh(mergeGeos(this.P,true),VC); m.castShadow=!!shadow; m.receiveShadow=recv!==false; this.group.add(m); this.P=[]; return m; } }; }
 const XP_GLOW=new THREE.MeshBasicMaterial({color:0x8ff4ff}), XP_WATER=new THREE.MeshLambertMaterial({color:0x1e4f6b,transparent:true,opacity:.72,depthWrite:false});
 /* ---------- tile-map dungeons (built far east, past the garages, and reached through entrances) ---------- */
@@ -5807,12 +5809,21 @@ function xpGrid(D){ const g=new THREE.Group(); scene.add(g); D.group=g; const T=
   if(D.low){ const wg=[]; for(let j=0;j<H;j++) for(let i=0;i<W;i++) if(D.low.includes(rows[j][i])) wg.push(new THREE.PlaneGeometry(T,T).rotateX(-PI/2).translate(D.ox+(i+.5)*T,D.waterY,D.oz+(j+.5)*T)); if(wg.length){ const wm=new THREE.Mesh(THREE.BufferGeometryUtils?THREE.BufferGeometryUtils.mergeBufferGeometries(wg):mergeGeos(wg.map(g=>({g,c:'#1e4f6b'})),false),D.waterMat||XP_WATER); g.add(wm); D.waterM=wm; } }
   D.feats=feats; return feats; }
 // the lighting while you're underground: dark, foggy, with a torch on your chest
+function xpTorch(){ if(!XP.torch){ XP.torch=new THREE.PointLight(0xffd9a8,0,26,1.6); XP.torch.position.set(0,-80,0); scene.add(XP.torch); } }
+function xpClimbStart(L,fromTop,quiet){ XP.climb={L,y:fromTop?L.y1:L.y0,t:0,clk:0}; player.mode='lift'; player.vel.set(0,0,0); player.crouch=false; try{ cancelReload(); }catch(e){} xpClimbPlace(); if(!quiet) flash(fromTop?'Hold S to climb down · W to go back up · Space to let go':'Hold W to climb up · S to go back down · Space to let go'); }
+function xpClimbPlace(){ const C=XP.climb, L=C.L; player.yaw=L.yaw; player.pos.set(L.x-Math.sin(L.yaw)*.45,C.y+HIP,L.z-Math.cos(L.yaw)*.45); player.g.position.copy(player.pos); player.g.quaternion.setFromAxisAngle(UP,L.yaw); player.vel.set(0,0,0); }
+function xpClimbEnd(){ XP.climb=null; if(player.mode==='lift') player.mode='walk'; player.vel.set(0,0,0); mhPose('stand'); }
+function xpClimbTick(dt){ const C=XP.climb; if(!C) return; if(player.mode!=='lift'||activeCar||state.over){ XP.climb=null; mhPose('stand'); return; } const L=C.L, v=(Math.max(K('KeyW'),K('ArrowUp'))-Math.max(K('KeyS'),K('ArrowDown')))*2.1;
+  C.y+=v*dt; if(v){ C.t+=dt; C.clk+=dt; if(C.clk>.32){ C.clk=0; Snd.tink(player.pos.x,player.pos.z); } } xpClimbPlace(); mhPose('climb',C.t);
+  if(keys.Space){ keys.Space=false; xpClimbEnd(); return; }
+  if(C.y<=L.y0&&v<0){ C.y=L.y0; L.bottom(); } else if(C.y>=L.y1&&v>0){ C.y=L.y1; L.top(); } }
+function xpFade(){ let f=XP.fadeEl; if(!f){ f=XP.fadeEl=document.createElement('div'); f.style.cssText='position:fixed;inset:0;background:#000;z-index:60;pointer-events:none;opacity:0;transition:opacity .7s ease-out'; document.body.appendChild(f); } f.style.transition='none'; f.style.opacity='1'; void f.offsetWidth; setTimeout(()=>{ f.style.transition='opacity .7s ease-out'; f.style.opacity='0'; },120); }
 function xpLight(dt){ const D=xpDunAt(player.pos.x,player.pos.z)||(activeCar?xpDunAt(activeCar.pos.x,activeCar.pos.z):null); XP.in=D;
   for(const L of XP.list) if(L.group) L.group.visible=(L===D);
-  if(!D){ const Pq=activeCar?activeCar.pos:player.pos; if(typeof QZ!=='undefined'&&inQZ(Pq.x,Pq.z)){ if(!XP.was) XP.fog0=scene.fog.density; XP.was=QZ; skyDome.visible=false; scene.background=XP.bg; XP.bg.set(QZ.fog); scene.fog.color.set(QZ.fog); scene.fog.density=QZ.dens; if(XP.torch) XP.torch.visible=false; return; }
-    if(XP.was){ XP.was=null; skyDome.visible=true; scene.background=skyCol; if(XP.fog0!==null) scene.fog.density=XP.fog0; if(XP.torch) XP.torch.visible=false; } return; }
+  if(!D){ const Pq=activeCar?activeCar.pos:player.pos; if(typeof QZ!=='undefined'&&inQZ(Pq.x,Pq.z)){ if(!XP.was) XP.fog0=scene.fog.density; XP.was=QZ; skyDome.visible=false; scene.background=XP.bg; XP.bg.set(QZ.fog); scene.fog.color.set(QZ.fog); scene.fog.density=QZ.dens; if(XP.torch) XP.torch.intensity=0; return; }
+    if(XP.was){ XP.was=null; skyDome.visible=true; scene.background=skyCol; if(XP.fog0!==null) scene.fog.density=XP.fog0; if(XP.torch) XP.torch.intensity=0; } return; }
   if(!XP.was){ XP.fog0=scene.fog.density; } XP.was=D; skyDome.visible=false; scene.background=XP.bg; XP.bg.set(D.fog); scene.fog.color.set(D.fog); scene.fog.density=D.dens; sun.intensity=D.sun||0; hemi.intensity=D.amb; if(typeof vmHemi!=='undefined') vmHemi.intensity=D.amb*1.6+.15;
-  if(!XP.torch){ XP.torch=new THREE.PointLight(0xffd9a8,1.1,19,1.8); scene.add(XP.torch); } XP.torch.visible=true; XP.torch.intensity=D.torch===undefined?1.15:D.torch; const f=new V3(); camera.getWorldDirection(f); XP.torch.position.set(camera.position.x+f.x*.6,camera.position.y+.35,camera.position.z+f.z*.6); }
+  xpTorch(); XP.torch.intensity=D.torch===undefined?1.6:D.torch; const f=new V3(); camera.getWorldDirection(f); XP.torch.position.set(camera.position.x+f.x*.6,camera.position.y+.35,camera.position.z+f.z*.6); }
 // in and out
 function xpGo(x,y,z,yaw,msg){ if(activeCar) return; ENT.on=false; player.mode='walk'; player.vel.set(0,0,0); player.pos.set(x,(y===undefined?groundHeight(x,z,6):y)+HIP,z); if(yaw!==undefined){ player.yaw=yaw; camYaw=yaw; } player.g.position.copy(player.pos); camTarget&&camTarget.set(x,player.pos.y+1.7,z); lastLook=-9; if(msg) flash(msg); Snd.door&&Snd.door(x,z,true); for(const p of COMP.list) if(people.includes(p)) p.pos.set(x+R(-1.5,1.5),player.pos.y,z+R(-1.5,1.5)); }
 /* ---------- the lurker: pale, fast, glowing eyes; and its queen ---------- */
@@ -5823,8 +5834,8 @@ function xpBossBar(name,frac){ if(!XP.bar){ const d=document.createElement('div'
 /* ---------- interactive things inside: crates, notes, ladders, docks ---------- */
 const XP_NOTES={};
 function xpNearFeat(r){ const D=XP.in; if(!D||!D.feats||activeCar||player.mode!=='walk') return null; let best=null,bd=r||2.2; for(const f of D.feats){ if(!f.use) continue; const d=Math.hypot(player.pos.x-f.x,player.pos.z-f.z); if(d<bd){ bd=d; best=f; } } return best; }
-function xpPrompt(){ if(XP.ride) return 'Enjoy the ride · <kbd>E</kbd> to hop out'; const f=xpNearFeat(); if(f) return '<kbd>E</kbd> '+f.label(); const s=xpSurfNear(); return s?'<kbd>E</kbd> '+(typeof s.label==='function'?s.label():s.label):''; }
-function xpUse(){ if(XP.ride){ xpRideEnd(true); return true; } const f=xpNearFeat(); if(f){ f.use(); return true; } const s=xpSurfNear(); if(s){ s.use(); return true; } return false; }
+function xpPrompt(){ if(XP.climb) return '<kbd>W</kbd> up · <kbd>S</kbd> down · <kbd>Space</kbd> let go'; if(XP.ride) return 'Enjoy the ride · <kbd>E</kbd> to hop out'; const f=xpNearFeat(); if(f) return '<kbd>E</kbd> '+f.label(); const s=xpSurfNear(); return s?'<kbd>E</kbd> '+(typeof s.label==='function'?s.label():s.label):''; }
+function xpUse(){ if(XP.climb) return true; if(XP.ride){ xpRideEnd(true); return true; } const f=xpNearFeat(); if(f){ f.use(); return true; } const s=xpSurfNear(); if(s){ s.use(); return true; } return false; }
 function xpCrate(D,f,key,relic){ f.key=D.id+':'+key; const m=new THREE.Mesh(mergeGeos([{g:BX(1.1,.8,.8,0,.4,0),c:'#6b4a2b'},{g:BX(1.14,.08,.84,0,.62,0),c:'#3b2f22'},{g:BX(1.14,.08,.84,0,.18,0),c:'#3b2f22'}],true),VC); m.position.set(f.x,0,f.z); m.rotation.y=R(0,6); D.group.add(m); f.m=m;
   if(XP.loot[f.key]) m.rotation.x=.25; f.label=()=>XP.loot[f.key]?'Empty crate':'Open the crate'; f.use=()=>{ if(XP.loot[f.key]){ flash('Already looted'); return; } XP.loot[f.key]=1; xpSave(); plBend&&plBend(); Snd.rack&&Snd.rack(); m.rotation.x=.25; const cash=150+Math.floor(Math.random()*6)*50; earn(cash); for(const k in AMMO) if(state.owned[k]){ const a=ammoOf(k); a.res=Math.min(AMMO[k].tot,a.res+AMMO[k].mag); } save(); flash('+'+money(cash)+' and some ammo'); if(relic) setTimeout(()=>xpRelic(relic[0],relic[1]),700); }; }
 function xpNote(D,f,title,text){ const m=new THREE.Mesh(mergeGeos([{g:BX(.6,.04,.45,0,.5,0),c:'#f2ead0'},{g:BX(.7,.5,.5,0,.24,0),c:'#5b4636'}],true),VC); m.position.set(f.x,0,f.z); D.group.add(m); const glow=new THREE.Mesh(new THREE.SphereGeometry(.06,6,4),XP_GLOW); glow.position.set(f.x,.62,f.z); D.group.add(glow);
@@ -5846,7 +5857,7 @@ function xpWaterTex(){ const cv=document.createElement('canvas'); cv.width=32; c
 
 /* ======================= 1. TE ANA TŪRAMA · THE GLOWWORM CAVES ======================= */
 const CAVE={id:'cave',name:'Te Ana Tūrama',ox:2000,oz:-360,T:2.5,rows:["########################################################", "########################################################", "###...##################################################", "##....M#################################################", "#..S....################################################", "##.....#############################g###################", "###.....#######################ggggggggggg##############", "######...####################ggggggggggggggg############", "#######...#################ggggggggggggggggggg##########", "########..################ggggggggggNgggggggggg#########", "########..###############ggggggggggggggggggggggg########", "########...##############ggggggggggggggggggggggg########", "#########...############ggggggggggggggwwwwwgggggg#######", "#########L...####...####gggggggggggwwwwwwwwwwgggg#######", "###########....M..N..###gggggggggwwwwwwgggwwwwwgg#######", "############..........#gggggggggwwwwggggggggwwwwgg######", "################.....###gggggggwwwggggggggggggwwg#######", "#################....###ggggggwwwgggggggggggggwwg#######", "#####################.##gggggwwwggggggggggggggwww#######", "###...###############..##gggwwwggggggggggggggggww#######", "###.X.##############.....wwwwwggggggggggggggggwww#######", "###...##############..D.wwwwwgggggggggggggggggww########", "####.###############....ww#gggggggggggggggggggww########", "####.#################.######ggggggggggggggg##.w########", "####.##########################ggggggggggg##..d..#######", "####.###############################g#######.....#######", "####.#######################################.....#######", "#####.####.###################################.r########", "######........################.###############rr########", "######.........#############.....#############Zr########", "######.........#############..L..#############rr########", "#####.....B.....############..Z..###########Krrr########", "######.......K.###############..##########rrrrrr########", "######.........rr###############rrZrKrrrZrrrrr##########", "#######.......rrrrrr########N#rrrrrrrrrrrrr#############", "##########.#####rrZrrrKrZrrrrrrrr#######r###############", "###################rrrrrrrrrrrr#########...#############", "#######################################..L..############", "########################################...#############", "########################################################"],ceilH:4.6,tall:'gwDd',tallH:13,low:'w',lowY:-.9,waterY:-.25,seed:11,
-  rock:['#4a4640','#3f3b36','#57524a','#36332f'],floor:['#4b463e','#423e37','#514b42'],bed:'#2a2e2c',fog:0x04080b,dens:.032,amb:.11,stal:.09,
+  rock:['#4a4640','#3f3b36','#57524a','#36332f'],floor:['#4b463e','#423e37','#514b42'],bed:'#2a2e2c',fog:0x06101a,dens:.02,amb:.22,stal:.09,
   surf:{x:-395,z:-470}, sink:{x:-352,z:-528}, spawned:{}, queen:null};
 XP.list.push(CAVE);
 function caveBuild(){ const D=CAVE, feats=xpGrid(D);
@@ -5856,17 +5867,23 @@ function caveBuild(){ const D=CAVE, feats=xpGrid(D);
   for(let k=0;k<n;k++){ const [i,j]=pts[Math.floor(rnd()*pts.length)], x=D.ox+(i+rnd())*D.T, z=D.oz+(j+rnd())*D.T, L=.3+rnd()*1.4, y=D.tallH-.05-rnd()*.4-L; const s=.6+rnd()*.9; m.makeScale(s,s,s); m.setPosition(x,y,z); gw.setMatrixAt(k,m); if(k%3===0&&k/3<th.count){ m.makeScale(1,L,1); m.setPosition(x,y+L/2,z); th.setMatrixAt(k/3,m); } }
   D.group.add(gw,th); D.gw=gw; caveStals(D);
   // a soft blue glow in the grotto
-  const gl=new THREE.PointLight(0x5fd8ff,.9,90,1.2); const c0=xpTileW(D,36,15); gl.position.set(c0.x,D.tallH-3,c0.z); D.group.add(gl);
+  const gl=new THREE.PointLight(0x5fd8ff,0,90,1.2); const c0=xpTileW(D,36,15); gl.position.set(c0.x,D.tallH-3,c0.z); scene.add(gl); D.glL=gl; D.lanterns=[]; D.lanL=[0,1].map(()=>{ const L=new THREE.PointLight(0xffa640,0,15,1.6); L.position.set(0,-80,0); scene.add(L); return L; });
   // features
   const notes={'18,14':['Mere\'s notebook · day 3','The cavers\' club map says the river runs right under the hills. We\'re going to wait it out down here. It\'s quiet. Maybe too quiet. — Mere'],'36,9':['Scrawled on a rock','If you\'re reading this, LOOK UP. Thousands of them. Glowworms. Whatever is happening up top, this place doesn\'t care. Stand still for a moment.'],'28,34':['Mere\'s notebook · day 9','The miners sealed the lower tunnels in 1931 because of "the pale ones". I thought it was a story. It isn\'t. Do NOT go towards the big cavern. — Mere']};
   let li=0;
   for(const f of feats){ const k=f.i+','+f.j;
-    if(f.c==='S') xpLadder(D,f,'Climb back out behind the waterfall',()=>xpGo(D.surf.x+4,0,D.surf.z+9,0,'Back out in the daylight'));
+    if(f.c==='S'){ const m=new THREE.Mesh(mergeGeos([{g:BX(.08,6,.08,-.35,3,0),c:'#8a6d4a'},{g:BX(.08,6,.08,.35,3,0),c:'#8a6d4a'},...[...Array(10)].map((_,k)=>({g:BX(.7,.06,.06,0,.35+k*.55,0),c:'#8a6d4a'}))],true),VC); m.position.set(f.x,0,f.z); D.group.add(m);
+      const hole=new THREE.Mesh(new THREE.CircleGeometry(1.15,18).rotateX(PI/2),new THREE.MeshBasicMaterial({color:0x000000,side:THREE.DoubleSide})); hole.position.set(f.x,D.ceilH-.06,f.z+.25); D.group.add(hole);
+      const beam=new THREE.Mesh(new THREE.CylinderGeometry(.9,1.3,D.ceilH,14,1,true),new THREE.MeshBasicMaterial({color:0x9fd8ff,transparent:true,opacity:.07,depthWrite:false,side:THREE.DoubleSide,fog:false})); beam.position.set(f.x,D.ceilH/2,f.z+.25); D.group.add(beam);
+      D.ladC={x:f.x,z:f.z,yaw:PI,y0:0,y1:3.0,
+        bottom:()=>{ xpClimbEnd(); player.pos.set(f.x,HIP,f.z+1.4); player.g.position.copy(player.pos); },
+        top:()=>{ const L=CAVE.ladS; xpFade(); xpGo(L.x,L.y0,L.z+.45,PI,''); xpClimbStart(L,false,true); }};
+      f.label=()=>'Climb the ladder up to the waterfall'; f.use=()=>xpClimbStart(D.ladC,false); }
     else if(f.c==='X') xpLadder(D,f,'Climb the rope up to the sinkhole',()=>{ xpGo(D.sink.x+2.5,0,D.sink.z+2.5,0,'You pull yourself out of a sinkhole in the hills'); xpFind('cave_through','Right Through','You went all the way through the caves',300); });
     else if(f.c==='N') xpNote(D,f,...(notes[k]||['A note','...']));
     else if(f.c==='L'){ xpCrate(D,f,'L'+(li++),li===2?['glowstone','Glowstone · a stone that glows faint blue in the dark']:null); }
     else if(f.c==='M'){ const P=[]; const rnd=mulberry32(f.i*31+f.j); for(let k2=0;k2<7;k2++){ const a=rnd()*6, r=rnd()*1.1, h=.1+rnd()*.35; P.push({g:new THREE.CylinderGeometry(.03,.04,h,5).translate(f.x+Math.cos(a)*r,h/2,f.z+Math.sin(a)*r),c:'#d9e8e0'}); const cap=new THREE.SphereGeometry(.08+rnd()*.1,7,4,0,TAU,0,PI/2); cap.translate(f.x+Math.cos(a)*r,h,f.z+Math.sin(a)*r); P.push({g:cap,c:'#7ff6c8'}); } D.group.add(new THREE.Mesh(mergeGeos(P,true),new THREE.MeshBasicMaterial({vertexColors:true}))); }
-    else if(f.c==='K'){ const lm=new THREE.Mesh(mergeGeos([{g:BX(.08,2,.08,0,1,0),c:'#3b2f22'},{g:BX(.3,.36,.3,0,2.1,0),c:'#2b2d31'}],true),VC); lm.position.set(f.x,0,f.z); D.group.add(lm); const gl2=new THREE.Mesh(new THREE.SphereGeometry(.12,8,6),new THREE.MeshBasicMaterial({color:0xffc070})); gl2.position.set(f.x,2.1,f.z); D.group.add(gl2); const pl=new THREE.PointLight(0xffa640,.9,14,1.6); pl.position.set(f.x,2.3,f.z); D.group.add(pl); }
+    else if(f.c==='K'){ const lm=new THREE.Mesh(mergeGeos([{g:BX(.08,2,.08,0,1,0),c:'#3b2f22'},{g:BX(.3,.36,.3,0,2.1,0),c:'#2b2d31'}],true),VC); lm.position.set(f.x,0,f.z); D.group.add(lm); const gl2=new THREE.Mesh(new THREE.SphereGeometry(.12,8,6),new THREE.MeshBasicMaterial({color:0xffc070})); gl2.position.set(f.x,2.1,f.z); D.group.add(gl2); D.lanterns.push(f); }
     else if(f.c==='r'){ }
     else if(f.c==='D'||f.c==='d'){ const dk=new THREE.Mesh(mergeGeos([{g:BX(2.6,.2,2.4,0,.08,0),c:'#7a5233'},{g:BX(.18,1.2,.18,1.1,.3,1.0),c:'#5b3d24'},{g:BX(.18,1.2,.18,-1.1,.3,1.0),c:'#5b3d24'}],true),VC); dk.position.set(f.x,0,f.z); D.group.add(dk);
       if(f.c==='D'){ D.dockA={x:f.x,z:f.z}; D.boatHome=xpTileW(D,24,21); D.boat=xpBoat(); D.boat.position.set(D.boatHome.x,D.waterY,D.boatHome.z); D.group.add(D.boat); f.label=()=>'Take the boat through the glowworm grotto'; f.use=()=>xpRideStart(D,CAVE_RIVER,false); }
@@ -5876,21 +5893,38 @@ function caveBuild(){ const D=CAVE, feats=xpGrid(D);
   { const P=[]; for(const f of feats) if(f.c==='r'||f.c==='Z'||f.c==='K'){ const ri=D.rows[f.j], hor=(ri[f.i-1]==='r'||ri[f.i+1]==='r'); for(const o of [-.45,.45]) P.push({g:hor?BX(D.T,.08,.08,0,.05,o):BX(.08,.08,D.T,o,.05,0),c:'#6b6f75'}); for(let s=0;s<3;s++) P.push({g:hor?BX(.16,.06,1.3,-D.T/2+.4+s*.85,.02,0):BX(1.3,.06,.16,0,.02,-D.T/2+.4+s*.85),c:'#4a3424'}); for(const q of P.splice(P.length-5)){ q.g.translate(f.x,0,f.z); P.push(q); } } if(P.length) D.group.add(new THREE.Mesh(mergeGeos(P,true),VC)); }
   // a mine cart
   { const f=xpTileW(D,22,35); const cart=new THREE.Mesh(mergeGeos([{g:BX(1.1,.7,1.5,0,.6,0),c:'#5b5f66'},{g:BX(1.0,.1,1.4,0,.95,0),c:'#3b3f45'},{g:new THREE.CylinderGeometry(.18,.18,1.2,8).rotateZ(PI/2).translate(0,.2,.5),c:'#2b2d31'},{g:new THREE.CylinderGeometry(.18,.18,1.2,8).rotateZ(PI/2).translate(0,.2,-.5),c:'#2b2d31'}],true),VC); cart.position.set(f.x,0,f.z); cart.rotation.y=PI/2; D.group.add(cart); }
-  // the surface: a rocky bluff with a waterfall and a pool; the cave mouth hides behind the falls
-  { const S=D.surf, g=new THREE.Group(); scene.add(g); const B=xpB(S.x,0,S.z,g), rnd=mulberry32(3), col=['#6b665c','#5b574e','#7a7468','#4f4b44'];
-    for(let k=0;k<26;k++){ const a=rnd()*TAU, r=6+rnd()*10, x=Math.cos(a)*r, z=Math.sin(a)*r*.7-8, h=6+rnd()*12; if(z>-3&&Math.abs(x)<5) continue; const geo=new THREE.DodecahedronGeometry(4+rnd()*3,0); geo.scale(1,h/7,1); geo.rotateY(rnd()*6); geo.translate(x,h/2-1,z); B.geo(geo,col[k%4]); }
-    B.box(26,15,12,0,7.5,-12,'#5b574e',true); B.box(10,13,8,-11,6.5,-4,'#6b665c',true); B.box(10,13,8,11,6.5,-4,'#6b665c',true); B.box(6,4,3,0,13,-5.2,'#57524a',false);
-    B.box(4,3.4,1,0,1.7,-6.3,'#0a0c0e',false); const pool=new THREE.Mesh(new THREE.CircleGeometry(6,24).rotateX(-PI/2),XP_WATER); pool.position.set(S.x,.06,S.z+1); g.add(pool);
+  // the surface: a tall rock bluff facing south, a waterfall pouring off its lip into a pool, and the cave mouth hidden behind the falls
+  { const S=D.surf, g=new THREE.Group(); scene.add(g); const B=xpB(S.x,0,S.z,g), rnd=mulberry32(3), col=['#6b665c','#5b574e','#7a7468','#4f4b44'], FZ=-6.5;
+    // the cliff itself: solid blocks you can't walk through, stepped back so it looks natural
+    B.box(13,16,10,-9.5,8,FZ-5,'#5b574e',true); B.box(13,16,10,9.5,8,FZ-5,'#5b574e',true); B.box(6,11.5,10,0,10.25+1.5,FZ-5,'#57524a',true); B.box(6,4.5,6,0,2.25,FZ-7,'#57524a',true);
+    B.box(10,13,7,-17,6.5,FZ-1,'#6b665c',true); B.box(10,13,7,17,6.5,FZ-1,'#6b665c',true); B.box(30,6,8,0,19,FZ-8,'#4f4b44',false);
+    // the lip the water pours over
+    B.box(6.4,.8,1.6,0,15.6,FZ+.4,'#4f4b44',false);
+    // the dark cave mouth behind the falls (a recess 4.4 m wide)
+    B.box(4.4,4.4,.2,0,2.2,FZ-3.9,'#050607',false); B.box(.6,4.6,4,-2.5,2.3,FZ-2,'#3f3b36',true); B.box(.6,4.6,4,2.5,2.3,FZ-2,'#3f3b36',true); B.box(5.6,1.2,4,0,5.1,FZ-2,'#3f3b36',false);
+    // boulders on the cliff face and in two clusters either side of the pool; every one is solid
+    const rock=(x,z,r,h,c)=>{ const geo=new THREE.DodecahedronGeometry(r,0); geo.scale(1,h/(2*r),1); geo.rotateY(rnd()*6); geo.translate(x,h/2-.4,z); B.geo(geo,c); const k=r*.78; B.solid(x-k,x+k,z-k,z+k,-1,h-.6); };
+    for(let k=0;k<7;k++){ const sd=k%2?1:-1, r=1.8+rnd()*1.6; rock(sd*(3.4+r+rnd()*8),FZ-.4-rnd()*1.5,r,5+rnd()*8,col[k%4]); }
+    for(let k=0;k<9;k++){ const sd=k%2?1:-1, x=sd*(7.5+rnd()*8), z=FZ+2+rnd()*9; rock(x,z,1+rnd()*1.6,1.6+rnd()*3.5,col[(k+1)%4]); }
+    // ferns and moss so it doesn't look bare
+    for(let k=0;k<26;k++){ const sd=rnd()<.5?1:-1, x=sd*(5+rnd()*14), z=FZ+.5+rnd()*12, h=.5+rnd()*.7; const cg=new THREE.ConeGeometry(.45,h,5); cg.translate(x,h/2,z); B.geo(cg,k%3?'#2f6b3a':'#3d7a2e'); }
     B.done(true,true);
-    const tex=xpWaterTex(), fall=new THREE.Mesh(new THREE.PlaneGeometry(4.2,13.5),new THREE.MeshLambertMaterial({map:tex,transparent:true,opacity:.86,depthWrite:false,side:THREE.DoubleSide})); fall.position.set(S.x,6.6,S.z-4.6); g.add(fall); CAVE.fallTex=tex;
-    const mist=new THREE.Mesh(new THREE.SphereGeometry(2.4,10,6),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.22,depthWrite:false})); mist.scale.set(1.6,.5,1); mist.position.set(S.x,.6,S.z-3.5); g.add(mist); CAVE.mist=mist;
-    XP_SURF.push({x:S.x,z:S.z-5,r:3,label:'Slip behind the waterfall',use:()=>{ const s=D.feats.find(f=>f.c==='S'); xpGo(s.x+1.5,0,s.z+1.5,PI*.75,''); xpFind('cave','Te Ana Tūrama','The Glowworm Caves. Bring a torch... you have one',250); }});
+    const pool=new THREE.Mesh(new THREE.CircleGeometry(5.5,28).rotateX(-PI/2),XP_WATER); pool.position.set(S.x,.06,S.z+FZ+4.2); g.add(pool);
+    const tex=xpWaterTex(), fall=new THREE.Mesh(new THREE.PlaneGeometry(4.6,15.4),new THREE.MeshLambertMaterial({map:tex,color:0xa9d4e6,side:THREE.DoubleSide,emissive:0x1d3a4a})); fall.position.set(S.x,7.7,S.z+FZ+.9); g.add(fall); CAVE.fallW={x:S.x,z:S.z+FZ+.9}; CAVE.fallTex=tex;
+    const mist=new THREE.Mesh(new THREE.SphereGeometry(2.4,10,6),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.28,depthWrite:false})); mist.scale.set(1.7,.55,1.1); mist.position.set(S.x,.7,S.z+FZ+1.3); g.add(mist); CAVE.mist=mist;
+    const sg=new THREE.Mesh(new THREE.PlaneGeometry(2.6,.8),signMat([['TE ANA TŪRAMA',40],['glowworm caves ▸ behind the falls',22]],'#3b2f22','#f2e6c8',256,80)); sg.position.set(S.x+5.2,1.5,S.z+FZ+6.5); sg.rotation.y=-.35; g.add(sg); B.box(.12,1.2,.12,5.2,.6,FZ+6.45,'#3b2f22',false); B.done(false,true);
+    { const hx=S.x, hz=S.z+FZ-2.8, B3=xpB(hx,0,hz,g); B3.geo(new THREE.CylinderGeometry(1.05,1.05,.04,18).translate(0,.035,0),'#020303'); for(let k=0;k<10;k++){ const an=k/10*TAU, r3=new THREE.DodecahedronGeometry(.32+rnd()*.2,0); r3.translate(Math.cos(an)*1.3,.12,Math.sin(an)*1.3); B3.geo(r3,'#4f4b44'); }
+      B3.box(.08,4.6,.08,-.35,0,-.7,'#8a6d4a',false); B3.box(.08,4.6,.08,.35,0,-.7,'#8a6d4a',false); for(let k=0;k<7;k++) B3.box(.7,.06,.06,0,-2+k*.55,-.7,'#8a6d4a',false); B3.done(false,true);
+      CAVE.ladS={x:hx,z:hz-.7,yaw:PI,y0:-1.7,y1:0,
+        top:()=>{ xpClimbEnd(); player.pos.set(hx,HIP,hz+1.5); player.yaw=0; camYaw=0; player.g.position.copy(player.pos); flash('Out behind the waterfall. Walk through it to get back outside'); },
+        bottom:()=>{ const L=CAVE.ladC; xpFade(); xpGo(L.x,L.y1,L.z+.45,PI,''); xpClimbStart(L,true,true); xpFind('cave','Te Ana Tūrama','The Glowworm Caves. Your torch turns on by itself in the dark',250); }};
+      XP_SURF.push({x:hx,z:hz,r:2.3,label:'Climb down the ladder',use:()=>xpClimbStart(CAVE.ladS,true)}); }
     // the sinkhole exit in the hills
     const sk=new THREE.Group(); scene.add(sk); const B2=xpB(D.sink.x,0,D.sink.z,sk); B2.geo(new THREE.CylinderGeometry(2.2,2.2,.05,16).translate(0,.04,0),'#121416'); for(let k=0;k<9;k++){ const a=k/9*TAU; const r2=new THREE.DodecahedronGeometry(.7+Math.random()*.5,0); r2.translate(Math.cos(a)*2.6,.3,Math.sin(a)*2.6); B2.geo(r2,'#6b665c'); } B2.box(.06,3,.06,1.8,1.5,1.8,'#c9b48a',false); B2.done(true,true);
-    XP_SURF.push({x:D.sink.x,z:D.sink.z,r:2.6,label:'Climb down into the sinkhole',use:()=>{ const s=D.feats.find(f=>f.c==='X'); xpGo(s.x+1.5,0,s.z,0,'Down into the dark...'); xpFind('cave','Te Ana Tūrama','The Glowworm Caves',250); }}); }
+    XP_SURF.push({x:D.sink.x,z:D.sink.z,r:2.6,label:'Climb down into the sinkhole',use:()=>{ const s=D.feats.find(f=>f.c==='X'); xpFade(); xpGo(s.x+1.5,0,s.z,0,'Down into the dark...'); xpFind('cave','Te Ana Tūrama','The Glowworm Caves',250); }}); }
 }
 const CAVE_RIVER=[[24,21],[28,19],[31,16],[35,13],[40,12],[45,14],[47,18],[46,22]];
-function caveTick(dt){ const D=CAVE; caveStalTick(D,dt); if(D.fallTex){ D.fallTex.offset.y-=dt*1.6; } if(D.mist) D.mist.scale.y=.5+Math.sin(perfT*2)*.08;
+function caveTick(dt){ const D=CAVE; caveStalTick(D,dt); if(D.glL){ const inC=XP.in===D; D.glL.intensity=inC?1.1:0; D.lanT=(D.lanT||0)-dt; if(!inC){ for(const L of D.lanL) L.intensity=0; } else if(D.lanT<=0){ D.lanT=.3; const px=player.pos.x, pz=player.pos.z, ls=D.lanterns.slice().sort((a,b)=>Math.hypot(a.x-px,a.z-pz)-Math.hypot(b.x-px,b.z-pz)); D.lanL.forEach((L,k)=>{ const f=ls[k]; if(f&&Math.hypot(f.x-px,f.z-pz)<30){ L.position.set(f.x,2.3,f.z); L.intensity=1; } else L.intensity=0; }); } } if(D.fallTex){ D.fallTex.offset.y-=dt*1.6; } if(D.mist) D.mist.scale.y=.5+Math.sin(perfT*2)*.08;
   if(XP.in!==D) return; const px=player.pos.x, pz=player.pos.z, t=xpTileAt(D,px,pz);
   if('gwDd'.includes(t)&&!XP.found.grotto) xpFind('grotto','The Glowworm Grotto','Thousands of glowworms light up the ceiling',150);
   // pale ones wake up as you come near
@@ -5972,7 +6006,7 @@ function bunkBuild(){ BUNK.forEach((D,li)=>{ const feats=xpGrid(D); const G=D.gr
   const notes=[['Staff notice · Bunker Kōwhai','Level 3 cafeteria closes at 7 pm. Levels 4 and 5 are RESTRICTED. The riot team is on standby below.'],['Torn page','They moved the riot team down to the lower levels after Subject Zero broke its first tank. Nobody has come back up since.'],['Cafeteria whiteboard','TODAY: mince and cheese pies. (Lunch was... interrupted.)'],['Test log 41','Subject Zero reacts to noise. Body mass up 40% this week. Recommend termination. REQUEST DENIED.'],['Scratched into the wall','If you can read this, it\'s awake.']];
   let li2=0;
   for(const f of feats){
-    if(f.c==='A') xpLadder(D,f,'Leave the bunker',()=>xpGo(QZ.door.x+6,0,QZ.door.z,PI/2,'Back outside. The fog is still red.'));
+    if(f.c==='A') xpLadder(D,f,'Leave the bunker',()=>{ xpFade(); xpGo(QZ.door.x+6,0,QZ.door.z,PI/2,'Back outside. The fog is still red.'); });
     else if(f.c==='u'){ bunkStairs(D,f,true); const up=li===0?null:BUNK[li-1]; f.label=()=>'Go back up to level '+li; f.use=()=>{ const v=up.feats.find(q=>q.c==='v'); xpGo(v.x+1.6,0,v.z,0,'Level '+li); }; }
     else if(f.c==='v'){ bunkStairs(D,f,false); const dn=BUNK[li+1]; f.label=()=>'Take the stairs down to level '+(li+2); f.use=()=>{ const u=dn.feats.find(q=>q.c==='u'); xpGo(u.x+1.8,0,u.z+1.8,0,''); xpFind('b'+(li+2),'Level '+(li+2),li+2===5?'The containment level. Something big is breathing.':'Deeper into Bunker Kōwhai',li+2===5?400:100); }; }
     else if(f.c==='N') xpNote(D,f,...notes[li]);
@@ -6027,7 +6061,7 @@ function qzBuild(){ const g=new THREE.Group(); scene.add(g); QZ.group=g; const B
     const mk=s=>{ const m=new THREE.Mesh(mergeGeos([{g:BX(.6,6.6,4.1,0,3.3,0),c:'#9aa0a6'},{g:BX(.62,.4,4.1,0,5.8,0),c:'#e8b923'},{g:BX(.62,.4,4.1,0,1.0,0),c:'#e8b923'},{g:BX(.64,.08,.08,0,3.3,s*-1.95),c:'#2b2d31'}],true),VC); m.position.set(x-.3,0,z+s*2.05); m.castShadow=true; g.add(m); return m; };
     D2.L=mk(-1); D2.R=mk(1); D2.box={x0:x-.7,x1:x+.1,z0:z-4.2,z1:z+4.2,y0:0,h:6.6}; AIR.boxes.push(D2.box); OUTG.n=-1;
     const sg=new THREE.Mesh(new THREE.PlaneGeometry(9,1.6),signMat([['BUNKER KŌWHAI',74],['AUTHORISED PERSONNEL ONLY',36]],'#3b3f45','#e8b923',512,100)); sg.position.set(x+.25,8.6,z); sg.rotation.y=PI/2; g.add(sg);
-    XP_SURF.push({x:x-4,z,r:3.2,label:'Go into the bunker',use:()=>{ const a=BUNK[0].feats.find(f=>f.c==='A'); xpGo(a.x+2,0,a.z+1.5,0,''); xpFind('bunker','Bunker Kōwhai','Five levels down. Nobody came back up.',300); }}); }
+    XP_SURF.push({x:x-4,z,r:3.2,label:'Go into the bunker',use:()=>{ const a=BUNK[0].feats.find(f=>f.c==='A'); xpFade(); xpGo(a.x+2,0,a.z+1.5,0,''); xpFind('bunker','Bunker Kōwhai','Five levels down. Nobody came back up.',300); }}); }
   // signs
   for(const [x,z,r] of [[QZ.x1+.8,-575,PI/2],[QZ.x1+.8,-545,PI/2],[QZ.x1+.8,-480,PI/2],[QZ.x1+.8,-650,PI/2],[-600,QZ.z1+.8,0],[-600,QZ.z0-.8-t,PI]]){ const sg=new THREE.Mesh(new THREE.PlaneGeometry(7,1.6),signMat([['☣ QUARANTINE',64],['KEEP OUT · LETHAL FORCE AUTHORISED',30]],'#a33a2a','#ffffff',512,110)); sg.position.set(x,5.6,z); sg.rotation.y=r; g.add(sg); }
   B.done(true,true);
@@ -6054,8 +6088,8 @@ function bunkTick(dt){ const D=XP.in; if(!D||!D.lvl) return; bunkRatsTick(D,dt);
   if(D.lights&&D.lvl>=4) D.lights.visible=Math.random()>.02; }
 function qzZombieTick(dt){ for(const z of people){ if(!z.zombie||z.dead||z.mode!=='walk') continue; if(z.zkind==='riot') riotTick(z,dt); else if(z.zkind==='spitter') spitTick(z,dt); } acidTick(dt); xpRingsTick(dt); }
 
-function xpSetup(){ EBR.push([-790,-LIM,-770,-LIM],[LIM,790,-770,-276],[LIM,790,LIM,770],[-790,-LIM,LIM,770]); try{ caveBuild(); }catch(e){ console.warn('cave',e); } try{ qzBuild(); }catch(e){ console.warn('qz',e); } try{ bunkBuild(); }catch(e){ console.warn('bunker',e); } }
-function xpTick(dt){ if(XP.ride&&player.mode!=='lift') XP.ride=null; if(XP.shieldM&&player.crouch&&player.mode==='walk'&&!activeCar) player.armL.rotation.set(-1.3,0,.6); xpHelpTick(dt); if(!XP.gv){ XP.gv=true; xpGearVis(); } xpRideTick(dt); try{ caveTick(dt); }catch(e){} try{ qzTick(dt); bunkTick(dt); qzZombieTick(dt); }catch(e){ console.warn(e); }
+function xpSetup(){ try{ xpTorch(); }catch(e){} EBR.push([-790,-LIM,-770,-LIM],[LIM,790,-770,-276],[LIM,790,LIM,770],[-790,-LIM,LIM,770]); try{ caveBuild(); }catch(e){ console.warn('cave',e); } try{ qzBuild(); }catch(e){ console.warn('qz',e); } try{ bunkBuild(); }catch(e){ console.warn('bunker',e); } }
+function xpTick(dt){ if(XP.ride&&player.mode!=='lift') XP.ride=null; if(XP.shieldM&&player.crouch&&player.mode==='walk'&&!activeCar) player.armL.rotation.set(-1.3,0,.6); xpHelpTick(dt); if(!XP.gv){ XP.gv=true; xpGearVis(); } xpRideTick(dt); try{ xpClimbTick(dt); }catch(e){ console.warn(e); } try{ caveTick(dt); }catch(e){} try{ qzTick(dt); bunkTick(dt); qzZombieTick(dt); }catch(e){ console.warn(e); }
   XP.gcT=(XP.gcT||0)-dt; if(XP.gcT<=0){ XP.gcT=2; for(let i=people.length-1;i>=0;i--){ const q=people[i]; if(q.xpZ&&!q.xpBoss&&Math.hypot(q.pos.x-player.pos.x,q.pos.z-player.pos.z)>250) removePerson(q); } } }
 
 
@@ -7572,7 +7606,7 @@ function updateCamera(dt){
   const k=1-Math.exp(-dt*10); camTarget.x+=(tx-camTarget.x)*k; camTarget.y+=(ty-camTarget.y)*k; camTarget.z+=(tz-camTarget.z)*k;
   const cp=Math.cos(pitch); camOff.set(-Math.sin(camYaw)*cp*dist,Math.sin(pitch)*dist,-Math.cos(camYaw)*cp*dist);
   const camSub=SEWG&&camTarget.y<-4.2; let tHit=1; for(let s=1;s<=16;s++){ const t=s/16; const x=camTarget.x+camOff.x*t, y=camTarget.y+camOff.y*t, z=camTarget.z+camOff.z*t;
-    if(camSub?sewCam(x,y,z):(insideBuilding(x,y,z)||y<(z<-LIM?groundHeight(x,z,y):groundHeight(x,z))+.35)){ tHit=Math.max(.12,(s-1)/16); break; } }
+    if(camSub?sewCam(x,y,z):(insideBuilding(x,y,z)||xpCamBlock(x,y,z)||y<(z<-LIM?groundHeight(x,z,y):groundHeight(x,z))+.35)){ tHit=Math.max(.12,(s-1)/16); break; } }
   camTS=(camTS===undefined?tHit:camTS); camTS+=(tHit-camTS)*Math.min(1,dt*(tHit<camTS?22:3.5)); if(tHit<camTS) camTS=Math.min(camTS,tHit+.08);
   camPos.copy(camTarget).addScaledVector(camOff,camTS);
   if(state.shake>.002&&!reduceMotion){ camPos.x+=R(-1,1)*state.shake; camPos.y+=R(-1,1)*state.shake; camPos.z+=R(-1,1)*state.shake; }
