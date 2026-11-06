@@ -6183,7 +6183,7 @@ function updateCar(c,dt){
   if(c.air){ c.vy-=G*dt; c.pos.y+=c.vy*dt; if(c.pos.y<=gh){ if(c.vy<-12&&c===activeCar) state.shake=Math.max(state.shake,Math.min(.5,-c.vy*.02)); const im=-c.vy; c.sPv=(c.sPv||0)+R(-.4,.4)*Math.min(12,im)*.25+im*.02; c.sRv=(c.sRv||0)+R(-1,1)*Math.min(12,im)*.12;
       if(im>14) vehDmg(c,(im-14)*1.5*(c.crashK||1)); if(im>6) Snd.thud(c.pos.x,c.pos.z,im*.8); if(c.flipLeft>.6){ c.vy=Math.min(9,im*.35); c.pos.y=gh+.02; c.spin+=R(-1,1); vehDmg(c,6); c.vel.multiplyScalar(.75); } else { c.pos.y=gh; c.air=false; c.vy=0; c.vel.multiplyScalar(.9); } } }
   else { if(gh<c.pos.y-.35){ c.air=true; } else { c.vy=clamp((gh-c.pos.y)/dt,-30,30); c.pos.y=gh; } }
-  if(c.mode==='free'&&!c.air&&c.vel.lengthSq()<.04&&Math.abs(c.spin)<.1&&!(!c.parked&&!c.patrol&&c.sg&&Math.hypot(c.sg.x,c.sg.z)>.04&&!(c===activeCar&&keys.Space))){ c.vel.set(0,0,0); c.spin=0; }
+  if(c.mode==='free'&&!c.air&&c.vel.lengthSq()<.04&&Math.abs(c.spin)<.1&&!(!c.parked&&!c.patrol&&c.sg&&Math.hypot(c.sg.x,c.sg.z)>.04&&!(c===activeCar&&keys.Space))){ c.vel.set(0,0,0); c.spin=0; c.restT=(c.restT||0)+dt; } else c.restT=0;
   // pose
   let tp;
   if(c.air){ const hs=Math.hypot(c.vel.x,c.vel.z); tp=-Math.atan2(c.vy,Math.max(6,hs))*.8; }
@@ -6230,7 +6230,8 @@ const isWalker=o=>o.isPerson&&(o.mode==='walk'||o.mode==='getup');
 const EBR=[[-LIM,LIM,-LIM,LIM],[-790,-LIM,-LIM,LIM],[-LIM-5,LIM+5,-770,-LIM],[-LIM-5,LIM+5,LIM,770],[LIM-1,AIR.x1,AIR.z0,AIR.z1],[LIM-1,790,-276,-146],[LIM-1,790,136,276],[-345,790,-300,-276],[764,790,-300,345],[-345,790,276,345],[-345,-LIM,-300,345]];
 function bounds(p,v){ if(p.x>GZ0.x-150) return; let bd=1e9,bx=p.x,bz=p.z; for(const r of EBR){ if(p.x>=r[0]&&p.x<=r[1]&&p.z>=r[2]&&p.z<=r[3]) return; const cx=clamp(p.x,r[0],r[1]), cz=clamp(p.z,r[2],r[3]), d=(cx-p.x)**2+(cz-p.z)**2; if(d<bd){ bd=d; bx=cx; bz=cz; } }
   if(bx!==p.x&&v.x*(p.x-bx)>0) v.x*=-.4; if(bz!==p.z&&v.z*(p.z-bz)>0) v.z*=-.4; p.x=bx; p.z=bz; }
-const _near=[];
+const _near=[], _sx=[]; let _sxR=0;
+function sortDyn(){ _sx.length=0; let mr=0; for(const o of dyn){ _sx.push(o); if(o.r>mr) mr=o.r; } _sx.sort((a,b)=>a.pos.x-b.pos.x); _sxR=mr; }
 function collisions(){
   for(const o of dyn){ if(o.sleep||o.lodSkip) continue; const foot=o.mode==='getup'&&o.getFloor!==undefined?o.getFloor:o.pos.y-(isWalker(o)?HIP:o.gr);
     const fb=isWalker(o)?foot:Math.min(foot,o._pf!==undefined?o._pf:foot); o._pf=foot;
@@ -6239,10 +6240,10 @@ function collisions(){
     if(ceilHit<Infinity&&!(o.rd&&o.mode==='ragdoll')){ const top=isWalker(o)?foot+1.85:o.pos.y+(o.isPerson?.5:o.r); if(top>ceilHit){ o.pos.y-=top-ceilHit; if(o.vel.y>0) o.vel.y=0; } }
     if(h){ const vn=o.vel.x*h.nx+o.vel.z*h.nz; if(vn<0){ const e=o.isPerson?.2:o.bounce+.1; o.vel.x-=(1+e)*vn*h.nx; o.vel.z-=(1+e)*vn*h.nz; } }
     bounds(o.pos,o.vel); }
-  const n=dyn.length;
-  for(let i=0;i<n;i++){ const a=dyn[i];
-    const ax=a.pos.x, az=a.pos.z, ar=a.r, as=a.sleep||a.lodSkip;
-    for(let j=i+1;j<n;j++){ const b=dyn[j]; const rs=ar+b.r, dx=b.pos.x-ax; if(dx>rs||dx<-rs) continue; const dz=b.pos.z-az; if(dz>rs||dz<-rs) continue; if(as&&(b.sleep||b.lodSkip)) continue; if(a.sleep&&b.sleep) continue;
+  sortDyn(); const n=_sx.length;
+  for(let i=0;i<n;i++){ const a=_sx[i];
+    const ax=a.pos.x, az=a.pos.z, ar=a.r, as=a.sleep||a.lodSkip, lim=ar+_sxR+.3;
+    for(let j=i+1;j<n;j++){ const b=_sx[j]; const dx=b.pos.x-ax; if(dx>lim) break; const rs=ar+b.r; if(dx>rs||dx<-rs) continue; const dz=b.pos.z-az; if(dz>rs||dz<-rs) continue; if(as&&(b.sleep||b.lodSkip)) continue; if(a.sleep&&b.sleep) continue;
       const dy=b.pos.y-a.pos.y, d2=dx*dx+dy*dy+dz*dz;
       if(d2>=rs*rs||d2<1e-9) continue;
       const d=Math.sqrt(d2), nx=dx/d, ny=dy/d, nz=dz/d, pen=rs-d;
@@ -6275,7 +6276,8 @@ function collisions(){
     bounds(c.pos,c.vel); }
   // cars vs people and props
   for(const c of cars){ const fx=Math.sin(c.yaw), fz=Math.cos(c.yaw), R0=c.off+c.cr+1.4; _near.length=0;
-    for(const o of dyn){ const dx=o.pos.x-c.pos.x; if(dx>R0||dx<-R0) continue; const dz=o.pos.z-c.pos.z; if(dz>R0||dz<-R0) continue; _near.push(o); }
+    { const xl=c.pos.x-R0-1.2, xr=c.pos.x+R0+1.2; let lo=0, hi=_sx.length; while(lo<hi){ const m=(lo+hi)>>1; if(_sx[m].pos.x<xl) lo=m+1; else hi=m; }
+      for(let k=lo;k<_sx.length;k++){ const o=_sx[k]; if(o.pos.x>xr) break; const dx=o.pos.x-c.pos.x; if(dx>R0||dx<-R0) continue; const dz=o.pos.z-c.pos.z; if(dz>R0||dz<-R0) continue; _near.push(o); } }
     if(!_near.length) continue;
     for(const s of c.offs){ const px=c.pos.x+fx*c.off*s, pz=c.pos.z+fz*c.off*s;
       for(const o of _near){ if(o.pos.y>c.pos.y+c.top||o.pos.y+o.r<c.pos.y-.1) continue;
@@ -6368,10 +6370,13 @@ function updateEffects(dt){
 function simStep(h){
   G=state.low?G_LOW:G_NORMAL;
   buildDyn();
-  for(const p of people){ if(!p.isPlayer&&!p.zombie&&!p.work&&p.mode==='walk'&&!p.g.visible&&!(p.scared>0)&&!p.threat&&!p.react&&!p.vip&&!p.follow&&!p.cop){ p.lodT=(p.lodT||0)+h; if(p.lodT<.05){ p.lodSkip=true; continue; } const hh=p.lodT; p.lodT=0; p.lodSkip=false; updatePerson(p,hh); }
+  for(const p of people){ if(!p.isPlayer&&(!p.zombie||(!p.boss&&!p.named&&!p.xpBoss&&!p.net&&!p.npc&&!p.xpZ))&&!p.work&&p.mode==='walk'&&(!p.g.visible||(!p.zombie&&(p.pos.x-camera.position.x)**2+(p.pos.z-camera.position.z)**2>2025))&&!(p.scared>0)&&!p.threat&&!p.react&&!p.vip&&!p.follow&&!p.cop){ p.lodT=(p.lodT||0)+h; if(p.lodT<(p.g.visible?1/30:.05)){ p.lodSkip=true; continue; } const hh=p.lodT; p.lodT=0; p.lodSkip=false; updatePerson(p,hh); }
     else { p.lodT=0; p.lodSkip=false; updatePerson(p,h); } }
   for(const o of props){ o.launchCD-=h; if(o.net){ mpNOUpdate(o,h); continue; } if(o.sleep) continue; integrateFree(o,h); sleepCheck(o,h); }
-  for(const c of cars) updateCar(c,h);
+  for(const c of cars){ if(c!==activeCar&&!c.net&&!c.boat&&!c.towBy&&!c.flipLeft&&!(c.whl>0)&&!c.lifted){
+      if(c.mode==='free'&&!c.air&&c.vel.x===0&&c.vel.z===0&&c.spin===0&&(c.restT||0)>1.5){ c.lodT=(c.lodT||0)+h; if(c.lodT<.25) continue; c.lodT=0; updateCar(c,h); continue; }
+      if(!c.g.visible&&!c.air&&c.mode!=='police'&&c.mode!=='player'){ c.lodT=(c.lodT||0)+h; if(c.lodT<1/30) continue; const hh=c.lodT; c.lodT=0; updateCar(c,hh); continue; } }
+    c.lodT=0; updateCar(c,h); }
   for(const H of helis) updateHeli(H,h);
   for(const J of jets) updateJet(J,h); updateBombs(h);
   updateLifts(h);
@@ -8468,6 +8473,7 @@ $('cfcancel').addEventListener('click',closeRestart);
 cfEl.addEventListener('mousedown',e=>{ if(e.target===cfEl) closeRestart(); });
 
 /* ---------- loop ---------- */
+let shPace=0; function shadowPace(){ const slow=frEma>18.5&&sun.castShadow; renderer.shadowMap.autoUpdate=!slow; if(slow){ shPace^=1; renderer.shadowMap.needsUpdate=!!shPace; } }
 let last=performance.now();
 let frameErrs=0, frameErrT=0;
 function frame(now){
@@ -8493,7 +8499,7 @@ function frameBody(now){
     Snd.wind(player.chute?Math.min(.2,.08+sp*.02):clamp((sp-7)/34,0,1)*.6,!!player.chute); }
   mpTick(dt); updateCamera(dt); if(state.cine) cineUpdate(dt); mhTick(dt); updateBubbles(dt); storyHUD(); policeHUD(); updateGhost(); try{ screenFx(dt); }catch(e){} try{ hudLayout(dt); }catch(e){} if(state.msgT>0) state.msgT-=dt; updateHUD();
   Snd.engine(activeJet&&!state.over?20+activeJet.spd*.5:activeCar&&!state.over&&!activeCar.pedal?Math.hypot(activeCar.vel.x,activeCar.vel.z):-1);
-  try{ xpLight(dt); }catch(e){} screenGuard(dt); renderer.clear(); renderer.render(scene,camera);
+  try{ xpLight(dt); }catch(e){} screenGuard(dt); shadowPace(); renderer.clear(); renderer.render(scene,camera);
   if(fp&&!state.cine&&state.started&&!state.over&&!activeCar&&!activeHeli&&!player.chute&&(player.mode==='walk'||player.mode==='lift')){ updateViewModel(dt); renderer.clearDepth(); renderer.render(vmScene,vmCam); }
 }
 
