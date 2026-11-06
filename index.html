@@ -3658,7 +3658,7 @@ function vehWpnTick(dt){ const c=activeCar; for(const v of cars) if(v.cd>0) v.cd
   const m=c.barrel.localToWorld(_tv.set(c.muz[0],c.muz[1],c.muz[2])).clone(), f=c.barrel.localToWorld(_tv2.set(c.muz[0],c.muz[1],c.muz[2]+1)), d=new V3(f.x-m.x,f.y-m.y,f.z-m.z).normalize();
   if(c.tank){ c.cd=1.5; addProj('shell',m.x,m.y,m.z,d.clone().multiplyScalar(85).add(c.vel),3); projs[projs.length-1].rocket=true; c.vel.x-=d.x*2; c.vel.z-=d.z*2;
     for(let k=0;k<4;k++) puff(m.x+d.x*k*.4,m.y+d.y*k*.4,m.z+d.z*k*.4,k?0xbdbdbd:0xffc46b,.7+k*.15,false); Snd.launch(m.x,m.z); Snd.thud(m.x,m.z,8); state.shake=Math.max(state.shake,.3); return; }
-  c.cd=.09; const Am=heliAim(c), ex=Am.x+R(-.25,.25), ey=Am.y+R(-.2,.2), ez=Am.z+R(-.25,.25); const tr=new THREE.Mesh(beamGeo(m.x,m.y,m.z,ex,ey,ez,.06),heliTracerMat); scene.add(tr); tracers.push({m:tr,t:.05});
+  c.cd=.09; const Am=heliAim(c), ex=Am.x+R(-.25,.25), ey=Am.y+R(-.2,.2), ez=Am.z+R(-.25,.25); const tr=new THREE.Mesh(beamGeo(m.x,m.y,m.z,ex,ey,ez,.06),heliTracerMat); scene.add(tr); tracers.push({m:tr,t:.05}); mpShot(m.x,m.y,m.z,ex,ey,ez,1);
   puff(m.x,m.y,m.z,0xffd27a,.22,false); Snd.mg(); const dir=new V3(ex-m.x,ey-m.y,ez-m.z).normalize();
   if(Am.hitO){ const o=Am.hitO; if(o.isHeli){ vehDmg(o,o.police?1.6:2.5); Snd.tink(o.pos.x,o.pos.z); if(o.police&&state.wanted&&!o.hitMsg){ o.hitMsg=true; flash('Direct hits on the police helicopter! Keep shooting'); } } else if(o instanceof Car){ vehDmg(o,2.5); o.vel.x+=dir.x*.5; o.vel.z+=dir.z*.5; Snd.tink(o.pos.x,o.pos.z); } else { nailHit(o,dir.clone().multiplyScalar(30),2.2,'shot'); if(o.isPerson&&o.zombie&&o.mode==='walk'&&o.hp<=1) knock(o,dir.x*10,4,dir.z*10,6,1); } }
   else puff(ex,ey,ez,0xb8b0a0,.3,false); }
@@ -3694,9 +3694,9 @@ const GAR_IN={S:null};
 function gOrigin(S){ return {x:GZ0.x+S.i*90,z:GZ0.z}; }
 function saleSign(S){ if(S.sign){ scene.remove(S.sign); disposeTree(S.sign); } const own=GAR.h[S.i]&&GAR.h[S.i].own, g=new THREE.Group(), p=S.signP;
   for(const x of [-1.25,1.25]){ const post=new THREE.Mesh(new THREE.BoxGeometry(.14,2.6,.14),lam('#f2f2f2')); post.position.set(x,1.3,0); g.add(post); }
-  const m=own?signMat([['HOME',110],[S.D.name,56]],'#2e7d4f','#ffffff',512,256):signMat([['FOR SALE',96],[S.D.name,52],['$'+S.D.price.toLocaleString()+' · garage for '+S.D.cap,40]],'#e5484d','#ffffff',512,256);
+  const ot=!own&&S.other, m=ot?signMat([[ot.name.toUpperCase().slice(0,14)+'\'S',80],['HOME',96],[S.D.name,44]],ot.col,'#ffffff',512,256):own?signMat([['HOME',110],[S.D.name,56]],'#2e7d4f','#ffffff',512,256):signMat([['FOR SALE',96],[S.D.name,52],['$'+S.D.price.toLocaleString()+' · garage for '+S.D.cap,40]],'#e5484d','#ffffff',512,256);
   const bd=new THREE.Mesh(new THREE.BoxGeometry(2.8,1.4,.08),m); bd.position.y=2.1; g.add(bd); g.position.set(p.x,0,p.z); g.traverse(o=>{ if(o.isMesh) o.castShadow=true; }); scene.add(g); S.sign=g;
-  if(S.pad) S.pad.visible=!!own; if(S.beam) S.beam.visible=!own; }
+  if(S.pad) S.pad.visible=!!own; if(S.beam) S.beam.visible=!own&&!S.other; }
 function setupSale(){ PROPS.forEach((Pp,i)=>{ if(!Pp) return; const S=Object.assign(Pp,{i,D:HOUSES[i],yaw:0}); SALE.push(S);
     const pad=new THREE.Mesh(new THREE.RingGeometry(1.6,2,32).rotateX(-PI/2),new THREE.MeshBasicMaterial({color:0x4fc3ff,transparent:true,opacity:.75,depthWrite:false})); pad.position.set(S.padP.x,.1,S.padP.z); scene.add(pad); S.pad=pad;
     const bm=new THREE.Mesh(new THREE.CylinderGeometry(.9,.9,90,12,1,true),new THREE.MeshBasicMaterial({color:0xffc43a,transparent:true,opacity:.2,depthWrite:false,side:THREE.DoubleSide,fog:false})); bm.position.set(S.cx,45,S.cz-4); bm.renderOrder=4; scene.add(bm); S.beam=bm;
@@ -3760,7 +3760,7 @@ function garageTick2(dt){ const S=GAR_IN.S; if(!S) return; const O=gOrigin(S);
   const c=activeCar; if(c&&c.inGarage&&c.pos.z>O.z+32.5){ const e=GAR.cars.find(e=>e.id===c.gid); c.inGarage=false; garageClear(c); if(e) e.out=true;
     c.pos.set(S.padP.x,0,S.padP.z+2.5); c.yaw=S.exitYaw; c.vel.set(Math.sin(c.yaw)*7,0,Math.cos(c.yaw)*7); c.spin=0; c.air=false; c.vy=0; c.prevSp=0; c.parkT=-3; camYaw=c.yaw; camTarget.set(c.pos.x,c.pos.y+1.7,c.pos.z); flash('Out on the street!'); } }
 function houseMarks(){ if(!state.started||state.cine){ for(const S of SALE) if(S.mk) S.mk.hidden=true; return; } const w=canvas.clientWidth, h=canvas.clientHeight; camera.updateMatrixWorld();
-  for(const S of SALE){ if(!S.mk){ S.mk=document.createElement('div'); S.mk.className='mark'; marksEl.appendChild(S.mk); } const own=GAR.h[S.i]&&GAR.h[S.i].own, txt=(own?'🏠 Your home · ':'🏠 For sale · ')+S.D.name+(own?'':' · '+money(S.D.price));
+  for(const S of SALE){ if(!S.mk){ S.mk=document.createElement('div'); S.mk.className='mark'; marksEl.appendChild(S.mk); } const own=GAR.h[S.i]&&GAR.h[S.i].own, txt=own?'🏠 Your home · '+S.D.name:S.other?'🏠 '+S.other.name+'\'s home · '+S.D.name:'🏠 For sale · '+S.D.name+' · '+money(S.D.price);
     if(S.mkT!==txt){ S.mkT=txt; S.mk.textContent=''; const sp=document.createElement('span'); sp.textContent=txt; S.mk.appendChild(sp); }
     _v.set(S.cx,16,S.cz-4); const d=_v.distanceTo(camera.position); _v.project(camera); const vis=!GAR_IN.S&&_v.z<1&&d<420&&d>14&&Math.abs(_v.x)<1.05&&Math.abs(_v.y)<1.05;
     if(S.mk.hidden===vis) S.mk.hidden=!vis; if(vis){ S.mk.style.transform='translate('+((_v.x*.5+.5)*w).toFixed(1)+'px,'+((-_v.y*.5+.5)*h).toFixed(1)+'px) translate(-50%,-100%)'; S.mk.style.opacity=d>250?.7:1; } } }
@@ -3884,7 +3884,7 @@ function shopMenu(){ const add=menuOpen('Vehicles R Us · you have '+money(state
     b.addEventListener('click',()=>{ if(state.money<p||GAR.cars.length>=garCap()) return; state.money-=p; save(); GAR.cars.push({id:GAR.n++,v,col:EMCOL[v]||state.buyCol,mods:{},out:false}); garSave(); Snd.rack&&Snd.rack(); const S=garFind();
       menuDone('You bought a '+n+'! It\'s waiting in your garage'+(S?' at '+S.D.name:'')); if(S){ state.wpDest={x:S.portal.x,z:S.portal.z}; state.shopWpUntil=perfT+90; } }); g.appendChild(b); }
   add('Close','',()=>menuDone()); }
-function houseBuy(S){ const D=S.D, add=menuOpen(D.name+' · '+money(D.price)); add('Buy '+D.name+' for '+money(D.price),'A house with a garage for '+D.cap+' vehicles. Your bought cars are kept here forever',()=>{ if(state.money<D.price){ menuDone('You need '+money(D.price-state.money)+' more'); return; } state.money-=D.price; save(); GAR.h[S.i]={own:true,cap:D.cap,arm:false,med:false}; garSave(); saleSign(S); menuDone('Welcome home! The GARAGE entrance is by the driveway: E there to go down'); },'pick-go',state.money<D.price);
+function houseBuy(S){ if(S.other&&!(GAR.h[S.i]&&GAR.h[S.i].own)){ flash(S.other.name+' owns this house'); return; } const D=S.D, add=menuOpen(D.name+' · '+money(D.price)); add('Buy '+D.name+' for '+money(D.price),'A house with a garage for '+D.cap+' vehicles. Your bought cars are kept here forever',()=>{ if(state.money<D.price){ menuDone('You need '+money(D.price-state.money)+' more'); return; } state.money-=D.price; save(); GAR.h[S.i]={own:true,cap:D.cap,arm:false,med:false}; garSave(); saleSign(S); menuDone('Welcome home! The GARAGE entrance is by the driveway: E there to go down'); },'pick-go',state.money<D.price);
   add('Not now','',()=>menuDone()); }
 function modMenu(c){ const add=menuOpen('Tumbleton Motors · Mods · '+money(state.money)); c.mods=c.mods||{};
   if(c.boat||c.variant==='horse'){ add(c.variant==='horse'?'We don\'t mod horses, mate':'Sorry, we can\'t mod boats','Bring us anything with wheels or tracks',null,'',true); add('Close','',()=>menuDone()); return; }
@@ -4279,7 +4279,7 @@ function wxPick(){ const r=Math.random(); return r<.38?'clear':r<.58?'cloudy':r<
 function wxMsg(k){ return {clear:'The sky is clearing',cloudy:'Clouds are rolling in',rain:'It\'s starting to rain. Roads get slippery!',storm:'A thunderstorm is coming. Watch out for lightning!',fog:'Thick fog is coming in'}[k]; }
 function weatherSky(dt,t){ const W=WX, inGar=player.pos.x>GZ0.x-150, sub=sewSub;
   // pick the weather
-  const want=SET.weather||'auto'; W.t-=dt; if(want!=='auto'){ if(W.kind!==want){ W.kind=want; } } else if(W.t<=0){ const k=wxPick(); W.t=150+Math.random()*180; if(k!==W.kind){ W.kind=k; if(state.started) flash(wxMsg(k)); } }
+  const want=mpClient()?'auto':(SET.weather||'auto'); W.t-=dt; if(want!=='auto'){ if(W.kind!==want){ W.kind=want; } } else if(W.t<=0){ const k=wxPick(); W.t=150+Math.random()*180; if(k!==W.kind){ W.kind=k; if(state.started) flash(wxMsg(k)); } }
   const T=wxTarget(W.kind), k=Math.min(1,dt*.12); W.cloud+=(T[0]-W.cloud)*k; W.rain+=(T[1]-W.rain)*k; W.fog+=(T[2]-W.fog)*k; W.storm+=(T[3]-W.storm)*k; W.wet=clamp(W.wet+(W.rain>.3?dt*.08:-dt*.02),0,1);
   const c=W.cloud*(1-t*.5);
   if(c>.01){ skyCol.lerp(WX_GREY,c*.75); skyU.top.value.lerp(WX_GREY,c*.85); skyU.hor.value.lerp(WX_GREY,c*.8); sun.intensity*=1-c*.75; hemi.intensity*=1-c*.25; }
@@ -4434,6 +4434,7 @@ function evOK(x,z){ const p={x,z}; bounds(p,{x:0,z:0}); if(Math.abs(p.x-x)>.1||M
 function evSpot(minD,maxD){ const pc=activeCar?activeCar.pos:player.pos; for(let k=0;k<40;k++){ let x,z; if(Math.abs(pc.x)<LIM&&Math.abs(pc.z)<LIM&&Math.random()<.8){ const q=ringPointFar(minD,maxD); if(!q) continue; x=q.x; z=q.z; } else { const a=Math.random()*TAU, r=minD+Math.random()*(maxD-minD); x=pc.x+Math.cos(a)*r; z=pc.z+Math.sin(a)*r; } if(evOK(x,z)) return {x,z}; } return null; }
 function evZombie(x,z,k){ const zb=new Person(x,z,{spawned:true,zombie:true,kind:k||pickZKind(3),y:groundHeight(x,z)}); zb.evZ=true; return zb; }
 function evPos(){ return activeCar?activeCar.pos:player.pos; }
+function evNear(x,z){ const p=evPos(); let d=Math.hypot(p.x-x,p.z-z); if(MP.on&&MP.host) for(const av of MP.av.values()) if(av&&av.pos) d=Math.min(d,Math.hypot(av.pos.x-x,av.pos.z-z)); return d; }
 function evStart(){ const roll=Math.random(), pc=evPos(); let E=null;
   const near=ringNear(pc.x,pc.z); if(near&&roll<.22) E=evConvoy(near);
   else if(roll<.42){ const p=evSpot(45,110); if(p) E=evRescue(p); }
@@ -4447,21 +4448,21 @@ function evRescue(p){ const sv=new Person(p.x,p.z,{spawned:true}); sv.evSurv=tru
   flash('Someone is calling for help! Follow the orange beam'); state.wpDest={x:p.x,z:p.z}; state.shopWpUntil=perfT+150;
   return {kind:'rescue',x:p.x,z:p.z,t:150,sv,zs,done:false, tick(dt){ const sv=this.sv; if(this.done){ this.t2-=dt; if(this.t2<=0) return 'end'; return null; } if(!people.includes(sv)||sv.dead||sv.zombie) return 'fail';
       sv.pos.x+=(this.x-sv.pos.x)*Math.min(1,dt*2); sv.pos.z+=(this.z-sv.pos.z)*Math.min(1,dt*2); if(sv.armR) sv.armR.rotation.set(-2.6+Math.sin(perfT*8)*.4,0,.3);
-      const left=people.filter(z=>z.zombie&&!z.dead&&Math.hypot(z.pos.x-sv.pos.x,z.pos.z-sv.pos.z)<18).length, pd=Math.hypot(evPos().x-sv.pos.x,evPos().z-sv.pos.z);
+      const left=people.filter(z=>z.zombie&&!z.dead&&Math.hypot(z.pos.x-sv.pos.x,z.pos.z-sv.pos.z)<18).length, pd=evNear(sv.pos.x,sv.pos.z);
       evBeam(sv.pos.x,sv.pos.z,0xff7a1a); evHud('🆘 Rescue the survivor · '+(left?left+' zombies near them':'all clear, go to them')+' · their health '+Math.max(0,Math.round(sv.svHp/SV_HP*100))+'% · '+Math.round(pd)+' m · '+Math.ceil(this.t)+' s');
-      if(!left&&pd<5){ this.done=true; this.t2=6; earn(400); banner('SURVIVOR RESCUED','+$400 · "Thank you! I thought I was done for!"'); say(sv,'Thank you so much!',true); achStat('rescue'); sv.evSurv=false; if(typeof compOffer==='function') compOffer(sv); return null; }
+      if(!left&&pd<5){ this.done=true; this.t2=6; earn(400); banner('SURVIVOR RESCUED','+$400 · "Thank you! I thought I was done for!"'); mpEvShare('SURVIVOR RESCUED','+$400 · your crew saved them',400,0); say(sv,'Thank you so much!',true); achStat('rescue'); sv.evSurv=false; if(typeof compOffer==='function') compOffer(sv); return null; }
       this.t-=dt; return this.t<=0?'fail':null; },
     cleanup(){ if(this.sv&&people.includes(this.sv)&&!this.sv.follow&&this.done===false) removePerson(this.sv); } }; }
 function evHorde(p){ const zs=[]; for(let k=0;k<14;k++){ const a=Math.random()*TAU, r=Math.random()*10; zs.push(evZombie(p.x+Math.cos(a)*r,p.z+Math.sin(a)*r,pickZKind(4))); } for(const z of zs) z.aggro=6;
-  flash('A zombie horde is coming! Take them down'); return {kind:'horde',x:p.x,z:p.z,t:180,zs, tick(dt){ const alive=this.zs.filter(z=>people.includes(z)&&!z.dead&&z.zombie); if(!alive.length){ earn(700); banner('HORDE DEFEATED','+$700 · all 14 zombies taken down'); achStat('horde'); return 'end'; }
+  flash('A zombie horde is coming! Take them down'); return {kind:'horde',x:p.x,z:p.z,t:180,zs, tick(dt){ const alive=this.zs.filter(z=>people.includes(z)&&!z.dead&&z.zombie); if(!alive.length){ earn(700); banner('HORDE DEFEATED','+$700 · all 14 zombies taken down'); mpEvShare('HORDE DEFEATED','+$700 · your crew took them all down',700,0); achStat('horde'); return 'end'; }
       let cx=0,cz=0; for(const z of alive){ cx+=z.pos.x; cz+=z.pos.z; } cx/=alive.length; cz/=alive.length; evBeam(cx,cz,0xe5484d); evHud('🧟 Zombie horde · '+alive.length+' left · '+Math.ceil(this.t)+' s'); this.t-=dt; return this.t<=0?'gone':null; },
     cleanup(){ for(const z of this.zs) if(people.includes(z)&&!z.dead&&Math.hypot(z.pos.x-evPos().x,z.pos.z-evPos().z)>40) removePerson(z); } }; }
 function evDrop(p){ const g=new THREE.Group(), crate=new THREE.Mesh(mergeGeos([{g:BX(1.4,1,1.4,0,.5,0),c:'#4b5320'},{g:BX(1.45,.15,1.45,0,1.02,0),c:'#ffb703'}],true),VC), chute=new THREE.Mesh(new THREE.SphereGeometry(2.6,12,6,0,TAU,0,PI/2),lam('#f2f2f2',{side:THREE.DoubleSide})); chute.position.y=5; const lines=new THREE.Mesh(beamGeo(-1.8,5,0,0,1,0,.03).clone(),lam('#888')); g.add(crate,chute,lines); g.position.set(p.x,70,p.z); scene.add(g);
   const gy=groundHeight(p.x,p.z,200); flash('A supply drop is coming down! Get there first'); state.wpDest={x:p.x,z:p.z}; state.shopWpUntil=perfT+150;
   return {kind:'drop',x:p.x,z:p.z,gy,t:150,g,chute,landed:false, tick(dt){ const g=this.g; if(!this.landed){ g.position.y=Math.max(this.gy,g.position.y-dt*7); g.rotation.y+=dt*.4; if(g.position.y<=this.gy+.01){ this.landed=true; this.chute.visible=false; for(let k=0;k<5;k++){ const a=Math.random()*TAU; evZombie(this.x+Math.cos(a)*14,this.z+Math.sin(a)*14); } } }
       else if(Math.random()<dt*6) puff(this.x+R(-.3,.3),this.gy+1.2,this.z+R(-.3,.3),0xff4d4d,.6,false);
-      evBeam(this.x,this.z,0xffd166); const pd=Math.hypot(evPos().x-this.x,evPos().z-this.z); evHud('📦 Supply drop · '+Math.round(pd)+' m · '+Math.ceil(this.t)+' s');
-      if(this.landed&&pd<3.5){ const cash=500+Math.round(Math.random()*10)*100; earn(cash); for(const k in AMMO) if(state.owned[k]){ const A=AMMO[k], a=ammoOf(k); a.mag=A.mag; a.res=A.tot-A.mag; } state.hp=100; save(); banner('SUPPLIES!','+$'+cash.toLocaleString()+', full ammo and health'); achStat('drop'); return 'end'; }
+      evBeam(this.x,this.z,0xffd166); const pd=evNear(this.x,this.z); evHud('📦 Supply drop · '+Math.round(pd)+' m · '+Math.ceil(this.t)+' s');
+      if(this.landed&&pd<3.5){ const cash=500+Math.round(Math.random()*10)*100; earn(cash); for(const k in AMMO) if(state.owned[k]){ const A=AMMO[k], a=ammoOf(k); a.mag=A.mag; a.res=A.tot-A.mag; } state.hp=100; save(); banner('SUPPLIES!','+$'+cash.toLocaleString()+', full ammo and health'); mpEvShare('SUPPLIES!','+$'+cash.toLocaleString()+', full ammo and health',cash,1); achStat('drop'); return 'end'; }
       this.t-=dt; return this.t<=0?'fail':null; }, cleanup(){ scene.remove(this.g); } }; }
 // the Ring Road: which straight are we near?
 function ringNear(x,z){ if(Math.abs(z+290)<90&&x>-330&&x<770) return {ax:'x',c:-290,lo:-330,hi:776}; if(Math.abs(x-776)<90&&z>-290&&z<330) return {ax:'z',c:776,lo:-290,hi:330}; if(Math.abs(z-330)<90&&x>-330&&x<770) return {ax:'x',c:330,lo:-330,hi:776}; if(Math.abs(x+330)<90&&Math.abs(z)<330) return {ax:'z',c:-330,lo:-290,hi:330}; return null; }
@@ -4639,7 +4640,7 @@ function raiderTick(p,dt){ const tg=activeCar?activeCar.pos:player.pos, dx=tg.x-
 function evRaid(p){ const rs=[]; for(let k=0;k<4;k++){ const a=Math.random()*TAU; rs.push(raiderMk(p.x+Math.cos(a)*4,p.z+Math.sin(a)*4)); } try{ const c=new Car(p.x+6,p.z+6,Math.random()*TAU,'free',{variant:'pickup',color:'#1b1b1b'}); c.parked=true; }catch(e){}
   say(rs[0],'Hand over your stuff!',true); flash('Raiders! They\'re after your stuff. Take them down');
   return {kind:'raid',t:200,rs,paid:new Set(), tick(dt){ for(const r of this.rs) if(r.dead&&!this.paid.has(r)){ this.paid.add(r); earn(150); }
-      const alive=this.rs.filter(r=>people.includes(r)&&!r.dead); if(!alive.length){ earn(300); banner('RAIDERS DEFEATED','+$300 bonus · the town is safer'); achStat('raid'); return 'end'; }
+      const alive=this.rs.filter(r=>people.includes(r)&&!r.dead); if(!alive.length){ earn(300); banner('RAIDERS DEFEATED','+$300 bonus · the town is safer'); mpEvShare('RAIDERS DEFEATED','+$300 · the town is safer',300,0); achStat('raid'); return 'end'; }
       let cx=0,cz=0; for(const r of alive){ cx+=r.pos.x; cz+=r.pos.z; } evBeam(cx/alive.length,cz/alive.length,0xb5201f); evHud('🔫 Raiders · '+alive.length+' left'); this.t-=dt; const far=Math.hypot(evPos().x-cx/alive.length,evPos().z-cz/alive.length)>220; return (this.t<=0||far)?'gone':null; },
     cleanup(){ for(const r of this.rs) if(people.includes(r)&&!r.dead) removePerson(r); } }; }
 // ---- nest bosses ----
@@ -5124,7 +5125,7 @@ function gardEat(){ if(GARD.veg<=0) return; GARD.veg--; gardSave(); state.hp=Mat
 const SEAS={day:0,lastT:null,cur:null,over:null,names:['summer','autumn','winter','spring'],icon:{summer:'🌞',autumn:'🍂',winter:'❄️',spring:'🌸'},
   leaf0:matLeaf.map(m=>m.color.clone()),grass0:matGrass.color.clone(),snow:null,leaves:null,lambs:[],van:null};
 try{ const q=JSON.parse(localStorage.getItem('tumbleton-season')||'null'); if(q){ SEAS.day=q.day|0; if(SEAS.names.includes(q.over)) SEAS.over=q.over; } }catch(e){}
-function seasonSave(){ try{ localStorage.setItem('tumbleton-season',JSON.stringify({day:SEAS.day,over:SEAS.over})); }catch(e){} }
+function seasonSave(){ if(MP.on&&!MP.host) return; try{ localStorage.setItem('tumbleton-season',JSON.stringify({day:SEAS.day,over:SEAS.over})); }catch(e){} }
 function seasonNow(){ return SEAS.over||SEAS.names[Math.floor(SEAS.day/3)%4]; }
 function seasonTag(){ const s2=SEAS.cur||seasonNow(); return ' · '+SEAS.icon[s2]+' '+s2[0].toUpperCase()+s2.slice(1)+', day '+(SEAS.day%3+1); }
 function seasonApply(k,quiet){ SEAS.cur=k;
@@ -5271,7 +5272,7 @@ function twgTick(dt){ if(!TWG.on) return; const G=CB.guns&&CB.guns[TWG.i]; if(!G
   player.pos.set(G.gx,6.1+HIP,G.gz-.55); player.vel.set(0,0,0); const A=heliAim(null); const dx=A.x-G.gx, dy=A.y-6.7, dz=A.z-G.gz; G.pv.rotation.set(0,0,0); G.pv.rotation.order='YXZ'; G.pv.rotation.y=Math.atan2(dx,dz); G.pv.rotation.x=-Math.atan2(dy,Math.hypot(dx,dz));
   player.yaw=G.pv.rotation.y; player.g.position.copy(player.pos); player.g.quaternion.setFromAxisAngle(UP,player.yaw); player.armR.rotation.set(-1.35,0,-.15); player.armL.rotation.set(-1.35,0,.15);
   TWG.cd-=dt; if((state.mouseHeld||state.touchFire||K('KeyF')>0)&&TWG.cd<=0&&!state.paused){ TWG.cd=.11; G.pv.updateMatrixWorld(true); const m=G.pv.localToWorld(new V3(0,.04,1.45)), ex=A.x+R(-.2,.2), ey=A.y+R(-.15,.15), ez=A.z+R(-.2,.2);
-    const tr=new THREE.Mesh(beamGeo(m.x,m.y,m.z,ex,ey,ez,.06),heliTracerMat); scene.add(tr); tracers.push({m:tr,t:.05}); puff(m.x,m.y,m.z,0xffd27a,.22,false); Snd.mg(); state.shake=Math.max(state.shake,.05); const dir=new V3(ex-m.x,ey-m.y,ez-m.z).normalize();
+    const tr=new THREE.Mesh(beamGeo(m.x,m.y,m.z,ex,ey,ez,.06),heliTracerMat); scene.add(tr); tracers.push({m:tr,t:.05}); mpShot(m.x,m.y,m.z,ex,ey,ez,1); puff(m.x,m.y,m.z,0xffd27a,.22,false); Snd.mg(); state.shake=Math.max(state.shake,.05); const dir=new V3(ex-m.x,ey-m.y,ez-m.z).normalize();
     if(A.hitO){ const o=A.hitO; if(o.isHeli){ vehDmg(o,2); Snd.tink(o.pos.x,o.pos.z); } else if(o instanceof Car){ vehDmg(o,2.5); Snd.tink(o.pos.x,o.pos.z); } else { nailHit(o,dir.clone().multiplyScalar(30),2.4,'shot'); if(o.isPerson&&o.zombie&&o.mode==='walk'&&o.hp<=1) knock(o,dir.x*10,4,dir.z*10,6,1); } } } }
 function cbTick(dt){ if(!CB.T) return; CB.chk=(CB.chk||0)-dt; if(CB.chk<=0){ CB.chk=1.5; cbNPCs(); }
   if(CB.fire){ CB.fire.scale.set(1+Math.sin(perfT*13)*.08,1+Math.sin(perfT*9.3)*.18,1+Math.cos(perfT*11)*.08); }
@@ -5711,6 +5712,27 @@ function hudLayout(dt){ HUDL.t-=dt; if(HUDL.t>0) return; HUDL.t=.15; const Q=k=>
   // keep clear of the buttons down the right-hand side
   for(const el of list){ if(!el) continue; if(el===DAY.clock){ el.style.right='auto'; el.style.left='50%'; el.style.transform='translateX(-50%)'; }
     if(!hudVis(el)) continue; const want=Math.round(y)+'px'; if(el.style.top!==want) el.style.top=want; const r=el.getBoundingClientRect(); y+=r.height+6; } }
+
+/* ---------- online: keep the whole world in step (time, season, weather, traffic lights, events, houses, gunfire) ---------- */
+const MPS={trT:0,trN:0,hSig:'',hT:0,houses:new Map(),gsT:0,evT:0,evLast:''};
+function mpShot(x1,y1,z1,x2,y2,z2,k){ if(!MP.on) return; const now=performance.now(); if(now-MPS.trT>1000){ MPS.trT=now; MPS.trN=0; } if(++MPS.trN>25) return; const r=v=>Math.round(v*10)/10; const m={t:'tr',a:[r(x1),r(y1),r(z1),r(x2),r(y2),r(z2)],k:k|0}; if(MP.host) mpBroadcast(m); else mpSendHost(m); }
+function mpShotSan(d){ const a=Array.isArray(d.a)?d.a.slice(0,6).map(mpNum):null; if(!a||a.length<6||Math.hypot(a[0]-a[3],a[2]-a[5])>400) return null; return {t:'tr',a,k:(d.k|0)===1?1:0}; }
+function mpShotShow(m){ const a=m.a, big=m.k===1; const tr=new THREE.Mesh(beamGeo(a[0],a[1],a[2],a[3],a[4],a[5],big?.06:.035),big?heliTracerMat:copTracerMat); scene.add(tr); tracers.push({m:tr,t:.06}); const pc=activeCar?activeCar.pos:player.pos; if(Math.hypot(a[0]-pc.x,a[2]-pc.z)<90){ if(big) Snd.mg(); else Snd.pistol(a[0],a[2]); } }
+function mpGsSend(){ if(!MP.on||!MP.host) return; mpBroadcast({t:'gs',d:+DAY.t.toFixed(5),sd:SEAS.day,so:SEAS.over||'',wk:WX.kind,tl:+TL.t.toFixed(2)}); }
+function mpGsApply(d){ const t=mpNum(d.d); if(t>=0&&t<1){ let df=t-DAY.t; if(df>.5) df-=1; if(df<-.5) df+=1; if(Math.abs(df)>.002){ DAY.t=t; SEAS.lastT=t; } }
+  const sd=Math.round(mpNum(d.sd)); if(sd>=0) SEAS.day=sd; SEAS.over=SEAS.names.includes(d.so)?d.so:null;
+  if(['clear','cloudy','rain','storm','fog'].includes(d.wk)&&WX.kind!==d.wk){ WX.kind=d.wk; if(state.started) flash(wxMsg(d.wk)); } WX.t=999; const tl=mpNum(d.tl); if(tl>=0) TL.t=tl; }
+function mpEvSend(){ const on=!!EV.on&&EV.hud&&EV.hud.style.display!=='none', b=EV.on&&EV.beam&&EV.beam.visible?[mpR1(EV.beam.position.x),mpR1(EV.beam.position.z),EV.beam.material.color.getHex()]:null, h=on?EV.hud.textContent.slice(0,140):'', key=h+JSON.stringify(b); if(key===MPS.evLast&&Math.random()<.8) return; MPS.evLast=key; mpBroadcast({t:'ev',h,b}); }
+function mpEvApply(d){ evHud(typeof d.h==='string'?d.h.slice(0,140):''); if(Array.isArray(d.b)&&d.b.length>=3) evBeam(mpNum(d.b[0]),mpNum(d.b[1]),(d.b[2]|0)&0xffffff); else if(EV.beam) EV.beam.visible=false; }
+function mpEvShare(title,text,cash,sup){ if(MP.on&&MP.host) mpBroadcast({t:'evx',ti:title,tx:text,c:cash|0,s:sup?1:0}); }
+function mpEvDone(d){ const c=clamp(Math.round(mpNum(d.c)),0,2000); if(c) earn(c); if(d.s){ for(const k in AMMO) if(state.owned[k]){ const A=AMMO[k], a=ammoOf(k); a.mag=A.mag; a.res=A.tot-A.mag; } state.hp=100; save(); } banner(mpClean(d.ti,40).toUpperCase(),mpClean(d.tx,90)); }
+function mpMyHouses(){ const L=[]; for(const S of SALE){ const h=GAR.h[S.i]; if(h&&h.own){ const u={}; for(const k in h){ const v=h[k]; if(typeof v==='boolean'||(typeof v==='number'&&isFinite(v))) u[k]=v; else if(typeof v==='string'&&v.length<24) u[k]=v; } L.push([S.i,u]); } } return L; }
+function mpHouseSan(l){ const out=[]; if(!Array.isArray(l)) return out; for(const e of l.slice(0,40)){ if(!Array.isArray(e)) continue; const i=e[0]|0; if(!SALE.some(S=>S.i===i)) continue; const u={}; if(e[1]&&typeof e[1]==='object') for(const k of Object.keys(e[1]).slice(0,30)){ if(k==='__proto__'||k==='constructor') continue; const v=e[1][k]; if(typeof v==='boolean'||(typeof v==='number'&&isFinite(v))) u[k]=v; else if(typeof v==='string') u[k]=v.slice(0,24); } u.own=true; out.push([i,u]); } return out; }
+function mpHouseTick(dt){ if(!MP.on) return; MPS.hT-=dt; if(MPS.hT>0) return; MPS.hT=2; const L=mpMyHouses(), sig=JSON.stringify(L); if(sig===MPS.hSig) return; MPS.hSig=sig; if(MP.host){ MPS.houses.set(0,L); mpHouseBroadcast(); } else mpSendHost({t:'hs',l:L}); }
+function mpHouseBroadcast(){ if(!MP.on||!MP.host) return; if(!MPS.houses.has(0)) MPS.houses.set(0,mpMyHouses()); const all=[]; for(const [id,L] of MPS.houses){ const P=MP.pl.get(id); if(!P) continue; for(const [i,u] of L) all.push([i,id,P.name,P.col,u]); } mpBroadcast({t:'hm',l:all}); mpHouseApply(all); }
+function mpHouseApply(all){ const map=new Map(); if(Array.isArray(all)) for(const e of all.slice(0,400)){ if(!Array.isArray(e)) continue; const id=e[1]|0; if(id===MP.id) continue; const i=e[0]|0; if(map.has(i)) continue; const s2=mpHouseSan([[i,e[4]]]); if(!s2.length) continue; map.set(i,{name:mpClean(e[2]),col:mpColOk(e[3]),u:s2[0][1]}); }
+  for(const S of SALE){ const o=map.get(S.i)||null, key=o?JSON.stringify(o):''; if((S.otherKey||'')===key) continue; S.otherKey=key; S.other=o; S.mkT=''; if(GAR.h[S.i]&&GAR.h[S.i].own) continue; try{ saleSign(S); }catch(e){}
+    if(o){ const had=Object.prototype.hasOwnProperty.call(GAR.h,S.i), keep=GAR.h[S.i]; GAR.h[S.i]=Object.assign({},o.u,{own:true}); try{ homeUpBuild(S); }catch(e){} if(had) GAR.h[S.i]=keep; else delete GAR.h[S.i]; } else { try{ homeUpBuild(S); }catch(e){} } } }
 
 let rescueI=0;
 function underOK(x,z,y){ if(Math.abs(x)<HALF+12&&Math.abs(z)<HALF+12) return true; if(x>1150) return true; if(z<-LIM&&Math.abs(x)<290){ const r=roadNear(x,z); if(r&&r.tun&&r.d<6) return true; } return false; }
@@ -6281,7 +6303,7 @@ function heliReload(){ const H=activeHeli; if(!H) return; const a=heliAm(H); let
 function heliFire(){ const H=activeHeli; if(!H||H.rot<.8||H.gunCD>0) return; const am=heliAm(H); if(am.gT>0) return;
   if(am.g<=0){ H.gunCD=.4; if(am.gr<=0){ Snd.dry(); flash('Out of bullets. Land the helicopter to re-arm'); } return; } am.g--; H.gunCD=.085; H.gunSide=-H.gunSide;
   const A=heliAim(); aimTurret(H,A.x,A.y,A.z,1); H.g.updateMatrixWorld(true); const m=H.gp.localToWorld(_v2.set(.08*H.gunSide,0,1.06)), dx=A.x-m.x, dy=A.y-m.y, dz=A.z-m.z, L=Math.hypot(dx,dy,dz)||1;
-  const tr=new THREE.Mesh(beamGeo(m.x,m.y,m.z,A.x,A.y,A.z,.07),heliTracerMat); scene.add(tr); tracers.push({m:tr,t:.05});
+  const tr=new THREE.Mesh(beamGeo(m.x,m.y,m.z,A.x,A.y,A.z,.07),heliTracerMat); scene.add(tr); tracers.push({m:tr,t:.05}); mpShot(m.x,m.y,m.z,A.x,A.y,A.z,1);
   puff(m.x,m.y,m.z,0xffd27a,.25,false); Snd.mg();
   const dir=new V3(dx/L,dy/L,dz/L);
   if(A.hitO){ const o=A.hitO; if(o.isHeli){ vehDmg(o,2); Snd.tink(o.pos.x,o.pos.z); } else if(o instanceof Car){ o.vel.x+=dir.x*.6; o.vel.z+=dir.z*.6; Snd.tink(o.pos.x,o.pos.z); } else { nailHit(o,dir.clone().multiplyScalar(30),1,'shot'); if(o.isPerson&&o.zombie&&o.mode==='walk'&&o.hp<=1){ knock(o,dir.x*10,4,dir.z*10,6,1); } } }
@@ -6685,11 +6707,11 @@ function blowAir(v,sx,sy,sz){ Snd.blow(); const hx=Math.sin(camYaw), hz=Math.cos
     effects.push({m:d,t:0,life:R(.4,.7),type:'debris',v:new V3(v.x*14+R(-2,2),v.y*14+R(0,2),v.z*14+R(-2,2)),w:new V3(R(-15,15),R(-15,15),R(-15,15))}); }
 }
 function addProj(type,x,y,z,vel,life){ const m=new THREE.Mesh(type==='shell'?shellGeo:type==='pellet'?pelletGeo:type==='bullet'?bulletGeo:nailGeo,type==='shell'?shellMat:type==='bullet'?bulletMat:nailMat); m.position.set(x,y,z); m.castShadow=type!=='nail'&&type!=='bullet'; scene.add(m);
-  projs.push({type,m,pos:m.position,vel,life}); }
+  projs.push({type,m,pos:m.position,vel,life}); if(MP.on){ const t=Math.min(life||1,70/(vel.length()||1)); mpShot(x,y,z,x+vel.x*t,y+vel.y*t,z+vel.z*t,0); } }
 function nailHit(o,vel,dmg,kind){
   provoke(o); dmg=dmg||1;
   const l=vel.length()||1, nx=vel.x/l, nz=vel.z/l; state.hitT=.15;
-  if(o.isPerson){ if(o.zombie){ if(o.mode==='walk'&&o.hp>dmg){ o.hp-=dmg; o.vel.x+=nx*4; o.vel.z+=nz*4; o.atkCD=Math.max(o.atkCD,.6); Snd.tink(o.pos.x,o.pos.z); } else knock(o,nx*9,4,nz*9,5,dmg); }
+  if(o.isPerson){ if(o.zombie){ if(o.net||o.npc){ hurt(o,dmg); Snd.tink(o.pos.x,o.pos.z); } else if(o.mode==='walk'&&o.hp>dmg){ o.hp-=dmg; o.vel.x+=nx*4; o.vel.z+=nz*4; o.atkCD=Math.max(o.atkCD,.6); Snd.tink(o.pos.x,o.pos.z); } else knock(o,nx*9,4,nz*9,5,dmg); }
     else { knock(o,nx*7,3,nz*7,4); civHurt(o,dmg); hitByPlayer(o,kind||'nail'); } }
   else { wake(o); o.vel.x+=nx*5/o.mass; o.vel.z+=nz*5/o.mass; o.vel.y=Math.max(o.vel.y,2); light(o); Snd.tink(o.pos.x,o.pos.z); }
 }
@@ -8799,7 +8821,7 @@ function glCrash(){ if(glDead) return; glDead=true; save(); try{ if(story.on) sa
   const b=document.createElement('button'); b.type='button'; b.className='opt'; b.textContent='Reload the game'; b.addEventListener('click',()=>restartTo(story.on?'story':'sandbox')); c.append(h,p,b); document.body.appendChild(d); b.focus(); }
 canvas.addEventListener('webglcontextlost',e=>{ e.preventDefault(); console.warn('[guard] WebGL context lost'); setTimeout(()=>{ if(renderer&&renderer.getContext&&renderer.getContext().isContextLost()) glCrash(); },1500); },false);
 /* ---------- online multiplayer (Sandbox): room codes over PeerJS (WebRTC); the host relays everyone's position ---------- */
-const MPV='tumbleton-52', MP_PFX='tumbleton-mp-', MPMAX=20, MPHZ=12, MPCOLS=['#ff7a1a','#e5484d','#2f80ed','#27ae60','#9b51e0','#f2c94c','#00b8a9','#ff6fb5','#f6f4ec','#2d3142'];
+const MPV='tumbleton-53', MP_PFX='tumbleton-mp-', MPMAX=20, MPHZ=12, MPCOLS=['#ff7a1a','#e5484d','#2f80ed','#27ae60','#9b51e0','#f2c94c','#00b8a9','#ff6fb5','#f6f4ec','#2d3142'];
 const CKINDS=['random','sedan','sports','pickup','van','bus','icecream','monster','firetruck','ambulance','towtruck','tank','armedute','bulldozer','digger','motorbike','dirtbike','scooter','bicycle','quad','gokart'], CKNAME={random:'Random',sedan:'Sedan',sports:'Sports car',pickup:'Ute',van:'Van',bus:'Bus',icecream:'Ice cream van',monster:'Monster truck',firetruck:'Fire truck',ambulance:'Ambulance',towtruck:'Tow truck',tank:'Tank',armedute:'Armed ute',bulldozer:'Bulldozer',digger:'Digger',motorbike:'Motorbike',dirtbike:'Dirt bike',scooter:'Scooter',bicycle:'Bicycle',quad:'Quad bike',gokart:'Go-kart'};
 const MPVAR=['sedan','taxi','van','pickup','sports','bus','icecream','motorbike','dirtbike','scooter','bicycle','quad','gokart','monster','firetruck','ambulance','towtruck','tank','armedute','jetski','bulldozer','digger'], MPA='ABCDEFGHJKLMNPQRSTUVWXYZ';
 const MP={np:new Map(),pmap:new Map(),pn:0,nc:new Map(),cmap:new Map(),cn:0,no:new Map(),omap:new Map(),on2:0,wT:0,bSig:'',grab:null,nz:new Map(),zmap:new Map(),zn:0,zT:0,zClean:0,spawnT:new Map(),pub:true,sname:'',on:false,host:false,code:'',peer:null,conn:null,id:-1,nextId:1,pl:new Map(),av:new Map(),sendT:0,busy:false,name:'',col:'',libP:null,joinTO:0,sinceHost:0};
@@ -8850,22 +8872,24 @@ function mpJoin(pick){ if(MP.on||MP.busy) return; const fromList=typeof pick==='
 function mpFail(t){ mpShutdown(); mpStatus(t,true); mpRenderPanel(); }
 function mpEnd(t){ const was=MP.on; mpShutdown(); if(was){ mpSys(t); flash(t); } if(!mpEl.hidden){ mpStatus(t,true); mpRenderPanel(); } }
 function mpLeave(){ if(MP.host) mpBroadcast({t:'x',why:'host'}); mpEnd('You left the server'); }
-function mpShutdown(){ mplStop(); if(MPG.id!==null) gunnerExit(); for(const z of MP.nz.values()) if(z.g.parent) removePerson(z); MP.nz.clear(); MP.zmap.clear(); for(const q of MP.np.values()) if(q.g.parent) removePerson(q); MP.np.clear(); MP.pmap.clear(); for(const c of MP.nc.values()) mpCarGone(c); MP.nc.clear(); MP.cmap.clear(); for(const o of MP.no.values()) if(props.includes(o)) removeProp(o); MP.no.clear(); MP.omap.clear(); MP.bSig=''; MP.grab=null; for(const c of cars) c.mpTaken=false; for(const p of people) if(p.mpAggro) p.mpAggro=null; clearTimeout(MP.joinTO); const p=MP.peer; MP.on=false; MP.busy=false; MP.host=false; MP.peer=null; MP.conn=null; MP.id=-1; MP.pl.clear(); for(const id of [...MP.av.keys()]) mpAvDrop(id); try{ if(p) p.destroy(); }catch(e){} mpHud(); }
+function mpShutdown(){ mplStop(); try{ MPS.houses.clear(); MPS.hSig=''; mpHouseApply([]); if(!MP.host){ evHud(''); if(EV.beam) EV.beam.visible=false; } }catch(e){} if(MPG.id!==null) gunnerExit(); for(const z of MP.nz.values()) if(z.g.parent) removePerson(z); MP.nz.clear(); MP.zmap.clear(); for(const q of MP.np.values()) if(q.g.parent) removePerson(q); MP.np.clear(); MP.pmap.clear(); for(const c of MP.nc.values()) mpCarGone(c); MP.nc.clear(); MP.cmap.clear(); for(const o of MP.no.values()) if(props.includes(o)) removeProp(o); MP.no.clear(); MP.omap.clear(); MP.bSig=''; MP.grab=null; for(const c of cars) c.mpTaken=false; for(const p of people) if(p.mpAggro) p.mpAggro=null; clearTimeout(MP.joinTO); const p=MP.peer; MP.on=false; MP.busy=false; MP.host=false; MP.peer=null; MP.conn=null; MP.id=-1; MP.pl.clear(); for(const id of [...MP.av.keys()]) mpAvDrop(id); try{ if(p) p.destroy(); }catch(e){} mpHud(); }
 function mpBroadcast(m,except){ if(!MP.host) return; for(const [id,p] of MP.pl) if(id&&p.conn&&p.conn!==except&&p.conn.open) try{ p.conn.send(m); }catch(e){} }
 function mpRoster(){ mpBroadcast({t:'r',l:[...MP.pl].map(([id,p])=>[id,p.name,p.col])}); mpHud(); if(!mpEl.hidden) mpRenderPanel(); }
 function mpHostData(conn,d){ if(!d||typeof d!=='object') return; const P=conn.mp;
   if(d.t==='hi'){ if(P) return; if(d.v!==MPV){ try{ conn.send({t:'x',why:'old'}); }catch(e){} setTimeout(()=>conn.close(),500); return; }
     if(MP.pl.size>=MPMAX){ try{ conn.send({t:'x',why:'full'}); }catch(e){} setTimeout(()=>conn.close(),500); return; }
     const id=MP.nextId++; conn.mp={id,name:mpClean(d.n),col:mpColOk(d.c),conn,st:null,t:0,seen:performance.now()}; MP.pl.set(id,conn.mp);
-    conn.send({t:'w',id,code:MP.code,sn:MP.sname,pub:MP.pub}); mpBlocksTo(conn.mp); mpRoster(); mpSys(conn.mp.name+' joined'); mpBroadcast({t:'c',id:-1,m:conn.mp.name+' joined the game'},conn); return; }
+    conn.send({t:'w',id,code:MP.code,sn:MP.sname,pub:MP.pub}); mpBlocksTo(conn.mp); mpRoster(); setTimeout(()=>{ mpHouseBroadcast(); mpGsSend(); },400); mpSys(conn.mp.name+' joined'); mpBroadcast({t:'c',id:-1,m:conn.mp.name+' joined the game'},conn); return; }
   if(!P) return; P.seen=performance.now();
   if(d.t==='u'){ const st=mpSanState(d.s); if(st){ P.st=st; P.t=performance.now(); } }
   else if(d.t==='c'&&typeof d.m==='string'){ const m=d.m.slice(0,120).trim(); if(!m) return; mpChatShow(P.name,P.col,m); mpBroadcast({t:'c',id:P.id,m},conn); }
   else if(d.t==='b'){ const b=mpSanBoom(d); if(b){ mpRemoteBoom(b,P.id); mpBroadcast(Object.assign({t:'b'},b),conn); } }
   else if(d.t==='zh') mpHostZHit(P,d);
   else if(d.t==='zs') mpHostZSpawn(P,d);
+  else if(d.t==='tr'){ const m=mpShotSan(d); if(m){ mpShotShow(m); mpBroadcast(m,conn); } }
+  else if(d.t==='hs'){ MPS.houses.set(P.id,mpHouseSan(d.l)); mpHouseBroadcast(); }
   else if(['ph','ci','cd','ct','cr','cs','oi','os','ps','bp','br'].includes(d.t)) mpHostWorld(P,d); }
-function mpHostDrop(conn){ const P=conn.mp; if(!P||!MP.pl.has(P.id)) return; MP.pl.delete(P.id); mpAvDrop(P.id); mpRoster(); mpSys(P.name+' left'); mpBroadcast({t:'c',id:-1,m:P.name+' left the game'}); }
+function mpHostDrop(conn){ const P=conn.mp; if(!P||!MP.pl.has(P.id)) return; MP.pl.delete(P.id); MPS.houses.delete(P.id); setTimeout(mpHouseBroadcast,50); mpAvDrop(P.id); mpRoster(); mpSys(P.name+' left'); mpBroadcast({t:'c',id:-1,m:P.name+' left the game'}); }
 function mpClientData(d){ if(!d||typeof d!=='object') return; MP.sinceHost=0;
   if(d.t==='w'){ clearTimeout(MP.joinTO); MP.busy=false; MP.on=true; MP.host=false; MP.id=+d.id; MP.sname=mpClean(d.sn,24); MP.pub=!!d.pub; mpSys('You joined "'+MP.sname+'". Press Enter to chat'); flash('Connected! Press Enter to chat'); mpRenderPanel(); mpHud(); }
   else if(d.t==='r'&&Array.isArray(d.l)){ const keep=new Set(); for(const e of d.l.slice(0,MPMAX)){ if(!Array.isArray(e)) continue; const id=+e[0]; if(!Number.isInteger(id)) continue; keep.add(id); const o=MP.pl.get(id)||{id,st:null,t:0}; o.name=mpClean(e[1]); o.col=mpColOk(e[2]); MP.pl.set(id,o); }
@@ -8878,6 +8902,11 @@ function mpClientData(d){ if(!d||typeof d!=='object') return; MP.sinceHost=0;
   else if(d.t==='zk'){ const r=clamp(Math.round(mpNum(d.r)),0,100); if(r){ state.defeated++; earn(r); } }
   else if(d.t==='zd') mpZDamage(d);
   else if(d.t==='w2') mpWorldApply(d);
+  else if(d.t==='gs') mpGsApply(d);
+  else if(d.t==='ev') mpEvApply(d);
+  else if(d.t==='evx') mpEvDone(d);
+  else if(d.t==='hm') mpHouseApply(d.l);
+  else if(d.t==='tr'){ const m=mpShotSan(d); if(m) mpShotShow(m); }
   else if(d.t==='bl') mpBlocksApply(d.l);
   else if(d.t==='x'){ const why=d.why; MP.conn=null; mpEnd(why==='full'?'That game is full (20 players).':why==='old'?'Your game version is different from the host\'s. Both of you should refresh the page.':'The host ended the game.'); } }
 function mpSanBoom(d){ const x=mpNum(d.x), y=mpNum(d.y), z=mpNum(d.z), S=clamp(mpNum(d.S)||1,.5,2); if(Math.abs(x)>1000||Math.abs(z)>1000) return null; return {x,y,z,S,g:d.g?1:0}; }
@@ -8912,8 +8941,9 @@ function mpTick(dt){ if(!MP.on) return; MP.sendT+=dt;
       for(const [id,p] of MP.pl){ if(id&&now-p.seen>12000){ try{ p.conn.close(); }catch(e){} mpHostDrop(p.conn); continue; } if(p.st) list.push([id,...p.st]); }
       mpBroadcast({t:'s',p:list}); MP.lastSnap=performance.now(); }
     else if(MP.conn&&MP.conn.open){ try{ MP.conn.send({t:'u',s:st}); }catch(e){} } }
-  if(MP.host){ MP.zT+=dt; if(MP.zT>=.1){ MP.zT=0; mpZSend(); } MP.wT+=dt; if(MP.wT>=1/6){ MP.wT=0; mpWorldSend(); } }
+  if(MP.host){ MP.zT+=dt; if(MP.zT>=.1){ MP.zT=0; mpZSend(); } MP.wT+=dt; if(MP.wT>=1/6){ MP.wT=0; mpWorldSend(); } MPS.gsT+=dt; if(MPS.gsT>=1){ MPS.gsT=0; mpGsSend(); } MPS.evT+=dt; if(MPS.evT>=.5){ MPS.evT=0; mpEvSend(); } }
   else { MP.zClean+=dt; if(MP.zClean>.5){ MP.zClean=0; for(let i=people.length-1;i>=0;i--){ const q=people[i]; if(q.zombie&&!q.net) removePerson(q); } mpClientTidy(); } mpGrabTick(dt); }
+  mpHouseTick(dt);
   if(!MP.host){ MP.sinceHost+=dt; if(MP.sinceHost>15){ MP.conn=null; mpEnd('Lost connection to the host.'); return; } }
   mpAvatars(dt); }
 /* public server list: the first public server also runs a tiny "lobby" that the others report to; if it closes, another public server takes over */
