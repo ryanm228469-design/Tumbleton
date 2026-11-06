@@ -5666,6 +5666,16 @@ function wheelieTick(dt){ const c=activeCar, ok=c&&WHEELIE_V.includes(c.variant)
   if(WHL.on){ WHL.t+=dt; if(!w||WHL.t>10||fwd<.4||c.wreck){ WHL.on=false; if(WHL.t>10) flash('Front wheel back down'); } else { const top=(c.topv||20)*1.06; if(fwd<top){ c.vel.x+=Math.sin(c.yaw)*dt*1.2; c.vel.z+=Math.cos(c.yaw)*dt*1.2; } } }
   const tgt=WHL.on?(c.variant==='bicycle'?.5:c.variant==='scooter'?.42:.62)+Math.sin(WHL.t*2.2)*.04:0; c.whl=(c.whl||0)+(tgt-(c.whl||0))*Math.min(1,dt*(WHL.on?5:7)); if(c.whl<.002&&!WHL.on){ c.whl=0; } }
 
+/* ---------- top-of-screen HUD: stack everything in the middle so nothing overlaps ---------- */
+const HUDL={t:0,q:{}};
+function hudVis(el){ if(!el||el.hidden) return false; const cs=getComputedStyle(el); if(cs.display==='none'||cs.visibility==='hidden'||+cs.opacity===0) return false; const r=el.getBoundingClientRect(); return r.width>0&&r.height>0; }
+function hudLayout(dt){ HUDL.t-=dt; if(HUDL.t>0) return; HUDL.t=.15; const Q=k=>HUDL.q[k]||(HUDL.q[k]=document.querySelector(k));
+  const list=[DAY.clock,Q('.mpbadge'),Q('.obj'),Q('.surv'),Q('.wanted'),BOSS.bar,RACE.hud,LEAGUE.hud,EV.hud,QST.hud,PIZ.hud,TAXI.hud,Q('.hint')];
+  const touch=document.body.classList.contains('touch'); let y=touch?8:14; if(touch){ const bar=Q('.bar'); if(hudVis(bar)) y=Math.max(y,bar.getBoundingClientRect().bottom+6); }
+  // keep clear of the buttons down the right-hand side
+  for(const el of list){ if(!el) continue; if(el===DAY.clock){ el.style.right='auto'; el.style.left='50%'; el.style.transform='translateX(-50%)'; }
+    if(!hudVis(el)) continue; const want=Math.round(y)+'px'; if(el.style.top!==want) el.style.top=want; const r=el.getBoundingClientRect(); y+=r.height+6; } }
+
 let rescueI=0;
 function underOK(x,z,y){ if(Math.abs(x)<HALF+12&&Math.abs(z)<HALF+12) return true; if(x>1150) return true; if(z<-LIM&&Math.abs(x)<290){ const r=roadNear(x,z); if(r&&r.tun&&r.d<6) return true; } return false; }
 function rescueTick(dt){ const n=people.length+cars.length; if(!n) return; const per=Math.max(4,Math.ceil(n*dt*4));
@@ -8093,7 +8103,7 @@ function frameBody(now){
   fpsTick(dt); updateChute(dt); updateTracers(dt); Snd.heli(lastHeli?lastHeli.rot:0);
   { const pm=player.mode, air=state.started&&((pm==='walk'&&!player.ground)||pm==='ragdoll'||pm==='held'), sp=air?Math.hypot(player.vel.x,player.vel.y*1.2,player.vel.z):0;
     Snd.wind(player.chute?Math.min(.2,.08+sp*.02):clamp((sp-7)/34,0,1)*.6,!!player.chute); }
-  mpTick(dt); updateCamera(dt); if(state.cine) cineUpdate(dt); mhTick(dt); updateBubbles(dt); storyHUD(); policeHUD(); updateGhost(); try{ screenFx(dt); }catch(e){} if(state.msgT>0) state.msgT-=dt; updateHUD();
+  mpTick(dt); updateCamera(dt); if(state.cine) cineUpdate(dt); mhTick(dt); updateBubbles(dt); storyHUD(); policeHUD(); updateGhost(); try{ screenFx(dt); }catch(e){} try{ hudLayout(dt); }catch(e){} if(state.msgT>0) state.msgT-=dt; updateHUD();
   Snd.engine(activeJet&&!state.over?20+activeJet.spd*.5:activeCar&&!state.over&&!activeCar.pedal?Math.hypot(activeCar.vel.x,activeCar.vel.z):-1);
   screenGuard(dt); renderer.clear(); renderer.render(scene,camera);
   if(fp&&!state.cine&&state.started&&!state.over&&!activeCar&&!activeHeli&&!player.chute&&(player.mode==='walk'||player.mode==='lift')){ updateViewModel(dt); renderer.clearDepth(); renderer.render(vmScene,vmCam); }
