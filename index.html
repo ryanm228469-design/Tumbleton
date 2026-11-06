@@ -462,6 +462,11 @@ body.touch .dlg .nx kbd{display:none}
       <dt><kbd>I</kbd></dt><dd>Bites turn people into zombies</dd>
       <dt><kbd>L</kbd></dt><dd>Last stand: survive the waves</dd>
       <dt><kbd>Tab</kbd></dt><dd>First or third person</dd>
+      <dt><kbd>/</kbd></dt><dd>Map: a bird's-eye photo of the whole world · drag, zoom, click a place to mark it</dd>
+      <dt><kbd>,</kbd></dt><dd>Your phone: camera and selfies, map, places, pets, weather, contracts</dd>
+      <dt><kbd>.</kbd></dt><dd>Throw a bottle to pull zombies away</dd>
+      <dt><kbd>E</kbd></dt><dd>Also: petrol pumps, vending machines, ATMs, your car's boot (stand behind it), crossing buttons on traffic lights, the pizza shop. Press <kbd>E</kbd> again while climbing into a car to skip it</dd>
+      <dt><kbd>F</kbd> / <kbd>Click</kbd></dt><dd>Fire your car's roof gun (it can shoot down the police helicopter)</dd>
       <dt><kbd>V</kbd></dt><dd>Switch between toys and building</dd>
       <dt><kbd>E</kbd></dt><dd>At the airport (east of the city): fly a bomber jet. <kbd>W</kbd>/<kbd>S</kbd> throttle, mouse steers (look up to climb), <kbd>Space</kbd> or <kbd>Click</kbd> drops a bomb, <kbd>E</kbd> bails out</dd>
       <dt><kbd>E</kbd></dt><dd>At a tower crane's base: drive the wrecking ball (<kbd>A</kbd><kbd>D</kbd> swing, <kbd>W</kbd><kbd>S</kbd> trolley, <kbd>Space</kbd>/<kbd>Shift</kbd> cable)</dd>
@@ -503,6 +508,9 @@ body.touch .dlg .nx kbd{display:none}
         <dt><kbd>B</kbd></dt><dd>Find places: shops, houses for sale and your garage</dd>
         <dt><kbd>Q</kbd></dt><dd>Switch weapon</dd>
         <dt><kbd>Tab</kbd></dt><dd>First or third person</dd>
+        <dt><kbd>/</kbd></dt><dd>Map</dd>
+        <dt><kbd>,</kbd></dt><dd>Phone and camera</dd>
+        <dt><kbd>.</kbd></dt><dd>Throw a bottle</dd>
         <dt><kbd>V</kbd></dt><dd>Toys or build bar</dd>
         <dt><kbd>C</kbd></dt><dd>Clear the mess</dd>
       </dl>
@@ -3651,7 +3659,7 @@ function vehWpnTick(dt){ const c=activeCar; for(const v of cars) if(v.cd>0) v.cd
     for(let k=0;k<4;k++) puff(m.x+d.x*k*.4,m.y+d.y*k*.4,m.z+d.z*k*.4,k?0xbdbdbd:0xffc46b,.7+k*.15,false); Snd.launch(m.x,m.z); Snd.thud(m.x,m.z,8); state.shake=Math.max(state.shake,.3); return; }
   c.cd=.09; const Am=heliAim(c), ex=Am.x+R(-.25,.25), ey=Am.y+R(-.2,.2), ez=Am.z+R(-.25,.25); const tr=new THREE.Mesh(beamGeo(m.x,m.y,m.z,ex,ey,ez,.06),heliTracerMat); scene.add(tr); tracers.push({m:tr,t:.05});
   puff(m.x,m.y,m.z,0xffd27a,.22,false); Snd.mg(); const dir=new V3(ex-m.x,ey-m.y,ez-m.z).normalize();
-  if(Am.hitO){ const o=Am.hitO; if(o instanceof Car){ vehDmg(o,2.5); o.vel.x+=dir.x*.5; o.vel.z+=dir.z*.5; Snd.tink(o.pos.x,o.pos.z); } else { nailHit(o,dir.clone().multiplyScalar(30),2.2,'shot'); if(o.isPerson&&o.zombie&&o.mode==='walk'&&o.hp<=1) knock(o,dir.x*10,4,dir.z*10,6,1); } }
+  if(Am.hitO){ const o=Am.hitO; if(o.isHeli){ vehDmg(o,o.police?1.6:2.5); Snd.tink(o.pos.x,o.pos.z); if(o.police&&state.wanted&&!o.hitMsg){ o.hitMsg=true; flash('Direct hits on the police helicopter! Keep shooting'); } } else if(o instanceof Car){ vehDmg(o,2.5); o.vel.x+=dir.x*.5; o.vel.z+=dir.z*.5; Snd.tink(o.pos.x,o.pos.z); } else { nailHit(o,dir.clone().multiplyScalar(30),2.2,'shot'); if(o.isPerson&&o.zombie&&o.mode==='walk'&&o.hp<=1) knock(o,dir.x*10,4,dir.z*10,6,1); } }
   else puff(ex,ey,ez,0xb8b0a0,.3,false); }
 
 /* ---------- Stage 2: owned vehicles, garages, houses, Vehicles R Us, mods and repairs ---------- */
@@ -5386,14 +5394,15 @@ function plTick(dt){ const p=player, walk=p.mode==='walk'&&!activeCar&&!activeHe
   if(PLX.bend>0){ PLX.bend-=dt; const k=Math.sin((1-PLX.bend/.55)*PI); if(p.rig) p.rig.rotation.x=1.0*k; p.armR.rotation.set(-1.3*k,0,0); }
   // idle fidgets
   if(walk&&sp<.15&&!anyKey&&PLX.pant<=0&&PLX.bend<=0&&!HOST.S) PLX.idle+=dt; else { PLX.idle=0; PLX.anim=null; }
-  if(!PLX.anim&&PLX.idle>PLX.next){ PLX.anim=pickA(['watch','stretch','yawn','kick','look']); PLX.at=0; PLX.idle=0; PLX.next=R(7,12); if(PLX.anim==='yawn') say(p,'*yaaawn*',false); }
+  if(!PLX.anim&&PLX.idle>PLX.next){ PLX.anim=pickA(['watch','stretch','yawn','kick','clap','shift']); PLX.at=0; PLX.idle=0; PLX.next=R(7,12); if(PLX.anim==='yawn') say(p,'*yaaawn*',false); }
   if(PLX.anim){ PLX.at+=dt; const t=PLX.at, k=Math.min(1,t/.4)*Math.min(1,Math.max(0,(2.6-t)/.4));
-    if(PLX.anim==='watch'){ p.armL.rotation.set(-1.5*k,0,.9*k); if(p.headIn) p.headIn.rotation.x=.35*k; }
-    else if(PLX.anim==='stretch'){ const w=Math.sin(t*3)*.15; p.armL.rotation.set(-2.9*k,0,.25*k+w); p.armR.rotation.set(-2.9*k,0,-.25*k-w); if(p.rig) p.rig.rotation.x=-.12*k; }
-    else if(PLX.anim==='yawn'){ p.armR.rotation.set(-2.2*k,0,-.5*k); if(p.headIn) p.headIn.rotation.x=-.4*k; }
-    else if(PLX.anim==='look'){ if(p.headIn) p.headIn.rotation.y=Math.sin(t*1.6)*.8*k; }
+    if(PLX.anim==='watch'){ p.armL.rotation.set(-1.5*k,0,.9*k); }
+    else if(PLX.anim==='stretch'){ const w=Math.sin(t*3)*.15; p.armL.rotation.set(-2.9*k,0,.25*k+w); p.armR.rotation.set(-2.9*k,0,-.25*k-w); }
+    else if(PLX.anim==='yawn'){ p.armR.rotation.set(-2.2*k,0,-.5*k); p.armL.rotation.set(0,0,.2*k); }
+    else if(PLX.anim==='clap'){ const c2=Math.abs(Math.sin(t*9))*.35; p.armL.rotation.set(-1.25*k,0,(-.15-c2)*k*-1); p.armR.rotation.set(-1.25*k,0,(-.15-c2)*k); }
+    else if(PLX.anim==='shift'){ const w=Math.sin(t*2.4)*k; p.legL.rotation.set(0,0,-.1*w); p.legR.rotation.set(0,0,-.1*w); p.armL.rotation.set(.1*w,0,.08*k); p.armR.rotation.set(-.1*w,0,-.08*k); }
     else if(PLX.anim==='kick'){ const s2=t<.8?Math.sin(t/.8*PI):0; p.legR.rotation.x=-1.1*s2; if(t>.4&&!PLX.kicked){ PLX.kicked=true; const fx=Math.sin(p.yaw), fz=Math.cos(p.yaw), m=new THREE.Mesh(new THREE.DodecahedronGeometry(.07),lam('#8d8f94')); m.position.set(p.pos.x+fx*.5,p.pos.y-HIP+.1,p.pos.z+fz*.5); scene.add(m); DROPS.push({m,vy:2.5,vx:fx*5,vz:fz*5,t:0,life:5,geoOwn:true}); } }
-    if(t>2.6){ PLX.anim=null; PLX.kicked=false; if(p.headIn) p.headIn.rotation.set(0,0,0); } }
+    if(t>2.6){ PLX.anim=null; PLX.kicked=false; } }
   // a hand on the stair rail
   if(walk){ const r=interiorAt(p.pos.x,p.pos.z,p.pos.y-HIP); if(r&&r.flights) for(const f of r.flights){ const ax=p.pos.x-f.lx, az=p.pos.z-f.lz, al=ax*f.dx+az*f.dz, L=Math.hypot(f.hx-f.lx,f.hz-f.lz), pe=Math.abs(ax*f.dz-az*f.dx), fy=p.pos.y-HIP-f.y; if(al>0&&al<L&&pe<1.1&&fy>-.3&&fy<FL+.3){ p.armR.rotation.set(-.35,0,-.75); break; } } }
   PLX.bottleCD-=dt; }
@@ -5632,6 +5641,20 @@ function mapDraw(){ const c=MAP.cv, dpr=Math.min(2,devicePixelRatio||1), W=c.cli
   x.textAlign='left'; x.font='600 12px system-ui'; x.fillStyle='#fffc'; x.fillText(MAP.img?('Photo taken '+Math.max(0,Math.round((perfT-MAP.snapAt)/60))+' min ago'):'',14,H-20); }
 window.addEventListener('keydown',e=>{ if(e.code==='Slash'||(MAP.on&&e.code==='Tab')){ if(state.started&&!state.over&&(MAP.on||cfEl.hidden)){ e.preventDefault(); e.stopImmediatePropagation(); mapToggle(); } } else if(MAP.on&&(e.code==='Escape')){ e.preventDefault(); e.stopImmediatePropagation(); mapClose(); } else if(MAP.on){ e.stopImmediatePropagation(); } },true);
 
+/* ---------- the police helicopter fires a missile at you every 10 seconds ---------- */
+const PMIS={list:[],cd:6,downT:-1e9,geo:null,mat:null,flame:null};
+function pmisFire(H){ if(!PMIS.geo){ PMIS.geo=mergeGeos([{g:new THREE.CylinderGeometry(.11,.11,1.1,8).rotateX(PI/2),c:'#e6e8eb'},{g:new THREE.ConeGeometry(.11,.32,8).rotateX(PI/2).translate(0,0,.71),c:'#d62828'},{g:BX(.42,.03,.18,0,0,-.42),c:'#2b2d31'},{g:BX(.03,.42,.18,0,0,-.42),c:'#2b2d31'}],true); PMIS.flame=new THREE.MeshBasicMaterial({color:0xffb020,transparent:true,opacity:.9,blending:THREE.AdditiveBlending,depthWrite:false}); }
+  const g=new THREE.Group(), m=new THREE.Mesh(PMIS.geo,VC), f=new THREE.Mesh(new THREE.ConeGeometry(.14,.7,8).rotateX(-PI/2).translate(0,0,-.95),PMIS.flame); g.add(m,f); H.g.updateMatrixWorld(); const side=(PMIS.side=-(PMIS.side||1)), st=H.g.localToWorld(new V3(side*1.1,.9,.6)); g.position.copy(st); scene.add(g);
+  const tg=activeCar?activeCar.pos:player.pos, dir=new V3(tg.x-st.x,tg.y+.6-st.y,tg.z-st.z).normalize(); PMIS.list.push({g,f,vel:dir.multiplyScalar(22),t:0}); Snd.launch&&Snd.launch(st.x,st.z); flash('🚀 The police helicopter fired a missile! Move!'); }
+function pmisTick(dt){ const H=policeHeli;
+  if(H&&!H.wreck&&H!==activeHeli&&state.wanted&&H.aiFly&&H.rot>.8&&!H.ground&&!state.over){ const tg=activeCar?activeCar.pos:player.pos, d=Math.hypot(H.pos.x-tg.x,H.pos.z-tg.z); if(d<170){ PMIS.cd-=dt; if(PMIS.cd<=0){ PMIS.cd=10; pmisFire(H); } } } else PMIS.cd=Math.max(PMIS.cd,4);
+  for(let i=PMIS.list.length-1;i>=0;i--){ const M=PMIS.list[i], p=M.g.position; M.t+=dt; const tg=activeCar?activeCar.pos:player.pos, want=new V3(tg.x-p.x,tg.y+.5-p.y,tg.z-p.z).normalize().multiplyScalar(30), turn=Math.min(1,dt*.7);
+    if(M.t>.35) M.vel.lerp(want,turn); M.vel.setLength(Math.min(32,M.vel.length()+dt*6)); p.addScaledVector(M.vel,dt); M.g.lookAt(p.x+M.vel.x,p.y+M.vel.y,p.z+M.vel.z); M.f.scale.setScalar(.8+Math.random()*.5); if(Math.random()<dt*30) puff(p.x-M.vel.x*.03,p.y-M.vel.y*.03,p.z-M.vel.z*.03,0xcfd2d6,.35,false);
+    const near=Math.hypot(tg.x-p.x,tg.y+.5-p.y,tg.z-p.z)<1.8, hit=near||p.y<=groundHeight(p.x,p.z,p.y)+.1||solidAt(p.x,p.y,p.z)||M.t>7;
+    if(!hit&&M.t>.4){ for(const c of cars){ if(c.wreck||Math.abs(c.pos.x-p.x)>3||Math.abs(c.pos.z-p.z)>3) continue; if(p.y<c.pos.y+(c.top||2)&&p.y>c.pos.y-.2){ M.t=99; break; } } }
+    if(hit||M.t>=99){ scene.remove(M.g); M.g.traverse(o=>{ if(o.geometry&&o.geometry!==PMIS.geo) o.geometry.dispose(); }); PMIS.list.splice(i,1); explode(p.x,p.y,p.z,1.15); } }
+  if(H&&H.wreck&&!state.wanted&&perfT-PMIS.downT>120&&PMIS.downT>0&&STATION){ PMIS.downT=-1e9; const N2=new Heli(STATION.pad.x,STATION.pad.y,STATION.pad.z,0,'#1d2b4f'); N2.police=true; N2.home=new V3(STATION.pad.x,STATION.pad.y,STATION.pad.z); for(const [col,x] of [[0xff2a2a,-.35],[0x2a6bff,.35]]){ const m=new THREE.Mesh(new THREE.BoxGeometry(.4,.14,.24),new THREE.MeshBasicMaterial({color:col})); m.position.set(x,2.32,.9); N2.g.add(m); } policeHeli=N2; } }
+
 let rescueI=0;
 function underOK(x,z,y){ if(Math.abs(x)<HALF+12&&Math.abs(z)<HALF+12) return true; if(x>1150) return true; if(z<-LIM&&Math.abs(x)<290){ const r=roadNear(x,z); if(r&&r.tun&&r.d<6) return true; } return false; }
 function rescueTick(dt){ const n=people.length+cars.length; if(!n) return; const per=Math.max(4,Math.ceil(n*dt*4));
@@ -5677,7 +5700,7 @@ function setupMotor(){ try{ setupSale(); }catch(e){ console.warn('houses',e); } 
   GREET.cars=['G\'day! Every vehicle comes with a free garage delivery.','Tanks are on special this week. Well, not really.','Have a look around, they don\'t bite.','Need a house first? Check the FOR SALE signs in the suburbs.'];
   GREET.motor=['Drive into a bay and press F.','Left bay for mods, right bay for repairs.','We fix anything that isn\'t a smoking crater.','Zombie rammer? Best money you\'ll ever spend.'];
   try{ for(const site of [0,1]){ const S=SITES[site]; if(!S) continue; const x=lotC(S[0]), z=lotC(S[1]); roadPark(x+10,z+24,site?'digger':'bulldozer'); } }catch(e){ console.warn('site vehicles',e); } }
-function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); southTick(dt); northTick(dt); eastTick(dt); basesTick(dt); rescueTick(dt); keepTick(dt); jobsTick(dt); homeTick(dt); bloodTick(dt); achTick(dt); furnTick(dt); keepOffProps(); eventsTick(dt); wlifeTick(dt); radioTick(dt); zonesTick(dt); questTick(dt); zaTick(dt); dayClock(); modTick(dt); kiwiTick(dt); fishTick(dt); surfTick(dt); bbTick(dt); driveTick(dt); townTick(dt); canTick(dt); chaosTick(dt); pizTick(dt); taxiTick(dt); seasonTick(dt); leagueTick(dt); nbossTick(dt); cbTick(dt); carLifeTick(dt); charTick(dt); worldTick(dt); foodTick(dt); blastFallTick(dt); petsTick(dt); hostTick(dt); gardTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
+function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); southTick(dt); northTick(dt); eastTick(dt); basesTick(dt); rescueTick(dt); keepTick(dt); jobsTick(dt); homeTick(dt); bloodTick(dt); achTick(dt); furnTick(dt); keepOffProps(); eventsTick(dt); wlifeTick(dt); radioTick(dt); zonesTick(dt); questTick(dt); zaTick(dt); dayClock(); modTick(dt); kiwiTick(dt); fishTick(dt); surfTick(dt); bbTick(dt); driveTick(dt); townTick(dt); canTick(dt); chaosTick(dt); pizTick(dt); taxiTick(dt); seasonTick(dt); leagueTick(dt); nbossTick(dt); cbTick(dt); carLifeTick(dt); charTick(dt); worldTick(dt); foodTick(dt); blastFallTick(dt); pmisTick(dt); petsTick(dt); hostTick(dt); gardTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
   const c=activeCar;
   if(c&&c.emerg==='fire'&&use){ camera.getWorldDirection(_ewd); let dx=_ewd.x, dy=_ewd.y+.16, dz=_ewd.z; const l=Math.hypot(dx,dy,dz)||1; hoseSpray(nozzleWorld(c),{x:dx/l,y:Math.max(-.35,dy/l),z:dz/l},dt,true); }
   if(c&&c.emerg==='tow'){ if(use&&!c.useW){ if(c.towed){ towRelease(c); flash('Let go of the car'); } else { const h=hookWorld(c); let best=null,bd=4.6;
@@ -6185,6 +6208,7 @@ function heliAim(ex){ camera.getWorldDirection(_v); const o=camera.position, d=_
   for(const q of people){ if(q.isPlayer||q.mode==='drive') continue; const t=ray(q.pos.x,q.pos.y+(q.mode==='ragdoll'?0:.15),q.pos.z,.7*(q.zkind==='brute'?1.4:1)); if(t>2&&t<best){ best=t; hitO=q; } }
   for(const q of props){ const t=ray(q.pos.x,q.pos.y,q.pos.z,(q.r||.5)+.1); if(t>2&&t<best){ best=t; hitO=q; } }
   for(const c of cars){ if(c===ex) continue; const t=ray(c.pos.x,c.pos.y+.8,c.pos.z,1.7); if(t>2&&t<best){ best=t; hitO=c; } }
+  for(const H of helis){ if(H===ex||H===activeHeli||H.wreck) continue; const t=ray(H.pos.x,H.pos.y+1.2,H.pos.z,2.8); if(t>2&&t<best){ best=t; hitO=H; } }
   return {x:o.x+d.x*best,y:o.y+d.y*best,z:o.z+d.z*best,hitO,dir:d.clone()}; }
 const HAM={g:{tot:500,mag:100,rt:3},r:{tot:12,mag:4,rt:4}};
 function heliAm(H){ if(!H.am) H.am={g:HAM.g.mag,gr:HAM.g.tot-HAM.g.mag,r:HAM.r.mag,rr:HAM.r.tot-HAM.r.mag,gT:0,rT:0,arm:0}; return H.am; }
@@ -6202,7 +6226,7 @@ function heliFire(){ const H=activeHeli; if(!H||H.rot<.8||H.gunCD>0) return; con
   const tr=new THREE.Mesh(beamGeo(m.x,m.y,m.z,A.x,A.y,A.z,.07),heliTracerMat); scene.add(tr); tracers.push({m:tr,t:.05});
   puff(m.x,m.y,m.z,0xffd27a,.25,false); Snd.mg();
   const dir=new V3(dx/L,dy/L,dz/L);
-  if(A.hitO){ const o=A.hitO; if(o instanceof Car){ o.vel.x+=dir.x*.6; o.vel.z+=dir.z*.6; Snd.tink(o.pos.x,o.pos.z); } else { nailHit(o,dir.clone().multiplyScalar(30),1,'shot'); if(o.isPerson&&o.zombie&&o.mode==='walk'&&o.hp<=1){ knock(o,dir.x*10,4,dir.z*10,6,1); } } }
+  if(A.hitO){ const o=A.hitO; if(o.isHeli){ vehDmg(o,2); Snd.tink(o.pos.x,o.pos.z); } else if(o instanceof Car){ o.vel.x+=dir.x*.6; o.vel.z+=dir.z*.6; Snd.tink(o.pos.x,o.pos.z); } else { nailHit(o,dir.clone().multiplyScalar(30),1,'shot'); if(o.isPerson&&o.zombie&&o.mode==='walk'&&o.hp<=1){ knock(o,dir.x*10,4,dir.z*10,6,1); } } }
   else { puff(A.x,A.y,A.z,0xb8b0a0,.35,false); if(Math.random()<.3) Snd.tink(A.x,A.z); } }
 function heliRocket(){ const H=activeHeli; if(!H||H.rot<.8||H.rocketCD>0) return; const am=heliAm(H); if(am.rT>0) return;
   if(am.r<=0){ H.rocketCD=.5; if(am.rr<=0){ Snd.dry(); flash('Out of rockets. Land the helicopter to re-arm'); } return; } am.r--; H.rocketCD=.65; H.gunSide=-H.gunSide;
@@ -6892,7 +6916,7 @@ $('m-set').addEventListener('click',()=>openSettings());
 $('gosettings').addEventListener('click',()=>openSettings());
 /* ---------- the How to play guide ---------- */
 const GUIDE=[
- ['Basics',`<p><b>WASD</b> walk or drive · <b>mouse</b> looks · <b>E</b> gets in and out of vehicles and uses things · <b>Space</b> jumps · <b>click</b> attacks · <b>Q</b> switches weapon · <b>Tab</b> first or third person · <b>B</b> opens <b>Find Places</b>, which marks anywhere on the map with an arrow.</p>
+ ['Basics',`<p><b>WASD</b> walk or drive · <b>mouse</b> looks · <b>E</b> gets in and out of vehicles and uses things · <b>Space</b> jumps · <b>click</b> attacks · <b>Q</b> switches weapon · <b>Tab</b> first or third person · <b>/</b> opens the <b>map</b> (a real bird's-eye view; click a place to mark it) · <b>,</b> opens your <b>phone</b> · <b>.</b> throws a bottle · <b>B</b> opens <b>Find Places</b>, which marks anywhere on the map with an arrow.</p><p>Keep an eye on the two bars top left: <b>health</b> and <b>food</b>. Eat at vending machines, the pizza shop, town markets or from your garden, or you'll be poisoned. Cars need <b>petrol</b> (gauge bottom right): fill up at the Rangiwai pumps.</p>
   <p>Two ways to play: <b>Story mode</b> follows the outbreak in Tumbleton city. <b>Sandbox</b> lets you do anything: zombie waves (<b>Z</b>), last stand (<b>L</b>), toys and building (<b>V</b>). The new areas are open in both.</p><p><b>H</b> shows every key. Change controls, graphics and the weather in <b>⚙ Settings</b>.</p>`],
  ['The map',`<ul><li><b>Tumbleton city</b> in the middle, with the river running through it.</li><li><b>West:</b> SH1, Rangiwai township, two farms, the airstrip with small planes, the train, and <b>Camp Kahu</b> army base.</li><li><b>North:</b> Mt Tumbleton: the mountain road and tunnel, the gondola to the lookout, the dam, the quarry, and the overrun <b>Fort Kererū</b>.</li>
   <li><b>South:</b> Marine Parade, the beach, the port, the industry area with the car crusher, and the ferry to <b>Mōtu Island</b>.</li><li><b>East:</b> the airport, <b>Tumbleton Raceway</b>, <b>Send It Stunt Park</b> and the <b>Kiwi Land</b> theme park.</li><li>The <b>Ring Road</b> loops round all of it.</li></ul><p>Zombies get more common and tougher the further you go from the city.</p>`],
@@ -6912,7 +6936,7 @@ const GUIDE=[
  ['Home life',`<ul><li><b>Invite your crew in:</b> at your garage entrance (E), invite your companions over. They sit on your sofas and armchairs, watch TV, cook at your stove and chat. You heal faster while they're round. Walk away or choose "Send your crew home with you" and they follow you again.</li><li><b>Vege garden</b> ($1,500) and <b>greenhouse</b> ($4,000) from the same menu. E at a bed to plant kūmara, silverbeet, tomatoes or pumpkins ($10 seeds). Crops grow in real time, even while you're away, and twice as fast in the greenhouse.</li><li>Eat your veges from B Find Places (+40 health each), or sell them at a freed-town market for $40 each.</li></ul>`],
  ['Pets',`<ul><li><b>Paws Animal Shelter</b> (next to the furniture store): dogs ($300) bite zombies, <b>cats</b> ($200) hiss when zombies are close, and a <b>pet kiwi</b> ($500) leads you to hidden kiwi statues nearby.</li><li><b>Hillcrest Horses</b> next to Hillcrest Farm: buy a horse ($2,500) and ride it anywhere. E to hop on and off, like a quad bike. B Find Places → Your pets lets you whistle for it.</li></ul>`],
  ['Racing league',`<ul><li>A season of 5 races across the map: City Sprint, Coast Run, Rangiwai Rally, Mountain Climb and the Ring Road Grand Prix.</li><li>Drive any car onto the <b>purple ring</b> at the start line and stop. B Find Places → Racing league marks it and shows the standings.</li><li>You race 5 rivals: Mad Maxine, Grandpa Rewi, Kev the Rocket, Aroha Speedwell and Doug "Diesel" Doherty. They remember whether you beat them last time.</li><li>Points: 10, 8, 6, 5, 4, 3. Race prizes up to $1,000. The season champion wins $10,000 (2nd $5,000, 3rd $2,500) and a trophy for the <b>trophy cabinet</b> in your garage.</li></ul>`],
- ['Police',`<ul><li>Hurting police officers, or running people over while someone's watching, gets you a <b>wanted level</b> (1 to 5 stars). More crimes mean more stars.</li><li>★ two police cars · ★★ vans join in · ★★★ the police helicopter · ★★★★ officers shoot at you · ★★★★★ the army sends an armed ute.</li><li>Get away until the timer runs out. Hiding in <b>tunnels</b>, the <b>sewer</b> or your <b>garage</b> makes it run out much faster.</li><li>Busted? The fine is $1,000 per star.</li></ul>`],
+ ['Police',`<ul><li>Hurting police officers, or running people over while someone's watching, gets you a <b>wanted level</b> (1 to 5 stars). More crimes mean more stars.</li><li>★ two police cars · ★★ vans join in · ★★★ the police helicopter, which fires a <b>missile</b> at you every 10 seconds (keep moving, or hide under cover) · ★★★★ officers shoot at you · ★★★★★ the army sends an armed ute.</li><li>Get away until the timer runs out. Hiding in <b>tunnels</b>, the <b>sewer</b> or your <b>garage</b> makes it run out much faster.</li><li>You can shoot the helicopter down with guns or your car's <b>roof gun</b> (F or click). That adds a star, and a new one arrives at the station later.</li><li>Busted? The fine is $1,000 per star.</li></ul>`],
  ['Kiwis & clothes',`<ul><li><b>50 kiwi statues</b> are hidden all over the map: in the city, on the farms, at the beach, up the mountain and out east. Walk or drive into one to collect it ($100). You hear a little chirp when one is close.</li><li>Bonuses at 10 and 25 kiwis. Find all 50 for <b>$10,000</b>, a <b>golden crown</b> and a <b>Golden Kiwi sports car</b>.</li><li>Stuck? B Find Places can mark the nearest kiwi for $250.</li><li><b>Kia Ora Threads</b>, next to the furniture store, sells hats, sunglasses, bandanas, masks, tops and pants. What you buy is yours to swap any time.</li><li>Some hats are only sold at the markets in towns you've freed from the zombies.</li></ul>`],
  ['Freed towns',`<ul><li>While a district's nest is still alive, its town square is <b>barricaded</b> with wrecked cars and sandbags, and the shops in Rangiwai are boarded up.</li><li>Blow up the nest and the town comes back: the barricades come down and a <b>market</b> opens with fairy lights and bunting.</li><li>Market stalls sell <b>pies</b> (full health), <b>ammo restocks</b>, a <b>kiwi map</b>, and a <b>hat you can't get anywhere else</b>: a party hat, Viking helmet, straw hat, army helmet, miner's lamp helmet, pirate hat or road cone hat.</li></ul>`],
  ['Online',`<p>Press <b>J</b> to play online with friends: join a public server, join a private one with its code, or make your own. <b>Enter</b> chats.</p>`]];
@@ -8664,7 +8688,7 @@ function vehDmg(v,amt){ try{ if(amt>=4&&v&&!v.net&&!v.wreck) carDent(v,amt); }ca
   if(v.story||v.boat||(v.isHeli&&v===policeHeli&&!state.started)) v.hp=Math.max(v.hp,28);
   if(was>70&&v.hp<=70) vehDent(v); if(was>45&&v.hp<=45){ vehDent(v); if(!burning.includes(v)) burning.push(v); if(v===activeCar||v===activeHeli) flash('Your vehicle is smoking!'); }
   if(was>20&&v.hp<=20){ if(v===activeCar||v===activeHeli) flash('It\'s on fire! Get out before it blows!'); Snd.thud(v.pos.x,v.pos.z,4); }
-  if(v.hp<=0) vehBoom(v); }
+  if(v.hp<=0){ if(v===policeHeli&&!v.wreck){ PMIS.downT=perfT; banner('HELICOPTER DOWN','You shot down the police helicopter!'); if(state.wanted) startWanted(); } vehBoom(v); } }
 function vehDent(v){ const root=v.isHeli?v.body:v.g; if(!root) return; root.traverse(o=>{ if(!o.isMesh||!o.geometry||!o.geometry.attributes.position||o.material!==VC&&!(o.material&&o.material.vertexColors)) return;
     const P=o.geometry.attributes.position, C=o.geometry.attributes.color, sx=R(-1,1), sz=R(-1,1);
     for(let i=0;i<P.count;i++){ const x=P.getX(i), y=P.getY(i), z=P.getZ(i), k=Math.max(0,1-Math.hypot(x-sx,z-sz*1.5)/1.6)*.07+.012; P.setXYZ(i,x+R(-k,k),y-Math.random()*k,z+R(-k,k)); if(C) C.setXYZ(i,C.getX(i)*.93,C.getY(i)*.93,C.getZ(i)*.93); }
