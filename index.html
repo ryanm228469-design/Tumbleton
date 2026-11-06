@@ -479,7 +479,6 @@ body.touch .dlg .nx kbd{display:none}
       <dt><kbd>R</kbd></dt><dd>Reload a gun · otherwise back to the plaza</dd>
       <dt><kbd>K</kbd></dt><dd>High or low graphics</dd>
       <dt><kbd>O</kbd></dt><dd>Switch between the new low-poly look and the classic blocky look (restarts the town)</dd>
-      <dt><kbd>U</kbd></dt><dd>Testing: unlock every weapon and fill ammo</dd>
       <dt><kbd>T</kbd></dt><dd>Restart (asks first) · story chapter or whole story</dd>
       <dt><kbd>J</kbd></dt><dd>Play online (Sandbox): join a public server, join a private one with its code, or make your own · <kbd>Enter</kbd> chat</dd>
       <dt><kbd>Y</kbd></dt><dd>Slow motion</dd>
@@ -6790,7 +6789,6 @@ addEventListener('keydown',e=>{
   else if(c==='Escape'&&!locked&&performance.now()-unlockT>400) openSettings();
   else if(c==='KeyJ'){ e.preventDefault(); mpOpen(); }
   else if(c==='Enter'&&MP.on){ e.preventDefault(); mpChatStart(); }
-  else if(c==='KeyU'){ for(const k of WORDER) state.owned[k]=true; for(const k in AMMO) state.ammo[k]={mag:AMMO[k].mag,res:AMMO[k].tot-AMMO[k].mag}; if(!activeCar&&!activeHeli) equip('ak47'); state.money+=1000000; save(); flash('Testing: +$1,000,000, every weapon unlocked and all ammo filled. Press Q to switch'); }
   else if(c==='KeyZ'){ if(mpClient()) flash('Only the server\'s host can start zombie waves'); else if(!state.surv.on) toggle('zwave'); }
   else if(c==='KeyP'){ if(state.resetArm>0){ hardRestart(); } else { state.resetArm=3; flash('Press P again to restart from nothing. All cash, weapons and builds will be lost'); } }
   else if(c==='KeyK') toggleGfx();
