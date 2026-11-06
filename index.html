@@ -5714,7 +5714,7 @@ function hudLayout(dt){ HUDL.t-=dt; if(HUDL.t>0) return; HUDL.t=.15; const Q=k=>
     if(!hudVis(el)) continue; const want=Math.round(y)+'px'; if(el.style.top!==want) el.style.top=want; const r=el.getBoundingClientRect(); y+=r.height+6; } }
 
 /* ---------- online: keep the whole world in step (time, season, weather, traffic lights, events, houses, gunfire) ---------- */
-const MPS={trT:0,trN:0,hSig:'',hT:0,houses:new Map(),gsT:0,evT:0,evLast:''};
+const MPS={pn:0,neg:0,polT:0,polSent:false,pol:new Map(),hSig:'',hT:0,houses:new Map(),gsT:0,evT:0,evLast:''};
 function mpShot(x1,y1,z1,x2,y2,z2,k){ if(!MP.on) return; const now=performance.now(); if(now-MPS.trT>1000){ MPS.trT=now; MPS.trN=0; } if(++MPS.trN>25) return; const r=v=>Math.round(v*10)/10; const m={t:'tr',a:[r(x1),r(y1),r(z1),r(x2),r(y2),r(z2)],k:k|0}; if(MP.host) mpBroadcast(m); else mpSendHost(m); }
 function mpShotSan(d){ const a=Array.isArray(d.a)?d.a.slice(0,6).map(mpNum):null; if(!a||a.length<6||Math.hypot(a[0]-a[3],a[2]-a[5])>400) return null; return {t:'tr',a,k:(d.k|0)===1?1:0}; }
 function mpShotShow(m){ const a=m.a, big=m.k===1; const tr=new THREE.Mesh(beamGeo(a[0],a[1],a[2],a[3],a[4],a[5],big?.06:.035),big?heliTracerMat:copTracerMat); scene.add(tr); tracers.push({m:tr,t:.06}); const pc=activeCar?activeCar.pos:player.pos; if(Math.hypot(a[0]-pc.x,a[2]-pc.z)<90){ if(big) Snd.mg(); else Snd.pistol(a[0],a[2]); } }
@@ -5733,6 +5733,31 @@ function mpHouseBroadcast(){ if(!MP.on||!MP.host) return; if(!MPS.houses.has(0))
 function mpHouseApply(all){ const map=new Map(); if(Array.isArray(all)) for(const e of all.slice(0,400)){ if(!Array.isArray(e)) continue; const id=e[1]|0; if(id===MP.id) continue; const i=e[0]|0; if(map.has(i)) continue; const s2=mpHouseSan([[i,e[4]]]); if(!s2.length) continue; map.set(i,{name:mpClean(e[2]),col:mpColOk(e[3]),u:s2[0][1]}); }
   for(const S of SALE){ const o=map.get(S.i)||null, key=o?JSON.stringify(o):''; if((S.otherKey||'')===key) continue; S.otherKey=key; S.other=o; S.mkT=''; if(GAR.h[S.i]&&GAR.h[S.i].own) continue; try{ saleSign(S); }catch(e){}
     if(o){ const had=Object.prototype.hasOwnProperty.call(GAR.h,S.i), keep=GAR.h[S.i]; GAR.h[S.i]=Object.assign({},o.u,{own:true}); try{ homeUpBuild(S); }catch(e){} if(had) GAR.h[S.i]=keep; else delete GAR.h[S.i]; } else { try{ homeUpBuild(S); }catch(e){} } } }
+
+/* ---------- online: a joined player's police chase shows up for everyone ---------- */
+function mpPolSend(dt){ if(!MP.on||MP.host) return; MPS.polT+=dt; if(MPS.polT<1/6) return; MPS.polT=0; const r1=mpR1, r2=mpR2, pc=activeCar?activeCar.pos:player.pos, cs=[], ps=[];
+  for(const c of cars){ if(!c.police||c.net||c.mode!=='police'||!c.g.parent) continue; if(Math.abs(c.pos.x-pc.x)+Math.abs(c.pos.z-pc.z)>300) continue; if(!c.pid) c.pid=++MPS.pn; const r=c.g.rotation; cs.push([c.pid,r1(c.pos.x),r1(c.pos.y),r1(c.pos.z),r2(r.x),r2(r.y),r2(r.z),Math.max(0,MPVAR.indexOf(c.variant)),(c.wreck?1:0)|2|4,Math.round(c.hp===undefined?100:c.hp),c.color||'#1b2a4a']); if(cs.length>=12) break; }
+  for(const q of people){ if(!q.cop||q.net||q.npc||q.duty!=='chase'||!q.g.parent) continue; if(Math.abs(q.pos.x-pc.x)+Math.abs(q.pos.z-pc.z)>200) continue; if(!q.pid) q.pid=++MPS.pn; const rag=q.mode!=='walk'&&q.mode!=='sit', Q=q.g.quaternion; ps.push([q.pid,r1(q.pos.x),r1(q.pos.y),r1(q.pos.z),r2(q.yaw),(rag?1:0)|2|(q.dead?4:0)|(q.aimT>0?16:0),rag?r2(Q.x):0,rag?r2(Q.y):0,rag?r2(Q.z):0,rag?r2(Q.w):1,(q.colors||[]).join(',')]); if(ps.length>=16) break; }
+  const H=policeHeli, h=H&&!H.wreck&&H.aiFly&&state.wanted&&!H.ground?[r1(H.pos.x),r1(H.pos.y),r1(H.pos.z),r2(H.g.rotation.x),r2(H.g.rotation.y),r2(H.g.rotation.z)]:null;
+  if(!cs.length&&!ps.length&&!h){ if(!MPS.polSent) return; MPS.polSent=false; } else MPS.polSent=true; mpSendHost({t:'pc',c:cs,p:ps,h}); }
+function mpPolSan(d){ const c=Array.isArray(d.c)?d.c.slice(0,12).filter(e=>Array.isArray(e)&&e.length>=11):[], p=Array.isArray(d.p)?d.p.slice(0,16).filter(e=>Array.isArray(e)&&e.length>=11):[], h=Array.isArray(d.h)&&d.h.length>=6?d.h.slice(0,6).map(mpNum):null; return {c,p,h}; }
+function mpPolOwner(id){ let O=MPS.pol.get(id); if(!O){ O={cars:new Map(),peds:new Map(),heli:null,t:0}; MPS.pol.set(id,O); } return O; }
+function mpPolApply(id,d){ if(id===MP.id) return; const O=mpPolOwner(id), now=performance.now(); O.t=now;
+  const seenC=new Set(); for(const e of d.c){ const lid=e[0]|0, x=mpNum(e[1]), y=mpNum(e[2]), z=mpNum(e[3]), fl=e[8]|0; seenC.add(lid); let c=O.cars.get(lid); if(c&&(!cars.includes(c)||c.mpTaken||c===activeCar||!c.net)){ O.cars.delete(lid); c=null; }
+    if(!c){ const col=typeof e[10]==='string'&&/^#[0-9a-fA-F]{6}$/.test(e[10])?e[10]:'#1b2a4a'; c=new Car(x,z,mpNum(e[5]),'net',{variant:MPVAR[e[7]|0]||'sedan',color:col}); c.net=-(++MPS.neg); c.polStand=true; c.pos.set(x,y,z); c.nt=new V3(x,y,z); c.nv=new V3(); c.ntT=now; c.nr=new V3(mpNum(e[4]),mpNum(e[5]),mpNum(e[6])); c.g.rotation.set(c.nr.x,c.nr.y,c.nr.z); c.hp=100; dressPolice(c); O.cars.set(lid,c); }
+    else { const gap=Math.max(.05,Math.min(.6,(now-c.ntT)/1000)); c.nv.set((x-c.nt.x)/gap,(y-c.nt.y)/gap,(z-c.nt.z)/gap); if(c.nv.lengthSq()>3600) c.nv.set(0,0,0); c.nt.set(x,y,z); c.ntT=now; c.nr.set(mpNum(e[4]),mpNum(e[5]),mpNum(e[6])); }
+    const hp=clamp(mpNum(e[9]),0,100), was=c.hp; c.hp=hp; if(was>70&&hp<=70) vehDent(c); if((fl&1)&&!c.wreck){ c.wreck=true; c.g.traverse(o=>{ if(o.isMesh){ if(o.material&&o.material.transparent) o.visible=false; else o.material=burntMat; } if(o.isLight) o.visible=false; }); } c.siren=!!(fl&4)&&!c.wreck; }
+  for(const [lid,c] of O.cars) if(!seenC.has(lid)){ O.cars.delete(lid); mpCarGone(c); }
+  const seenP=new Set(); for(const e of d.p){ const lid=e[0]|0, x=mpNum(e[1]), y=mpNum(e[2]), z=mpNum(e[3]), fl=e[5]|0; seenP.add(lid); let q=O.peds.get(lid); if(q&&!q.g.parent){ O.peds.delete(lid); q=null; }
+    if(!q){ let cols=typeof e[10]==='string'?e[10].split(',').slice(0,4):null; if(!cols||cols.length<4||!cols.every(c=>/^#[0-9a-fA-F]{6}$/.test(c))) cols=['#c58c5c','#1b2a4a','#1b2a4a','#111111']; q=new Person(x,z,{colors:cols,y:y-HIP}); q.npc=-(++MPS.neg); q.ai=null; q.pos.set(x,y,z); q.nt=new V3(x,y,z); q.nv=new V3(); q.ntT=now; q.nq=new THREE.Quaternion(); q.yaw=mpNum(e[4]); copGear(q); q.holdR=true; q.copLook=true; O.peds.set(lid,q); }
+    else { const gap=Math.max(.05,Math.min(.6,(now-q.ntT)/1000)); q.nv.set((x-q.nt.x)/gap,(y-q.nt.y)/gap,(z-q.nt.z)/gap); if(q.nv.lengthSq()>900) q.nv.set(0,0,0); q.nt.set(x,y,z); q.ntT=now; }
+    q.nyaw=mpNum(e[4]); q.nfl=fl; q.nq.set(mpNum(e[6]),mpNum(e[7]),mpNum(e[8]),mpNum(e[9])); q.dead=!!(fl&4); }
+  for(const [lid,q] of O.peds) if(!seenP.has(lid)){ O.peds.delete(lid); if(q.g.parent) removePerson(q); }
+  if(d.h){ if(!O.heli){ const H=new Heli(d.h[0],d.h[1],d.h[2],d.h[4],'#1d2b4f'); const i=helis.indexOf(H); if(i>=0) helis.splice(i,1); for(const [col,x] of [[0xff2a2a,-.35],[0x2a6bff,.35]]){ const m=new THREE.Mesh(new THREE.BoxGeometry(.4,.14,.24),new THREE.MeshBasicMaterial({color:col})); m.position.set(x,2.32,.9); H.g.add(m); } O.heli={H,nt:new V3(d.h[0],d.h[1],d.h[2]),nr:new V3(d.h[3],d.h[4],d.h[5])}; }
+    O.heli.nt.set(d.h[0],d.h[1],d.h[2]); O.heli.nr.set(d.h[3],d.h[4],d.h[5]); }
+  else if(O.heli){ scene.remove(O.heli.H.g); disposeTree(O.heli.H.g); O.heli=null; } }
+function mpPolClear(id){ const O=MPS.pol.get(id); if(!O) return; for(const c of O.cars.values()) mpCarGone(c); for(const q of O.peds.values()) if(q.g.parent) removePerson(q); if(O.heli){ scene.remove(O.heli.H.g); disposeTree(O.heli.H.g); } MPS.pol.delete(id); }
+function mpPolTick(dt){ const now=performance.now(); for(const [id,O] of MPS.pol){ if(now-O.t>4000||!MP.on){ mpPolClear(id); continue; } if(O.heli){ const H=O.heli.H; H.g.position.lerp(O.heli.nt,Math.min(1,dt*6)); H.g.rotation.set(O.heli.nr.x,O.heli.nr.y,O.heli.nr.z); if(H.rotor) H.rotor.rotation.y+=dt*30; } } }
 
 let rescueI=0;
 function underOK(x,z,y){ if(Math.abs(x)<HALF+12&&Math.abs(z)<HALF+12) return true; if(x>1150) return true; if(z<-LIM&&Math.abs(x)<290){ const r=roadNear(x,z); if(r&&r.tun&&r.d<6) return true; } return false; }
@@ -8821,7 +8846,7 @@ function glCrash(){ if(glDead) return; glDead=true; save(); try{ if(story.on) sa
   const b=document.createElement('button'); b.type='button'; b.className='opt'; b.textContent='Reload the game'; b.addEventListener('click',()=>restartTo(story.on?'story':'sandbox')); c.append(h,p,b); document.body.appendChild(d); b.focus(); }
 canvas.addEventListener('webglcontextlost',e=>{ e.preventDefault(); console.warn('[guard] WebGL context lost'); setTimeout(()=>{ if(renderer&&renderer.getContext&&renderer.getContext().isContextLost()) glCrash(); },1500); },false);
 /* ---------- online multiplayer (Sandbox): room codes over PeerJS (WebRTC); the host relays everyone's position ---------- */
-const MPV='tumbleton-53', MP_PFX='tumbleton-mp-', MPMAX=20, MPHZ=12, MPCOLS=['#ff7a1a','#e5484d','#2f80ed','#27ae60','#9b51e0','#f2c94c','#00b8a9','#ff6fb5','#f6f4ec','#2d3142'];
+const MPV='tumbleton-54', MP_PFX='tumbleton-mp-', MPMAX=20, MPHZ=12, MPCOLS=['#ff7a1a','#e5484d','#2f80ed','#27ae60','#9b51e0','#f2c94c','#00b8a9','#ff6fb5','#f6f4ec','#2d3142'];
 const CKINDS=['random','sedan','sports','pickup','van','bus','icecream','monster','firetruck','ambulance','towtruck','tank','armedute','bulldozer','digger','motorbike','dirtbike','scooter','bicycle','quad','gokart'], CKNAME={random:'Random',sedan:'Sedan',sports:'Sports car',pickup:'Ute',van:'Van',bus:'Bus',icecream:'Ice cream van',monster:'Monster truck',firetruck:'Fire truck',ambulance:'Ambulance',towtruck:'Tow truck',tank:'Tank',armedute:'Armed ute',bulldozer:'Bulldozer',digger:'Digger',motorbike:'Motorbike',dirtbike:'Dirt bike',scooter:'Scooter',bicycle:'Bicycle',quad:'Quad bike',gokart:'Go-kart'};
 const MPVAR=['sedan','taxi','van','pickup','sports','bus','icecream','motorbike','dirtbike','scooter','bicycle','quad','gokart','monster','firetruck','ambulance','towtruck','tank','armedute','jetski','bulldozer','digger'], MPA='ABCDEFGHJKLMNPQRSTUVWXYZ';
 const MP={np:new Map(),pmap:new Map(),pn:0,nc:new Map(),cmap:new Map(),cn:0,no:new Map(),omap:new Map(),on2:0,wT:0,bSig:'',grab:null,nz:new Map(),zmap:new Map(),zn:0,zT:0,zClean:0,spawnT:new Map(),pub:true,sname:'',on:false,host:false,code:'',peer:null,conn:null,id:-1,nextId:1,pl:new Map(),av:new Map(),sendT:0,busy:false,name:'',col:'',libP:null,joinTO:0,sinceHost:0};
@@ -8872,7 +8897,7 @@ function mpJoin(pick){ if(MP.on||MP.busy) return; const fromList=typeof pick==='
 function mpFail(t){ mpShutdown(); mpStatus(t,true); mpRenderPanel(); }
 function mpEnd(t){ const was=MP.on; mpShutdown(); if(was){ mpSys(t); flash(t); } if(!mpEl.hidden){ mpStatus(t,true); mpRenderPanel(); } }
 function mpLeave(){ if(MP.host) mpBroadcast({t:'x',why:'host'}); mpEnd('You left the server'); }
-function mpShutdown(){ mplStop(); try{ MPS.houses.clear(); MPS.hSig=''; mpHouseApply([]); if(!MP.host){ evHud(''); if(EV.beam) EV.beam.visible=false; } }catch(e){} if(MPG.id!==null) gunnerExit(); for(const z of MP.nz.values()) if(z.g.parent) removePerson(z); MP.nz.clear(); MP.zmap.clear(); for(const q of MP.np.values()) if(q.g.parent) removePerson(q); MP.np.clear(); MP.pmap.clear(); for(const c of MP.nc.values()) mpCarGone(c); MP.nc.clear(); MP.cmap.clear(); for(const o of MP.no.values()) if(props.includes(o)) removeProp(o); MP.no.clear(); MP.omap.clear(); MP.bSig=''; MP.grab=null; for(const c of cars) c.mpTaken=false; for(const p of people) if(p.mpAggro) p.mpAggro=null; clearTimeout(MP.joinTO); const p=MP.peer; MP.on=false; MP.busy=false; MP.host=false; MP.peer=null; MP.conn=null; MP.id=-1; MP.pl.clear(); for(const id of [...MP.av.keys()]) mpAvDrop(id); try{ if(p) p.destroy(); }catch(e){} mpHud(); }
+function mpShutdown(){ mplStop(); try{ for(const id of [...MPS.pol.keys()]) mpPolClear(id); MPS.houses.clear(); MPS.hSig=''; mpHouseApply([]); if(!MP.host){ evHud(''); if(EV.beam) EV.beam.visible=false; } }catch(e){} if(MPG.id!==null) gunnerExit(); for(const z of MP.nz.values()) if(z.g.parent) removePerson(z); MP.nz.clear(); MP.zmap.clear(); for(const q of MP.np.values()) if(q.g.parent) removePerson(q); MP.np.clear(); MP.pmap.clear(); for(const c of MP.nc.values()) mpCarGone(c); MP.nc.clear(); MP.cmap.clear(); for(const o of MP.no.values()) if(props.includes(o)) removeProp(o); MP.no.clear(); MP.omap.clear(); MP.bSig=''; MP.grab=null; for(const c of cars) c.mpTaken=false; for(const p of people) if(p.mpAggro) p.mpAggro=null; clearTimeout(MP.joinTO); const p=MP.peer; MP.on=false; MP.busy=false; MP.host=false; MP.peer=null; MP.conn=null; MP.id=-1; MP.pl.clear(); for(const id of [...MP.av.keys()]) mpAvDrop(id); try{ if(p) p.destroy(); }catch(e){} mpHud(); }
 function mpBroadcast(m,except){ if(!MP.host) return; for(const [id,p] of MP.pl) if(id&&p.conn&&p.conn!==except&&p.conn.open) try{ p.conn.send(m); }catch(e){} }
 function mpRoster(){ mpBroadcast({t:'r',l:[...MP.pl].map(([id,p])=>[id,p.name,p.col])}); mpHud(); if(!mpEl.hidden) mpRenderPanel(); }
 function mpHostData(conn,d){ if(!d||typeof d!=='object') return; const P=conn.mp;
@@ -8888,8 +8913,9 @@ function mpHostData(conn,d){ if(!d||typeof d!=='object') return; const P=conn.mp
   else if(d.t==='zs') mpHostZSpawn(P,d);
   else if(d.t==='tr'){ const m=mpShotSan(d); if(m){ mpShotShow(m); mpBroadcast(m,conn); } }
   else if(d.t==='hs'){ MPS.houses.set(P.id,mpHouseSan(d.l)); mpHouseBroadcast(); }
+  else if(d.t==='pc'){ const m=mpPolSan(d); mpPolApply(P.id,m); mpBroadcast({t:'pr',id:P.id,c:m.c,p:m.p,h:m.h},conn); }
   else if(['ph','ci','cd','ct','cr','cs','oi','os','ps','bp','br'].includes(d.t)) mpHostWorld(P,d); }
-function mpHostDrop(conn){ const P=conn.mp; if(!P||!MP.pl.has(P.id)) return; MP.pl.delete(P.id); MPS.houses.delete(P.id); setTimeout(mpHouseBroadcast,50); mpAvDrop(P.id); mpRoster(); mpSys(P.name+' left'); mpBroadcast({t:'c',id:-1,m:P.name+' left the game'}); }
+function mpHostDrop(conn){ const P=conn.mp; if(!P||!MP.pl.has(P.id)) return; MP.pl.delete(P.id); MPS.houses.delete(P.id); setTimeout(mpHouseBroadcast,50); mpPolClear(P.id); mpBroadcast({t:'pr',id:P.id,c:[],p:[],h:null}); mpAvDrop(P.id); mpRoster(); mpSys(P.name+' left'); mpBroadcast({t:'c',id:-1,m:P.name+' left the game'}); }
 function mpClientData(d){ if(!d||typeof d!=='object') return; MP.sinceHost=0;
   if(d.t==='w'){ clearTimeout(MP.joinTO); MP.busy=false; MP.on=true; MP.host=false; MP.id=+d.id; MP.sname=mpClean(d.sn,24); MP.pub=!!d.pub; mpSys('You joined "'+MP.sname+'". Press Enter to chat'); flash('Connected! Press Enter to chat'); mpRenderPanel(); mpHud(); }
   else if(d.t==='r'&&Array.isArray(d.l)){ const keep=new Set(); for(const e of d.l.slice(0,MPMAX)){ if(!Array.isArray(e)) continue; const id=+e[0]; if(!Number.isInteger(id)) continue; keep.add(id); const o=MP.pl.get(id)||{id,st:null,t:0}; o.name=mpClean(e[1]); o.col=mpColOk(e[2]); MP.pl.set(id,o); }
@@ -8906,6 +8932,7 @@ function mpClientData(d){ if(!d||typeof d!=='object') return; MP.sinceHost=0;
   else if(d.t==='ev') mpEvApply(d);
   else if(d.t==='evx') mpEvDone(d);
   else if(d.t==='hm') mpHouseApply(d.l);
+  else if(d.t==='pr'){ const id=d.id|0; if(id!==MP.id) mpPolApply(id,mpPolSan(d)); }
   else if(d.t==='tr'){ const m=mpShotSan(d); if(m) mpShotShow(m); }
   else if(d.t==='bl') mpBlocksApply(d.l);
   else if(d.t==='x'){ const why=d.why; MP.conn=null; mpEnd(why==='full'?'That game is full (20 players).':why==='old'?'Your game version is different from the host\'s. Both of you should refresh the page.':'The host ended the game.'); } }
@@ -8943,7 +8970,7 @@ function mpTick(dt){ if(!MP.on) return; MP.sendT+=dt;
     else if(MP.conn&&MP.conn.open){ try{ MP.conn.send({t:'u',s:st}); }catch(e){} } }
   if(MP.host){ MP.zT+=dt; if(MP.zT>=.1){ MP.zT=0; mpZSend(); } MP.wT+=dt; if(MP.wT>=1/6){ MP.wT=0; mpWorldSend(); } MPS.gsT+=dt; if(MPS.gsT>=1){ MPS.gsT=0; mpGsSend(); } MPS.evT+=dt; if(MPS.evT>=.5){ MPS.evT=0; mpEvSend(); } }
   else { MP.zClean+=dt; if(MP.zClean>.5){ MP.zClean=0; for(let i=people.length-1;i>=0;i--){ const q=people[i]; if(q.zombie&&!q.net) removePerson(q); } mpClientTidy(); } mpGrabTick(dt); }
-  mpHouseTick(dt);
+  mpHouseTick(dt); mpPolSend(dt); mpPolTick(dt);
   if(!MP.host){ MP.sinceHost+=dt; if(MP.sinceHost>15){ MP.conn=null; mpEnd('Lost connection to the host.'); return; } }
   mpAvatars(dt); }
 /* public server list: the first public server also runs a tiny "lobby" that the others report to; if it closes, another public server takes over */
