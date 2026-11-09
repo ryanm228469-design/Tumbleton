@@ -464,6 +464,7 @@ body.touch .dlg .nx kbd{display:none}
       <dt><kbd>Tab</kbd></dt><dd>First or third person</dd>
       <dt><kbd>/</kbd></dt><dd>Map: a bird's-eye photo of the whole world · drag, zoom, click a place to mark it</dd>
       <dt><kbd>,</kbd></dt><dd>Your phone: camera and selfies, map, places, pets, weather, contracts</dd>
+      <dt><kbd>;</kbd></dt><dd>Flashlight on or off: points where you look. The battery lasts about 2½ minutes and recharges while it's off</dd>
       <dt><kbd>.</kbd></dt><dd>Throw a bottle to pull zombies away</dd>
       <dt><kbd>W</kbd><kbd>W</kbd></dt><dd>Double-tap W on a motorbike, dirt bike, scooter or bicycle to pull a wheelie (hold W to keep it up, up to 10 seconds)</dd>
       <dt><kbd>E</kbd></dt><dd>Also: petrol pumps, vending machines, ATMs, your car's boot (stand behind it), crossing buttons on traffic lights, the pizza shop. Press <kbd>E</kbd> again while climbing into a car to skip it</dd>
@@ -511,6 +512,7 @@ body.touch .dlg .nx kbd{display:none}
         <dt><kbd>/</kbd></dt><dd>Map</dd>
         <dt><kbd>,</kbd></dt><dd>Phone and camera</dd>
         <dt><kbd>.</kbd></dt><dd>Throw a bottle</dd>
+        <dt><kbd>;</kbd></dt><dd>Flashlight</dd>
         <dt><kbd>V</kbd></dt><dd>Toys or build bar</dd>
         <dt><kbd>C</kbd></dt><dd>Clear the mess</dd>
       </dl>
@@ -6136,6 +6138,45 @@ function bunkTick(dt){ const D=XP.in; if(!D||!D.lvl) return; bunkRatsTick(D,dt);
   if(D.lights&&D.lvl>=4) D.lights.visible=Math.random()>.02; }
 function qzZombieTick(dt){ for(const z of people){ if(!z.zombie||z.dead||z.mode!=='walk') continue; if(z.zkind==='riot') riotTick(z,dt); else if(z.zkind==='spitter') spitTick(z,dt); } acidTick(dt); xpRingsTick(dt); }
 
+/* ===================== FLASHLIGHT (; to switch on/off) =====================
+   A real spotlight from your left hand, aimed where you look, with a soft visible beam in the dark.
+   The battery lasts about two and a half minutes, flickers when low and recharges while it's off.
+   Lights are made once at the start (yours + 2 for other players) so switching never rebuilds materials. */
+const FLT={on:false,bat:1,made:false,low:false,hud:null,lights:[],flick:1};
+function flMake(){ if(FLT.made) return; FLT.made=true;
+  const mk=()=>{ const L=new THREE.SpotLight(0xfff1d6,0,42,.42,.5,1.3); L.position.set(0,-200,0); L.target.position.set(0,-201,0); scene.add(L,L.target);
+    const cone=new THREE.Mesh(new THREE.CylinderGeometry(.04,2.4,11,18,1,true).translate(0,-5.5,0).rotateX(-PI/2),new THREE.MeshBasicMaterial({color:0xfff1c8,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,fog:false}));
+    cone.frustumCulled=false; cone.visible=false; scene.add(cone); return {L,cone}; };
+  FLT.lights=[mk(),mk(),mk()];
+  // the torch in your hand
+  FLT.mesh=new THREE.Mesh(mergeGeos([{g:new THREE.CylinderGeometry(.045,.045,.26,8).rotateX(PI/2),c:'#2d3142'},{g:new THREE.CylinderGeometry(.065,.05,.08,8).rotateX(PI/2).translate(0,0,.16),c:'#3a3f52'},{g:new THREE.CircleGeometry(.05,10).translate(0,0,.201),c:'#fff6d8'}],true),VC); FLT.mesh.visible=false;
+  try{ (player.foreL||player.armL).add(FLT.mesh); FLT.mesh.position.set(0,player.foreL?-.32:-.62,.12); FLT.mesh.rotation.x=PI/2; }catch(e){}
+  const h=document.createElement('div'); h.style.cssText='position:fixed;left:16px;bottom:118px;padding:4px 9px;border-radius:9px;background:rgba(15,18,28,.78);color:#fff;font:800 12px system-ui,sans-serif;z-index:30;pointer-events:none;display:none;align-items:center;gap:6px';
+  h.innerHTML='🔦<div style="width:46px;height:9px;border-radius:3px;border:1.5px solid #fff8;padding:1px;box-sizing:border-box"><div class="b" style="height:100%;width:100%;border-radius:2px;background:#7ee08a"></div></div>'; document.body.appendChild(h); FLT.hud=h; }
+function flToggle(){ flMake(); if(!FLT.on&&FLT.bat<.04){ flash('Flashlight battery is flat. Leave it off for a bit to recharge'); Snd.dry&&Snd.dry(); return; } FLT.on=!FLT.on; Snd.tink&&Snd.tink(player.pos.x,player.pos.z); flash(FLT.on?'Flashlight on':'Flashlight off'); }
+function flDark(){ if(XP.in||XP.was) return 1; const s=typeof sun!=='undefined'?sun.intensity:1; return Math.max(.12,Math.min(1,1.25-s*.9)); }
+function flAim(L,ox,oy,oz,dx,dy,dz,k,dark){ L.L.position.set(ox,oy,oz); L.L.target.position.set(ox+dx*10,oy+dy*10,oz+dz*10); L.L.intensity=2.6*k; L.cone.visible=k>0&&dark>.25; if(L.cone.visible){ L.cone.position.set(ox,oy,oz); L.cone.lookAt(ox+dx,oy+dy,oz+dz); L.cone.material.opacity=.05*dark*k; } }
+function flTick(dt){ if(!FLT.made){ if(!FLT.on) return; flMake(); }
+  // battery
+  if(FLT.on){ FLT.bat=Math.max(0,FLT.bat-dt/150); if(FLT.bat<=0){ FLT.on=false; flash('The flashlight dies. Leave it off to recharge'); } } else FLT.bat=Math.min(1,FLT.bat+dt/90);
+  const me=FLT.lights[0], hidden=!FLT.on||!!activeCar||state.over||!state.started;
+  if(FLT.hud){ const show=FLT.on||FLT.bat<.999; FLT.hud.style.display=show&&state.started?'flex':'none'; const b=FLT.hud.querySelector('.b'); b.style.width=Math.round(FLT.bat*100)+'%'; b.style.background=FLT.bat<.2?'#ff6b6b':FLT.bat<.45?'#f2c94c':'#7ee08a'; FLT.hud.style.opacity=FLT.on?1:.6; }
+  if(FLT.mesh){ const hand=player.foreL||player.armL; if(hand&&FLT.mesh.parent!==hand){ hand.add(FLT.mesh); FLT.mesh.position.set(0,player.foreL?-.32:-.62,.12); FLT.mesh.rotation.x=PI/2; } FLT.mesh.visible=FLT.on&&!activeCar&&!fp; }
+  if(hidden){ me.L.intensity=0; me.cone.visible=false; }
+  else { let k=1; if(FLT.bat<.2){ FLT.flick-=dt; if(FLT.flick<=0){ FLT.flick=.05+Math.random()*.4; FLT.fk=Math.random()<.35?Math.random()*.3:1; } k=FLT.fk===undefined?1:FLT.fk; }
+    const d=new V3(); camera.getWorldDirection(d); let o;
+    if(fp){ o=camera.position.clone().addScaledVector(d,.3); o.x+=Math.cos(camYaw)*.25; o.z-=Math.sin(camYaw)*.25; o.y-=.25; }
+    else { // hold it out in the left hand, pointing where you look
+      if(player.mode==='walk'&&!(XP.shieldM&&player.crouch)&&player.armL){ player.armL.rotation.set(-1.35+Math.max(-.6,Math.min(.6,camPitch))*.8,0,.12); if(player.foreL) player.foreL.rotation.set(-.15,0,0); }
+      o=new V3(); if(FLT.mesh&&FLT.mesh.parent){ FLT.mesh.updateWorldMatrix(true,false); FLT.mesh.localToWorld(o.set(0,0,.22)); } else o.set(player.pos.x,player.pos.y+.9,player.pos.z); }
+    // aim at whatever the crosshair points at
+    const far=camera.position.clone().addScaledVector(d,30), dir=far.sub(o).normalize();
+    flAim(me,o.x,o.y,o.z,dir.x,dir.y,dir.z,k,flDark()); }
+  // friends' flashlights (online)
+  let n=1; if(MP.on) for(const [id,P] of MP.pl){ if(n>2) break; if(id===MP.id||!P.st||!(P.st[7]&16)) continue; const av=MP.av&&MP.av.get(id); if(!av||!av.pos) continue; if(Math.hypot(av.pos.x-camera.position.x,av.pos.z-camera.position.z)>70) continue;
+    const y=P.st[11], p=P.st[12], cp=Math.cos(p); flAim(FLT.lights[n],av.pos.x+Math.sin(y)*.4,av.pos.y+.4,av.pos.z+Math.cos(y)*.4,Math.sin(y)*cp,-Math.sin(p),Math.cos(y)*cp,1,flDark()); n++; }
+  for(;n<3;n++){ FLT.lights[n].L.intensity=0; FLT.lights[n].cone.visible=false; } }
+
 /* ===================== THE PALE QUEEN · the old thing under the hill =====================
    A three-phase boss: ground fight, ceiling + darkness, then a boat chase down the river and a last stand.
    Weak spots: glowing egg sacs on her flanks, her split glowing mouth while she winds up a screech, and her heart
@@ -6495,7 +6536,7 @@ function pqHostHit(P,d){ if(!PQ.on||PQ.rep) return; const dmg=Math.max(0,Math.mi
   if(p==='cap'){ const c=PQ.caps[d.i|0]; if(c&&c.ok) pqCapBurst(c); return; } if(p==='stal'){ const st=PQ.stals[d.i|0]; if(st) pqStalHit(st,dmg); return; }
   if(p==='sac'){ const s=PQ.sacs[d.i|0]; if(s&&s.alive) pqDamage({part:'sac',sac:s},dmg,PQ.pos.x,2,PQ.pos.z,true); } else if(['body','throat','heart'].includes(p)) pqDamage({part:p},dmg,PQ.pos.x,2,PQ.pos.z,true); }
 
-function xpSetup(){ try{ xpTorch(); }catch(e){} EBR.push([-790,-LIM,-770,-LIM],[LIM,790,-770,-276],[LIM,790,LIM,770],[-790,-LIM,LIM,770]); try{ caveBuild(); }catch(e){ console.warn('cave',e); } try{ qzBuild(); }catch(e){ console.warn('qz',e); } try{ bunkBuild(); }catch(e){ console.warn('bunker',e); } }
+function xpSetup(){ try{ xpTorch(); flMake(); }catch(e){} EBR.push([-790,-LIM,-770,-LIM],[LIM,790,-770,-276],[LIM,790,LIM,770],[-790,-LIM,LIM,770]); try{ caveBuild(); }catch(e){ console.warn('cave',e); } try{ qzBuild(); }catch(e){ console.warn('qz',e); } try{ bunkBuild(); }catch(e){ console.warn('bunker',e); } }
 function xpTick(dt){ if(XP.ride&&player.mode!=='lift') XP.ride=null; if(XP.shieldM&&player.crouch&&player.mode==='walk'&&!activeCar) player.armL.rotation.set(-1.3,0,.6); xpHelpTick(dt); if(!XP.gv){ XP.gv=true; xpGearVis(); } xpRideTick(dt); try{ xpClimbTick(dt); }catch(e){ console.warn(e); } try{ pqTick(dt); }catch(e){ console.warn('queen',e); } try{ caveTick(dt); }catch(e){} try{ qzTick(dt); bunkTick(dt); qzZombieTick(dt); }catch(e){ console.warn(e); }
   XP.gcT=(XP.gcT||0)-dt; if(XP.gcT<=0){ XP.gcT=2; for(let i=people.length-1;i>=0;i--){ const q=people[i]; if(q.xpZ&&!q.xpBoss&&Math.hypot(q.pos.x-player.pos.x,q.pos.z-player.pos.z)>250) removePerson(q); } } }
 
@@ -7596,6 +7637,7 @@ addEventListener('keydown',e=>{
   else if(c==='KeyM') toggleSound();
   else if(c==='KeyL'){ if(mpClient()) flash('Only the server\'s host can start Last Stand'); else if(story.on) flash('Last Stand is only in Sandbox mode'); else if(state.surv.on) stopSurvival(); else startSurvival(); }
   else if(c==='KeyI'){ if(mpClient()) flash('Only the server\'s host can change infection'); else toggle('infection'); }
+  else if(c==='Semicolon'){ flToggle(); }
   else if(c==='KeyO'){ try{ localStorage.setItem('tumbleton-style',POLY?'classic':'poly'); }catch(e){} save(); restartTo(story.on?'story':'sandbox'); }
   else if(/^Digit[1-9]$/.test(c)){ const n=+c.slice(5)-1; if(n<curList().length) select(n,true); }
 });
@@ -8941,7 +8983,7 @@ function frameBody(now){
     Snd.wind(player.chute?Math.min(.2,.08+sp*.02):clamp((sp-7)/34,0,1)*.6,!!player.chute); }
   mpTick(dt); updateCamera(dt); if(state.cine) cineUpdate(dt); mhTick(dt); updateBubbles(dt); storyHUD(); policeHUD(); updateGhost(); try{ screenFx(dt); }catch(e){} try{ hudLayout(dt); }catch(e){} if(state.msgT>0) state.msgT-=dt; updateHUD();
   Snd.engine(activeJet&&!state.over?20+activeJet.spd*.5:activeCar&&!state.over&&!activeCar.pedal?Math.hypot(activeCar.vel.x,activeCar.vel.z):-1);
-  try{ xpLight(dt); }catch(e){} screenGuard(dt); shadowPace(); renderer.clear(); renderer.render(scene,camera);
+  try{ xpLight(dt); }catch(e){} try{ flTick(dt); }catch(e){ console.warn('flashlight',e); } screenGuard(dt); shadowPace(); renderer.clear(); renderer.render(scene,camera);
   if(fp&&!state.cine&&state.started&&!state.over&&!activeCar&&!activeHeli&&!player.chute&&(player.mode==='walk'||player.mode==='lift')){ updateViewModel(dt); renderer.clearDepth(); renderer.render(vmScene,vmCam); }
 }
 
@@ -9710,7 +9752,7 @@ function mpState(){ const p=player, r1=v=>Math.round(v*10)/10, r2=v=>Math.round(
   let x=p.pos.x, y=p.pos.y, z=p.pos.z, rx=0, ry=p.yaw, rz=0;
   if(o){ x=o.position.x; y=o.position.y; z=o.position.z; rx=o.rotation.x; ry=o.rotation.y; rz=o.rotation.z; mode=4; }
   else if(activeCrane) mode=5; else if(p.mode==='ragdoll'||p.mode==='held'){ mode=3; const Q=p.g.quaternion; q=[r2(Q.x),r2(Q.y),r2(Q.z),r2(Q.w)]; } else if(p.chute) mode=2; else if(p.crouch||MPG.id!==null) mode=1;
-  const st=[r1(x),r1(y),r1(z),r2(rx),r2(ry),r2(rz),mode,(p.punchT>0?1:0)|(!p.ground?2:0)|((p.immune>0||state.downT>0||state.over||p.mode==='held')?4:0)|(state.aimHeld?8:0),vk,vv,mpColOk(vc),r2(camYaw),r2(camPitch),Math.max(0,WORDER.indexOf(state.weapon))]; if(q) st.push(...q); return st; }
+  const st=[r1(x),r1(y),r1(z),r2(rx),r2(ry),r2(rz),mode,(p.punchT>0?1:0)|(!p.ground?2:0)|((p.immune>0||state.downT>0||state.over||p.mode==='held')?4:0)|(state.aimHeld?8:0)|(typeof FLT!=='undefined'&&FLT.on?16:0),vk,vv,mpColOk(vc),r2(camYaw),r2(camPitch),Math.max(0,WORDER.indexOf(state.weapon))]; if(q) st.push(...q); return st; }
 // a grabber on the host's game caught this player: get held, spun and thrown
 function mpGrabTick(dt){ const G=MP.grab; if(!G) return; const z=MP.nz.get(G.id); if(!z||!z.g.parent||state.over){ if(player.heldBy===z){ player.heldBy=null; player.mode='ragdoll'; } MP.grab=null; return; } G.t+=dt;
   if(!G.hold){ if((player.mode==='ragdoll'||player.mode==='walk')&&!player.heldBy&&Math.hypot(player.pos.x-z.pos.x,player.pos.z-z.pos.z)<4.5){ G.hold=GRAB_T; cancelReload(); player.mode='held'; player.heldBy=z; player.vel.set(0,0,0); player.angVel.set(0,0,0); flash('A grabber has you!'); Snd.groan(z.pos.x,z.pos.z); } else if(G.t>1.6) MP.grab=null; return; }
