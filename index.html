@@ -586,6 +586,10 @@ body.touch .dlg .nx kbd{display:none}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
+// if the game fails while starting up in the Classic style, go back to the normal style once instead of leaving a black screen
+window.addEventListener('error',function(){ if(window.__tbOK) return; try{ if(localStorage.getItem('tumbleton-style')==='classic'&&!sessionStorage.getItem('tb-fallback')){ sessionStorage.setItem('tb-fallback','1'); localStorage.setItem('tumbleton-style','poly'); location.reload(); } }catch(e){} });
+</script>
+<script>
 (function(){
 'use strict';
 if (!window.THREE){ document.getElementById('nogl').hidden=false; return; }
@@ -3616,9 +3620,9 @@ function carSkid(c,dt,amt){ if(amt<=0||c.air||!c.g.visible) return; const fx=Mat
 const _rdv=new V3();
 function poseRider(p,d,t){ const ped=d.pedal&&t!==undefined, s=ped?Math.sin(t):0;
   if(d.stand){ p.legL.rotation.set(-.15,0,-.22); p.legR.rotation.set(.15,0,.22); if(p.shinL){ p.shinL.rotation.set(.35,0,0); p.shinR.rotation.set(.35,0,0); } p.armL.rotation.set(0,0,-1.25); p.armR.rotation.set(0,0,1.25); if(p.foreL){ p.foreL.rotation.set(0,0,-.2); p.foreR.rotation.set(0,0,.2); } if(p.rig){ p.rig.position.y=0; p.rig.rotation.set(.12,0,0); } return; }
-  if(d.sit){ p.legL.rotation.set(-1.45,0,-.14); p.legR.rotation.set(-1.45,0,.14); p.shinL.rotation.set(.22,0,0); p.shinR.rotation.set(.22,0,0); }
-  else { p.legL.rotation.set(-1.15+s*.38,0,-.17); p.legR.rotation.set(-1.15-s*.38,0,.17); p.shinL.rotation.set(1.35-s*.42,0,0); p.shinR.rotation.set(1.35+s*.42,0,0); }
-  const ar=d.sit?-1.0:-1.2; p.armL.rotation.set(ar,0,-.1); p.armR.rotation.set(ar,0,.1); p.foreL.rotation.set(-.35,0,0); p.foreR.rotation.set(-.35,0,0);
+  if(d.sit){ p.legL.rotation.set(-1.45,0,-.14); p.legR.rotation.set(-1.45,0,.14); if(p.shinL){ p.shinL.rotation.set(.22,0,0); p.shinR.rotation.set(.22,0,0); } }
+  else { p.legL.rotation.set(-1.15+s*.38,0,-.17); p.legR.rotation.set(-1.15-s*.38,0,.17); if(p.shinL){ p.shinL.rotation.set(1.35-s*.42,0,0); p.shinR.rotation.set(1.35+s*.42,0,0); } }
+  const ar=d.sit?-1.0:-1.2; p.armL.rotation.set(ar,0,-.1); p.armR.rotation.set(ar,0,.1); if(p.foreL){ p.foreL.rotation.set(-.35,0,0); p.foreR.rotation.set(-.35,0,0); }
   if(p.rig){ p.rig.position.y=0; p.rig.rotation.set(d.hunch||0,0,0); } }
 function addDummyRider(c){ const P=makePersonMesh(SKIN[Math.floor(Math.random()*SKIN.length)],CAR_COLORS[Math.floor(Math.random()*CAR_COLORS.length)],PANTS[Math.floor(Math.random()*PANTS.length)],HAIR[Math.floor(Math.random()*HAIR.length)]);
   P.g.position.set(c.seat[0],c.seat[1],c.seat[2]); poseRider(P,c); P.g.traverse(o=>{ if(o.isMesh) o.castShadow=true; }); P.g.visible=false; c.g.add(P.g); c.dummy=P; }
@@ -9793,6 +9797,7 @@ function dmgLoad(){ let d=null; try{ d=JSON.parse(localStorage.getItem('tumbleto
   // collision for small things is restored to "broken" by re-running the wall/circle passes above; holes keep their walls solid
   dmgFlush(); }
 try{ dmgLoad(); }catch(e){ console.warn('damage load',e); }
+window.__tbOK=true;
 window.__tumbleton={state,player,cars,props,people,DMG,giantSmash,dmgBuildAll,stats:()=>({enterable:enterableCount,upper:storeyCount}),step:n=>{for(let i=0;i<n;i++){simStep(1/120);simStep(1/120);updateWorld(1/60);}}};
 })();
 </script>
