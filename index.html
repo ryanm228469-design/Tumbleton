@@ -588,6 +588,7 @@ body.touch .dlg .nx kbd{display:none}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="lib/GLTFLoader.js"></script>
+<script src="lib/SkeletonUtils.js"></script>
 <script>
 // if the game fails while starting up in the Classic style, go back to the normal style once instead of leaving a black screen
 window.addEventListener('error',function(){ if(window.__tbOK) return; try{ if(localStorage.getItem('tumbleton-style')==='classic'&&!sessionStorage.getItem('tb-fallback')){ sessionStorage.setItem('tb-fallback','1'); localStorage.setItem('tumbleton-style','poly'); location.reload(); } }catch(e){} });
@@ -8990,6 +8991,33 @@ function samTick(dt){
   SAM.mixer.update(dt);
 }
 
+/* ---------- Sam style zombies: Quaternius Zombie_Basic replaces the normal zombies' bodies (ragdolls and special kinds keep the old body) ---------- */
+const ZB={obj:null,acts:null,loading:false,err:0,h:1.72,base:1.36,near:80,far:105};
+function zbLoad(){ if(ZB.obj||ZB.loading||ZB.err) return; if(!THREE.GLTFLoader||!THREE.SkeletonUtils){ ZB.err=1; return; } ZB.loading=true;
+  new THREE.GLTFLoader().load('models/Zombie_Basic.gltf',g=>{ g.scene.traverse(n=>{ if(n.isMesh){ n.castShadow=true; n.frustumCulled=false; if(n.material&&n.material.map){ n.material.map.magFilter=THREE.NearestFilter; n.material.map.minFilter=THREE.NearestFilter; n.material.metalness=0; n.material.roughness=1; } } });
+    const box=new THREE.Box3(); g.scene.traverse(n=>{ if(n.isSkinnedMesh){ n.geometry.computeBoundingBox(); box.union(n.geometry.boundingBox); } });
+    ZB.base=Math.max(.5,box.max.y-box.min.y); ZB.clips=g.animations; ZB.obj=g.scene; ZB.loading=false; },undefined,e=>{ ZB.loading=false; ZB.err=1; console.warn('zombie model',e); }); }
+function zbMake(p){ const o=THREE.SkeletonUtils.clone(ZB.obj), mx=new THREE.AnimationMixer(o), acts={};
+  for(const c of ZB.clips) acts[c.name]=mx.clipAction(c); p.zb={o,mx,acts,cur:null,shown:false,t:Math.random()*3}; o.visible=false; p.g.add(o); }
+function zbDrop(p){ const z=p.zb; if(!z) return; if(z.shown&&p.rig) p.rig.visible=true; p.g.remove(z.o); z.mx.stopAllAction(); p.zb=null; }
+function zbTick(dt){
+  if(!SAM.on||!ZB.obj){ if(!SAM.on) for(const p of people) if(p.zb) zbDrop(p); else if(p.zbOff&&p.rig){ p.rig.visible=true; } if(SAM.on) zbLoad(); return; }
+  const px=player.pos.x, pz=player.pos.z;
+  for(const p of people){ if(!p.zombie||(p.zkind&&p.zkind!=='normal')||p.net||p.npc||!p.rig||p.isPlayer) continue;
+    const d=Math.hypot(p.pos.x-px,p.pos.z-pz), z=p.zb;
+    if(!z){ if(d>ZB.near||p.dead) continue; zbMake(p); continue; }
+    if(d>ZB.far){ zbDrop(p); continue; }
+    const show=p.mode==='walk'&&!p.dead&&p.g.visible;
+    if(show!==z.shown){ z.shown=show; z.o.visible=show; p.rig.visible=!show; z.cur=null; }
+    if(!show) continue;
+    const sc=p.g.scale.y||1, k=ZB.h*(p.zkind==='normal'?1:1)/(ZB.base*sc); z.o.scale.setScalar(k); z.o.position.set(0,-HIP/sc,0);
+    const sp=Math.hypot(p.vel.x,p.vel.z); let n='Idle';
+    if(p.legShot) n='Crawl'; else if(!p.ground) n='Jump_Idle'; else if(sp>3.2) n='Run'; else if(sp>.35) n='Walk';
+    if(n!==z.cur){ const a=z.acts[n]; if(a){ const old=z.acts[z.cur]; a.reset().setEffectiveWeight(1).play(); if(old) old.crossFadeTo(a,.2,false); z.cur=n; if(!old) a.time=z.t; } }
+    const a=z.acts[z.cur]; if(a) a.timeScale=(z.cur==='Walk'||z.cur==='Run')?clamp(sp/(z.cur==='Walk'?1.6:4),.6,1.7):1;
+    if(d<ZB.near) z.mx.update(dt); }
+}
+
 function frame(now){
   requestAnimationFrame(frame);
   try{ frameBody(now); frameErrs=Math.max(0,frameErrs-.02); }
@@ -9013,7 +9041,7 @@ function frameBody(now){
     Snd.wind(player.chute?Math.min(.2,.08+sp*.02):clamp((sp-7)/34,0,1)*.6,!!player.chute); }
   mpTick(dt); updateCamera(dt); if(state.cine) cineUpdate(dt); mhTick(dt); updateBubbles(dt); storyHUD(); policeHUD(); updateGhost(); try{ screenFx(dt); }catch(e){} try{ hudLayout(dt); }catch(e){} if(state.msgT>0) state.msgT-=dt; updateHUD();
   Snd.engine(activeJet&&!state.over?20+activeJet.spd*.5:activeCar&&!state.over&&!activeCar.pedal?Math.hypot(activeCar.vel.x,activeCar.vel.z):-1);
-  try{ xpLight(dt); }catch(e){} try{ flTick(dt); }catch(e){ console.warn('flashlight',e); } try{ samTick(dt); }catch(e){ if(!SAM.err){ SAM.err=1; console.warn('sam skin',e); } } screenGuard(dt); shadowPace(); renderer.clear(); renderer.render(scene,camera);
+  try{ xpLight(dt); }catch(e){} try{ flTick(dt); }catch(e){ console.warn('flashlight',e); } try{ samTick(dt); }catch(e){ if(!SAM.err){ SAM.err=1; console.warn('sam skin',e); } } try{ zbTick(dt); }catch(e){ if(!ZB.err){ ZB.err=1; console.warn('zombie skin',e); } } screenGuard(dt); shadowPace(); renderer.clear(); renderer.render(scene,camera);
   if(fp&&!state.cine&&state.started&&!state.over&&!activeCar&&!activeHeli&&!player.chute&&(player.mode==='walk'||player.mode==='lift')){ updateViewModel(dt); renderer.clearDepth(); renderer.render(vmScene,vmCam); }
 }
 
