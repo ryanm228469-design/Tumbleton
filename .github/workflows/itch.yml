@@ -3,7 +3,7 @@ name: Publish to itch.io
 on:
   push:
     branches: [main]
-    paths: ['index.html']
+    paths: ['index.html', 'models/**', 'lib/**']
   workflow_dispatch:
 
 jobs:
@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Package the game
-        run: mkdir -p build && cp index.html build/
+        run: mkdir -p build && cp -r index.html models lib build/
 
       - name: Push to sikmane.itch.io/tumbleton
         env:

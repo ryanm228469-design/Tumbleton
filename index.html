@@ -587,6 +587,7 @@ body.touch .dlg .nx kbd{display:none}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="lib/GLTFLoader.js"></script>
 <script>
 // if the game fails while starting up in the Classic style, go back to the normal style once instead of leaving a black screen
 window.addEventListener('error',function(){ if(window.__tbOK) return; try{ if(localStorage.getItem('tumbleton-style')==='classic'&&!sessionStorage.getItem('tb-fallback')){ sessionStorage.setItem('tb-fallback','1'); localStorage.setItem('tumbleton-style','poly'); location.reload(); } }catch(e){} });
@@ -7638,7 +7639,7 @@ addEventListener('keydown',e=>{
   else if(c==='KeyL'){ if(mpClient()) flash('Only the server\'s host can start Last Stand'); else if(story.on) flash('Last Stand is only in Sandbox mode'); else if(state.surv.on) stopSurvival(); else startSurvival(); }
   else if(c==='KeyI'){ if(mpClient()) flash('Only the server\'s host can change infection'); else toggle('infection'); }
   else if(c==='Semicolon'){ flToggle(); }
-  else if(c==='KeyO'){ try{ localStorage.setItem('tumbleton-style',POLY?'classic':'poly'); }catch(e){} save(); restartTo(story.on?'story':'sandbox'); }
+  else if(c==='KeyO'){ const st=POLY?(SAM.on?'sam':'poly'):'classic', nx=st==='poly'?'classic':st==='classic'?'sam':'poly'; try{ localStorage.setItem('tumbleton-style',nx==='classic'?'classic':'poly'); localStorage.setItem('tumbleton-sam',nx==='sam'?'1':'0'); }catch(e){} save(); restartTo(story.on?'story':'sandbox'); }
   else if(/^Digit[1-9]$/.test(c)){ const n=+c.slice(5)-1; if(n<curList().length) select(n,true); }
 });
 addEventListener('keyup',e=>{ keys[e.code]=false; });
@@ -8960,6 +8961,35 @@ cfEl.addEventListener('mousedown',e=>{ if(e.target===cfEl) closeRestart(); });
 let shPace=0; function shadowPace(){ const slow=frEma>18.5&&sun.castShadow; renderer.shadowMap.autoUpdate=!slow; if(slow){ shPace^=1; renderer.shadowMap.needsUpdate=!!shPace; } }
 let last=performance.now();
 let frameErrs=0, frameErrT=0;
+/* ---------- Sam skin: Quaternius "Zombie Apocalypse Kit" character (CC0) as an optional player model. Press O to cycle styles: Polygon, Classic, Sam. ---------- */
+const SAM={on:false,obj:null,mixer:null,acts:{},cur:null,loading:false,err:0,h:1.78};
+try{ SAM.on=localStorage.getItem('tumbleton-sam')==='1'; }catch(e){}
+function samLoad(){ if(SAM.obj||SAM.loading) return; if(!THREE.GLTFLoader){ flash('Sam model loader missing'); SAM.on=false; return; } SAM.loading=true;
+  new THREE.GLTFLoader().load('models/Characters_Sam.gltf',g=>{
+    const o=g.scene; o.traverse(n=>{ if(n.isMesh){ if(n.name!=='Sam') n.visible=false; n.castShadow=true; n.frustumCulled=false; if(n.material&&n.material.map){ n.material.map.magFilter=THREE.NearestFilter; n.material.map.minFilter=THREE.NearestFilter; n.material.metalness=0; n.material.roughness=1; } } });
+    const box=new THREE.Box3(); o.traverse(n=>{ if(n.isSkinnedMesh){ n.geometry.computeBoundingBox(); box.union(n.geometry.boundingBox); } });
+    SAM.base=Math.max(.5,box.max.y-box.min.y); SAM.obj=o; SAM.mixer=new THREE.AnimationMixer(o);
+    for(const c of g.animations) SAM.acts[c.name]=SAM.mixer.clipAction(c);
+    for(const n of ['Punch','Jump_Land']){ const a=SAM.acts[n]; if(a){ a.setLoop(THREE.LoopOnce,1); a.clampWhenFinished=true; } }
+    SAM.loading=false; SAM.attached=null; if(SAM.on) flash('Sam skin on'); },undefined,e=>{ SAM.loading=false; SAM.on=false; SAM.err=1; flash('Could not load the Sam model'); console.warn('sam load',e); }); }
+function samToggle(){ SAM.on=!SAM.on; try{ localStorage.setItem('tumbleton-sam',SAM.on?'1':'0'); }catch(e){} if(SAM.on&&!SAM.obj) samLoad(); else flash(SAM.on?'Sam skin on':'Sam skin off'); }
+function samPlay(n,fade){ const a=SAM.acts[n]; if(!a||SAM.cur===n) return; const old=SAM.acts[SAM.cur]; a.reset().setEffectiveWeight(1).play(); if(old) old.crossFadeTo(a,fade||.18,false); SAM.cur=n; }
+function samTick(dt){
+  if(!SAM.on){ if(SAM.shown&&player&&player.rig){ player.rig.visible=true; if(SAM.obj) SAM.obj.visible=false; SAM.shown=false; } return; }
+  if(!SAM.obj){ if(!SAM.loading&&!SAM.err) samLoad(); return; }
+  const p=player; if(!p||!p.g||!p.rig) return;
+  if(SAM.attached!==p.g){ p.g.add(SAM.obj); SAM.attached=p.g; }
+  const show=p.mode==='walk'&&!p.dead&&p.g.visible&&!state.over;
+  if(show!==SAM.shown){ SAM.shown=show; SAM.obj.visible=show; p.rig.visible=!show; SAM.cur=null; }
+  if(!show) return;
+  const sc=p.g.scale.y||1, k=SAM.h/(SAM.base*sc); SAM.obj.scale.setScalar(k); SAM.obj.position.set(0,-HIP/sc,0);
+  const sp=Math.hypot(p.vel.x,p.vel.z); let n='Idle';
+  if(!p.ground) n='Jump_Idle'; else if(p.punchT>0&&SAM.acts.Punch) n='Punch'; else if(sp>5.2) n='Run'; else if(sp>.5) n='Walk';
+  if(n==='Punch'&&SAM.cur!=='Punch'){ const a=SAM.acts.Punch; if(a){ a.reset(); } }
+  samPlay(n,.15); const a=SAM.acts[SAM.cur]; if(a&&(SAM.cur==='Walk'||SAM.cur==='Run')) a.timeScale=clamp(sp/(SAM.cur==='Walk'?2.2:5.5),.6,1.6); else if(a) a.timeScale=1;
+  SAM.mixer.update(dt);
+}
+
 function frame(now){
   requestAnimationFrame(frame);
   try{ frameBody(now); frameErrs=Math.max(0,frameErrs-.02); }
@@ -8983,7 +9013,7 @@ function frameBody(now){
     Snd.wind(player.chute?Math.min(.2,.08+sp*.02):clamp((sp-7)/34,0,1)*.6,!!player.chute); }
   mpTick(dt); updateCamera(dt); if(state.cine) cineUpdate(dt); mhTick(dt); updateBubbles(dt); storyHUD(); policeHUD(); updateGhost(); try{ screenFx(dt); }catch(e){} try{ hudLayout(dt); }catch(e){} if(state.msgT>0) state.msgT-=dt; updateHUD();
   Snd.engine(activeJet&&!state.over?20+activeJet.spd*.5:activeCar&&!state.over&&!activeCar.pedal?Math.hypot(activeCar.vel.x,activeCar.vel.z):-1);
-  try{ xpLight(dt); }catch(e){} try{ flTick(dt); }catch(e){ console.warn('flashlight',e); } screenGuard(dt); shadowPace(); renderer.clear(); renderer.render(scene,camera);
+  try{ xpLight(dt); }catch(e){} try{ flTick(dt); }catch(e){ console.warn('flashlight',e); } try{ samTick(dt); }catch(e){ if(!SAM.err){ SAM.err=1; console.warn('sam skin',e); } } screenGuard(dt); shadowPace(); renderer.clear(); renderer.render(scene,camera);
   if(fp&&!state.cine&&state.started&&!state.over&&!activeCar&&!activeHeli&&!player.chute&&(player.mode==='walk'||player.mode==='lift')){ updateViewModel(dt); renderer.clearDepth(); renderer.render(vmScene,vmCam); }
 }
 
