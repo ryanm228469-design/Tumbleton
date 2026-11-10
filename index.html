@@ -475,6 +475,7 @@ body.touch .dlg .nx kbd{display:none}
       <dt><kbd>X</kbd></dt><dd>Crouch down on one knee (Space stands up) · with the build bar open, pick up a block you placed</dd>
       <dt><kbd>B</kbd></dt><dd>Find places: the Hardware &amp; Arms store, Vehicles R Us, Tumbleton Motors, houses for sale and your garage. An arrow shows the way</dd>
       <dt><kbd>`</kbd></dt><dd>Clear dropped items and zombies</dd>
+      <dt><kbd>R</kbd></dt><dd>Next to a wheelie bin, dumpster, wall vent, locker or portaloo: hide inside (zombies and the Bull lose you). Hold <kbd>W</kbd> to peek, <kbd>R</kbd> or <kbd>Space</kbd> to get out. If the Bull is within 7 m when you climb in, it pulls you out</dd>
       <dt><kbd>U</kbd></dt><dd>Summon the Bull: the fog rolls in and it hunts you for 90 s (run, hide or stun it). The Expedition Journal is on your phone</dd>
       <dt><kbd>C</kbd></dt><dd>Switch weapon</dd>
       <dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Lean left and right to peek round corners (on foot) · Q is the horn and siren in vehicles</dd>
@@ -904,7 +905,8 @@ const PL=(w,d,x,y,z)=>new THREE.PlaneGeometry(w,d).rotateX(-PI/2).translate(x,y,
 function dirtTex(){ const c=cv(128,128), x=c.getContext('2d'); for(let i=0;i<26;i++){ const px=64+(Math.random()-.5)*70, py=64+(Math.random()-.5)*70, r=8+Math.random()*26, g=x.createRadialGradient(px,py,0,px,py,r);
     g.addColorStop(0,'rgba(92,72,48,.32)'); g.addColorStop(1,'rgba(92,72,48,0)'); x.fillStyle=g; x.fillRect(0,0,128,128); }
   for(let i=0;i<120;i++){ x.fillStyle='rgba(60,48,32,'+(.2+Math.random()*.3)+')'; x.fillRect(30+Math.random()*68,30+Math.random()*68,1.5,1.5); } return new THREE.CanvasTexture(c); }
-function detailPass(){ const dr=mulberry32(5150), DR=(a,b)=>a+(b-a)*dr(), pk=a=>a[Math.floor(dr()*a.length)];
+function detailPass(){ const dr=mulberry32(5150), DR=(a,b)=>a+(b-a)*dr(), pk=a=>a[Math.floor(dr()*a.length)], hr=mulberry32(4242);
+  HIDES=HIDES||[]; const lockMs=['#5d7184','#6f7f52','#8a5a3c'].map(c=>lam(c,{roughness:.55,metalness:.3})), ventM=lam('#3a3e44',{roughness:.5,metalness:.5}), slitM=lam('#0c0d0f',{roughness:1});
   const kerbM=lam('#bdb9b0',{roughness:.9}), drainM=lam('#25272b',{roughness:.6,metalness:.4}), lidM=lam('#1b1c1f',{roughness:.6}), lineM=lam('#e6e1d2',{roughness:.8}), ledgeM=lam('#d8d2c4',{roughness:.85}), plinthM=lam('#6d6862',{roughness:.9}),
     shopG=lam('#1d2731',{roughness:.12,metalness:.5,envMapIntensity:1.5}), frameM=lam('#2b2d31',{roughness:.5}), signMs=['#c0392b','#1d6fb8','#2e8b57','#f39c12','#8e44ad','#16a085','#d35400'].map(c=>lam(c,{roughness:.55})),
     binMs=['#2f6b45','#2a4f8f','#4a4d52','#7a6a2a'].map(c=>lam(c,{roughness:.7})), orangeM=lam('#f06d1f',{roughness:.6}), whiteM=lam('#f2f0ea',{roughness:.6}), woodM=lam('#a47a4c',{roughness:.9}),
@@ -931,11 +933,19 @@ function detailPass(){ const dr=mulberry32(5150), DR=(a,b)=>a+(b-a)*dr(), pk=a=>
       if(!street) continue;
       if(!f.door){ box(L,.9,.12,mid,.06,.45,plinthM);
         if(dr()<.55&&L>6){ const w=Math.min(L-2,DR(5,10)), t=mid+DR(-1,1)*(L-w-1)/2; box(w,2.5,.08,t,.06,1.55,shopG); box(w+.2,.12,.14,t,.08,2.84,frameM); for(let q=0;q<=Math.floor(w/2.2);q++) box(.1,2.5,.12,t-w/2+q*(w/Math.floor(w/2.2)),.08,1.55,frameM); box(w+.3,.65,.22,t,.12,3.25,pk(signMs)); } }
+      // hiding spots of their own (own random stream, so nothing else in the city moves): wall vents and locker banks near the corners
+      if(L>7&&hr()<.45){ const t=hr()<.5?a0+1.7:a1-1.7, [px,,pz]=at(t,0,0), nx=axisZ?0:sg, nz=axisZ?sg:0;
+        if(!(f.door&&Math.hypot(px-f.door.x,pz-f.door.z)<3.2)){
+          if(hr()<.5){ box(1.15,.9,.1,t,.04,.47,ventM); for(let q=0;q<6;q++) box(1.02,.05,.12,t,.06,.1+q*.14,pipeM); box(1.02,.78,.02,t,.005,.47,slitM);
+            HIDES.push({k:'vent',x:px+nx*.05,z:pz+nz*.05,nx,nz,eye:.45,front:.12,name:'the vent'}); }
+          else { for(let q=0;q<3;q++){ const tt=t+(q-1)*.58, m=lockMs[(q+Math.floor(hr()*3))%3]; box(.56,1.9,.5,tt,.27,.95,m); for(let r=0;r<4;r++) box(.3,.03,.02,tt,.53,1.55+r*.07,slitM); box(.04,.14,.04,tt+.18,.54,1.05,lidM); }
+            const [lx0,,lz0]=at(t-.9,.02,0), [lx1,,lz1]=at(t+.9,.52,0); f.c.b.push({x0:Math.min(lx0,lx1),x1:Math.max(lx0,lx1),z0:Math.min(lz0,lz1),z1:Math.max(lz0,lz1),y0:0,h:1.9});
+            const [cx2,,cz2]=at(t,.27,0); HIDES.push({k:'locker',x:cx2,z:cz2,nx,nz,eye:1.58,front:.2,name:'the locker'}); } } }
       // street props along the wall
       if(dr()<.6){ const t=mid+DR(-.4,.4)*L, kind=pk(['bins','bins','dump','barrier','pallets','pipes','tools']); const [px,,pz]=at(t,1.05,0), Fx=axisZ?1:0, Fz=axisZ?0:1;
         if(f.door&&Math.hypot(px-f.door.x,pz-f.door.z)<4) continue;
-        if(kind==='bins'){ for(let q=0;q<2;q++){ const [bx,,bz]=at(t+q*.75,.95,0), m=pk(binMs); addS(BX(.6,.95,.66,bx,.475,bz),m); addS(BX(.64,.08,.72,bx,.99,bz),lidM); f.c.b.push({x0:bx-.3,x1:bx+.3,z0:bz-.33,z1:bz+.33,y0:0,h:1}); } }
-        else if(kind==='dump'){ const [bx,,bz]=at(t,1.2,0); addS(axisZ?BX(2.2,1.2,1.3,bx,.6,bz):BX(1.3,1.2,2.2,bx,.6,bz),dumpM); addS(axisZ?BX(2.3,.1,1.4,bx,1.25,bz):BX(1.4,.1,2.3,bx,1.25,bz),lidM); f.c.b.push(axisZ?{x0:bx-1.1,x1:bx+1.1,z0:bz-.65,z1:bz+.65,y0:0,h:1.3}:{x0:bx-.65,x1:bx+.65,z0:bz-1.1,z1:bz+1.1,y0:0,h:1.3}); }
+        if(kind==='bins'){ for(let q=0;q<2;q++){ const [bx,,bz]=at(t+q*.75,.95,0), m=pk(binMs); addS(BX(.6,.95,.66,bx,.475,bz),m); addS(BX(.64,.08,.72,bx,.99,bz),lidM); f.c.b.push({x0:bx-.3,x1:bx+.3,z0:bz-.33,z1:bz+.33,y0:0,h:1}); HIDES.push({k:'bin',x:bx,z:bz,nx:axisZ?0:sg,nz:axisZ?sg:0,eye:.78,front:.3,name:'the wheelie bin'}); } }
+        else if(kind==='dump'){ const [bx,,bz]=at(t,1.2,0); addS(axisZ?BX(2.2,1.2,1.3,bx,.6,bz):BX(1.3,1.2,2.2,bx,.6,bz),dumpM); addS(axisZ?BX(2.3,.1,1.4,bx,1.25,bz):BX(1.4,.1,2.3,bx,1.25,bz),lidM); f.c.b.push(axisZ?{x0:bx-1.1,x1:bx+1.1,z0:bz-.65,z1:bz+.65,y0:0,h:1.3}:{x0:bx-.65,x1:bx+.65,z0:bz-1.1,z1:bz+1.1,y0:0,h:1.3}); HIDES.push({k:'dump',x:bx,z:bz,nx:axisZ?0:sg,nz:axisZ?sg:0,eye:1.05,front:.6,name:'the dumpster'}); }
         else if(kind==='barrier'){ for(let q=0;q<3;q++){ const [bx,,bz]=at(t+q*1.3,1.3,0); for(const y of [.25,.75]) addS(axisZ?BX(1.2,.18,.08,bx,y,bz):BX(.08,.18,1.2,bx,y,bz),q%2?whiteM:orangeM); for(const o of [-.55,.55]) addS(axisZ?BX(.06,.9,.06,bx+o,.45,bz):BX(.06,.9,.06,bx,.45,bz+o),whiteM); } }
         else if(kind==='pallets'){ const n=1+Math.floor(dr()*4); for(let q=0;q<n;q++){ const [bx,,bz]=at(t+(q%2)*1.3,1.1,0), y=Math.floor(q/2)*.15; for(const o of [-.4,0,.4]) addS(axisZ?BX(1.2,.04,.25,bx,y+.13,bz+o):BX(.25,.04,1.2,bx+o,y+.13,bz),woodM); for(const o of [-.5,0,.5]) addS(axisZ?BX(.12,.1,1,bx+o,y+.05,bz):BX(1,.1,.12,bx,y+.05,bz+o),woodM); } }
         else if(kind==='pipes'){ for(let q=0;q<5;q++){ const row=q<3?0:1, [bx,,bz]=at(t,1.2+(q%3-1)*.34+row*.17,0), g=new THREE.CylinderGeometry(.16,.16,3,8); if(axisZ) g.rotateZ(PI/2); else g.rotateX(PI/2); addS(g.translate(bx,.16+row*.29,bz),pipeM); } }
@@ -2241,6 +2251,7 @@ function makeSite(i,j,cx,cz,cell,lot){
   const zy=gate==='z1'?cz-m:cz+m, fy=gate==='z1'?1:-1;
   addS(BX(6,2.6,2.4,cx-6,1.3,zy),matCabin); addS(BX(1.4,.9,2.45,cx-7.5,1.5,zy),matCabGlass); addS(BX(1.4,.9,2.45,cx-4.5,1.5,zy),matCabGlass); addS(BX(6.2,.15,2.6,cx-6,2.68,zy),matRoofDark); cell.b.push({x0:cx-9,x1:cx-3,z0:zy-1.2,z1:zy+1.2,y0:0,h:2.75});
   addS(BX(1.2,2.3,1.2,cx-1.5,1.15,zy),matBlueP); addS(BX(1.3,.12,1.3,cx-1.5,2.36,zy),matWhite); cell.b.push({x0:cx-2.1,x1:cx-.9,z0:zy-.6,z1:zy+.6,y0:0,h:2.4});
+  (HIDES=HIDES||[]).push({k:'loo',x:cx-1.5,z:zy,nx:0,nz:fy,eye:1.55,front:.5,name:'the portaloo'});
   sitePallet(cx+5,zy,cell); sitePallet(cx+6.6,zy,cell); sitePallet(cx+5.8,zy,cell,matConcD);
   const sxp=cx-m, sz=cz+(big?2:4); addS(new THREE.ConeGeometry(big?1.6:2.2,big?1.3:1.6,12).translate(sxp,(big?1.3:1.6)/2,sz),matSand); cell.c.push({x:sxp,z:sz,r:big?1.3:1.8,h:1.4});
   addS(BX(1.7,1.3,3.6,cx-m,.65,cz-7),matCrane); cell.b.push({x0:cx-m-.85,x1:cx-m+.85,z0:cz-8.8,z1:cz-5.2,y0:0,h:1.3});
@@ -2604,10 +2615,10 @@ function poof(p){ if(p.storyM&&story.m&&p.storyM===story.m.id) story.kills++; if
 function provoke(o){ if(!o||!o.isPerson||!o.zombie||o.dead) return; const was=o.aggro>0; o.aggro=15; o.think=0; if(!was){ Snd.groan(o.pos.x,o.pos.z); o.lunge=Math.max(o.lunge||0,.25); } }
 function thinkAI(p){
   const lv=o=>o.pos.y<-4.2;
-  if(p.zombie){ if(p.aggro>0&&!state.over&&!(player.immune>0)&&state.downT<=0&&player.mode!=='held'&&lv(player)===lv(p)){ p.zt=activeCar?{pos:activeCar.pos,isCar:true,car:activeCar}:player; return; }
+  if(p.zombie){ if(p.aggro>0&&!state.over&&!(player.immune>0)&&state.downT<=0&&player.mode!=='held'&&!HIDE.on&&lv(player)===lv(p)){ p.zt=activeCar?{pos:activeCar.pos,isCar:true,car:activeCar}:player; return; }
     if(MP.on&&MP.host&&p.mpAggro&&perfT<p.mpAggro.t){ const T=mpTargetOf(p.mpAggro.id,p); if(T){ p.zt=T; return; } }
     let best=null,bd=38;
-    for(const h of people){ if(h.zombie||h.mode==='drive'||h.dead||h.noHurt||(h.isPlayer&&h.immune>0)||lv(h)!==lv(p)) continue;
+    for(const h of people){ if(h.zombie||h.mode==='drive'||h.dead||h.noHurt||(h.isPlayer&&(h.immune>0||HIDE.on))||lv(h)!==lv(p)) continue;
       const d=Math.hypot(h.pos.x-p.pos.x,h.pos.z-p.pos.z)*(h.isPlayer?.7:1); if(d<bd){bd=d;best=h;} }
     if(activeCar&&!lv(p)){ const d=Math.hypot(activeCar.pos.x-p.pos.x,activeCar.pos.z-p.pos.z)*.8; if(d<bd){bd=d;best={pos:activeCar.pos,isCar:true,car:activeCar};} }
     if(MP.on&&MP.host&&MP.av.size) for(const id of MP.av.keys()){ const T=mpTargetOf(id,p); if(!T) continue; const d=Math.hypot(T.pos.x-p.pos.x,T.pos.z-p.pos.z)*(T.isCar?.8:.7); if(d<bd){ bd=d; best=T; } }
@@ -6616,7 +6627,7 @@ var BULL_DATA={"n":["root","pelvis","spine_01","spine_02","spine_03","clavicle_l
 /* ---------- THE BULL: a rare night horror event. A thick fog rolls in (you can see about 15 m), creepy music starts,
    and a huge armoured beast hunts you for 90 seconds. Big hits stun it but nothing kills it. If it catches you: jumpscare, then you wake up safe ---------- */
 const BULL={on:false,mode:'off',t:0,M:null,pos:new V3(),yaw:0,spd:0,vx:0,vz:0,stunT:0,dmg:0,chaseT:0,cd:5,chDir:null,stuck:0,fogK:0,fogBase:null,bg:new THREE.Color('#2b2e35'),
-  rolled:false,startAt:-1,step:0,stepT:0,mus:null,act:null,scare:null,warn:{},hintT:0,LEN:90,S:.0145,lkp:new V3(),unseen:0,senseT:0,sensed:true,sniff:null,sniffT:0,srchT:0,hunt:false,hud:null};
+  rolled:false,startAt:-1,step:0,stepT:0,mus:null,act:null,scare:null,warn:{},hintT:0,LEN:75,S:.0145,lkp:new V3(),unseen:0,senseT:0,sensed:true,sniff:null,sniffT:0,srchT:0,hunt:false,hud:null};
 const _bv=new V3(), _bw=new V3();
 function bullBuild(){ if(BULL.M) return BULL.M; const D=BULL_DATA; if(!D) return null;
   const s=atob(D.bin), bin=new Uint8Array(s.length); for(let i=0;i<s.length;i++) bin[i]=s.charCodeAt(i);
@@ -6725,11 +6736,11 @@ function bullPlace(dist,behind){ const P=bullTarget(); let best=null;
   for(let k=0;k<14;k++){ const base=behind?camYaw+PI:Math.random()*TAU, a=base+(behind?R(-.9,.9):0), d=dist*R(.9,1.15), x=P.x+Math.sin(a)*d, z=P.z+Math.cos(a)*d, y=groundHeight(x,z);
     if(Math.abs(y-(P.y-HIP))>6) continue; if(solidAt(x,y+1.2,z)||solidAt(x,y+2.4,z)) continue; best={x,y,z}; break; }
   if(!best) return false; BULL.pos.set(best.x,best.y,best.z); BULL.yaw=Math.atan2(P.x-best.x,P.z-best.z); BULL.stuck=0; return true; }
-function bullEnd(survived){ BULL.on=false; BULL.mode='off'; BULL.hunt=false; BULL.leaving=0; if(BULL.M) BULL.M.g.visible=false; bullMusic();
+function bullEnd(survived){ BULL.on=false; BULL.mode='off'; BULL.hunt=false; try{ hideTempClear(); }catch(e){} BULL.leaving=0; if(BULL.M) BULL.M.g.visible=false; bullMusic();
   if(survived){ bullSnd('relief'); achStat('bull'); earn(750); banner('YOU SURVIVED THE BULL','It fades back into the fog. +$750'); } }
 function bullHurt(dmg,x,z){ if(!BULL.on||BULL.mode==='scare'||BULL.mode==='omen'||BULL.mode==='leave'||!BULL.M||!BULL.M.g.visible) return false;
   if(BULL.stunT>0){ return true; } BULL.dmg+=dmg; bullSnd('hurt',BULL.pos.x,BULL.pos.z); puff(x,BULL.pos.y+2,z,0xff8a4a,.3,false);
-  if(BULL.dmg>=10){ BULL.dmg=0; BULL.stunT=2.8; BULL.mode='stun'; BULL.chDir=null; bullPlay('hit',.1,1); state.shake=Math.max(state.shake,.15); if(!BULL.warn.stun){ BULL.warn.stun=1; flash('It staggers! You can stun it, but you can\'t kill it. RUN'); } }
+  if(BULL.dmg>=7){ BULL.dmg=0; BULL.stunT=3.5; BULL.mode='stun'; BULL.chDir=null; bullPlay('hit',.1,1); state.shake=Math.max(state.shake,.15); if(!BULL.warn.stun){ BULL.warn.stun=1; flash('It staggers! You can stun it, but you can\'t kill it. RUN'); } }
   return true; }
 function bullProjHit(q){ if(!BULL.on||!BULL.M||!BULL.M.g.visible) return false; const p=q.pos; if(Math.hypot(p.x-BULL.pos.x,p.z-BULL.pos.z)>1.7||p.y<BULL.pos.y-.2||p.y>BULL.pos.y+3.2) return false;
   if(q.type==='shell') return true; bullHurt(q.type==='bullet'?1:1.5,p.x,p.z); return true; }
@@ -6742,19 +6753,20 @@ function bullMove(dx,dz){ const p=BULL.pos, ok=(x,z)=>{ const y=groundHeight(x,z
 // It sees you only with a clear line (walls, buildings and anything solid block it), not far when you crouch, and only in front of it while it's searching
 function bullLOS(P,crouch){ const x0=BULL.pos.x, z0=BULL.pos.z, dx=P.x-x0, dz=P.z-z0, d=Math.hypot(dx,dz), n=Math.ceil(d/.6), gy=P.y-HIP;
   for(let i=1;i<n;i++){ const k=i/n, x=x0+dx*k, z=z0+dz*k, y=gy+(groundHeight(x,z)-gy)*0; if(solidAt(x,y+(crouch?.8:1.5),z)&&solidAt(x,y+.8,z)) return false; } return true; }
-function bullSense(P,dist,cone){ if(activeCar) return true; if(dist<2.8) return true; if(Math.abs(P.y-HIP-BULL.pos.y)>5) return false;
-  const cr=!!player.crouch, sp=Math.hypot(player.vel.x,player.vel.z), hear=sp>7?17:sp>2.5?(cr?3:9):sp>.4?(cr?2:5):0;
-  if(dist<hear) return true; if(dist>(cr?6:15)) return false;
+function bullSense(P,dist,cone){ if(HIDE.on) return !!HIDE.doomed; if(activeCar) return true; if(dist<2.8) return true; if(Math.abs(P.y-HIP-BULL.pos.y)>5) return false;
+  const cr=!!player.crouch, sp=Math.hypot(player.vel.x,player.vel.z), hear=sp>7?13:sp>2.5?(cr?2:6):sp>.4?(cr?1.5:3):0;
+  if(dist<hear) return true; if(dist>(cr?5:12)) return false;
   if(cone){ const a=Math.abs(wrapA(Math.atan2(P.x-BULL.pos.x,P.z-BULL.pos.z)-BULL.yaw)); if(a>1.2) return false; }
   return bullLOS(P,cr); }
 function bullHud(){ let h=BULL.hud; if(!h){ h=BULL.hud=document.createElement('div'); h.style.cssText='position:fixed;left:50%;bottom:132px;transform:translateX(-50%);z-index:21;padding:5px 14px;border-radius:999px;font:800 14px system-ui,sans-serif;color:#fff;pointer-events:none;letter-spacing:.04em;text-shadow:0 1px 2px #000;display:none'; document.body.appendChild(h); }
   if(!BULL.on||BULL.mode==='scare'||BULL.mode==='omen'){ h.style.display='none'; return; } h.style.display='block';
   const left=Math.max(0,BULL.LEN-BULL.chaseT), tm=BULL.hunt?' · '+Math.floor(left/60)+':'+String(Math.floor(left%60)).padStart(2,'0'):'';
-  if(BULL.mode==='search'){ h.style.background='rgba(160,110,10,.85)'; h.textContent='🫣 HIDDEN · it\'s searching'+tm; }
+  if(HIDE.on&&!HIDE.doomed){ h.style.background='rgba(160,110,10,.85)'; h.textContent='🫣 HIDING in '+HIDE.s.name.replace('the ','')+(BULL.mode==='search'?' · it\'s searching':'')+tm; }
+  else if(BULL.mode==='search'){ h.style.background='rgba(160,110,10,.85)'; h.textContent='🫣 HIDDEN · it\'s searching'+tm; }
   else if(BULL.mode==='stalk'){ h.style.background='rgba(40,44,52,.85)'; h.textContent='🌫 Something is out there'; }
   else if(BULL.mode==='leave'){ h.style.background='rgba(30,120,60,.85)'; h.textContent='The fog is lifting'; }
   else { h.style.background='rgba(170,20,20,.88)'; h.textContent='👁 HUNTED'+tm; } }
-function bullLost(){ BULL.mode='search'; BULL.srchT=0; BULL.sniff=BULL.lkp.clone(); BULL.sniffT=0; BULL.chDir=null; if(!BULL.warn.lost){ BULL.warn.lost=1; flash('It lost you! Stay out of sight. Crouch (X) and don\'t sprint: it can hear you'); } }
+function bullLost(){ BULL.mode='search'; BULL.srchT=0; BULL.sniff=BULL.lkp.clone(); BULL.sniffT=0; BULL.chDir=null; if(!BULL.warn.lost){ BULL.warn.lost=1; flash(HIDE.on?'It lost you. Stay put, hold W to peek (carefully)':'It lost you! Stay out of sight or hide in a bin, dumpster, vent or locker (R). Crouch (X) and don\'t sprint'); } }
 function bullFound(){ BULL.mode='rage'; BULL.t=.8; BULL.unseen=0; bullPlay('rage',.2,1.8); bullSnd('roar',BULL.pos.x,BULL.pos.z); bullSnd('sting'); flash('It found you! RUN'); }
 // U calls the Bull straight away (any time of day); the Expedition Journal is still on the phone
 function bullSummon(){ if(BULL.on){ flash('The Bull is already out there...'); return; } if(!bullCan()){ flash('The Bull can\'t reach you here'); return; } bullStart(); }
@@ -6773,25 +6785,25 @@ function bullTick0(dt){
   if(BULL.hunt&&BULL.mode!=='leave'){ BULL.chaseT+=bdt; if(BULL.chaseT>=BULL.LEN){ BULL.mode='leave'; BULL.t=0; BULL.chDir=null; bullSnd('bellow',BULL.pos.x,BULL.pos.z); flash('The fog is starting to lift...'); }
     else if(BULL.chaseT>BULL.LEN-20&&!BULL.warn.l){ BULL.warn.l=1; flash('Hold on! 20 more seconds'); } }
   if(BULL.mode==='omen'){ if(BULL.t>2.2&&!BULL.warn.b){ BULL.warn.b=1; const a=camYaw+PI+R(-1,1); bullSnd('bellow',P.x+Math.sin(a)*40,P.z+Math.cos(a)*40); }
-    if(BULL.t>6.5){ if(bullPlace(26,true)){ BULL.mode='stalk'; BULL.t=0; M.g.visible=true; bullPlay('walk',0,1); flash('Something is out there in the fog. Keep moving'); } } }
+    if(BULL.t>6.5){ if(bullPlace(26,true)){ BULL.mode='stalk'; BULL.t=0; M.g.visible=true; try{ hideTemp(); }catch(e){} bullPlay('walk',0,1); flash('Something is out there in the fog. Keep moving'); } } }
   else if(BULL.mode==='stalk'){ BULL.spd=2.6; if(dist<13||BULL.t>9){ BULL.hunt=true; BULL.lkp.set(P.x+R(-5,5),P.y,P.z+R(-5,5));
-      if(bullSense(P,dist,false)){ BULL.mode='rage'; BULL.t=0; BULL.spd=0; bullPlay('rage',.3,1.6); bullSnd('roar',BULL.pos.x,BULL.pos.z); bullSnd('sting'); state.shake=Math.max(state.shake,.25); banner('RUN','It has your scent. Run or hide for 90 seconds',true); }
-      else { bullSnd('bellow',BULL.pos.x,BULL.pos.z); banner('HIDE','It knows you\'re close. Stay out of sight for 90 seconds',true); bullLost(); } } }
+      if(bullSense(P,dist,false)){ BULL.mode='rage'; BULL.t=0; BULL.spd=0; bullPlay('rage',.3,1.6); bullSnd('roar',BULL.pos.x,BULL.pos.z); bullSnd('sting'); state.shake=Math.max(state.shake,.25); banner('RUN','It has your scent. Run or hide for 75 seconds',true); }
+      else { bullSnd('bellow',BULL.pos.x,BULL.pos.z); banner('HIDE','It knows you\'re close. Stay out of sight for 75 seconds',true); bullLost(); } } }
   else if(BULL.mode==='rage'){ BULL.spd=0; if(BULL.t>1.9){ BULL.mode='chase'; BULL.t=0; } }
   else if(BULL.mode==='stun'){ BULL.spd=0; BULL.stunT-=bdt; if(BULL.stunT<=0){ BULL.mode='rage'; BULL.t=.9; bullPlay('rage',.2,1.6); bullSnd('roar',BULL.pos.x,BULL.pos.z); } }
   else if(BULL.mode==='search'){ BULL.spd=BULL.sniffT>0?0:3.4; BULL.srchT+=bdt;
     if(BULL.sniffT>0){ BULL.sniffT-=bdt; if(BULL.sniffT<=0){ const a=Math.random()*TAU, r=R(2,8); BULL.sniff=BULL.lkp.clone(); BULL.sniff.x+=Math.sin(a)*r; BULL.sniff.z+=Math.cos(a)*r; } }
     else if(Math.hypot(BULL.sniff.x-BULL.pos.x,BULL.sniff.z-BULL.pos.z)<1.6||BULL.stuck>1){ BULL.stuck=0; BULL.sniffT=R(1,2.2); bullSnd('snort',BULL.pos.x,BULL.pos.z); }
     // it keeps catching your scent, so the search drifts towards wherever you are
-    if(BULL.srchT>10){ BULL.srchT=0; const a=Math.random()*TAU, r=R(5,12); BULL.lkp.set(P.x+Math.sin(a)*r,P.y,P.z+Math.cos(a)*r); BULL.sniff=BULL.lkp.clone(); BULL.sniffT=0; }
+    if(BULL.srchT>14){ BULL.srchT=0; const a=Math.random()*TAU, r=R(8,16); BULL.lkp.set(P.x+Math.sin(a)*r,P.y,P.z+Math.cos(a)*r); BULL.sniff=BULL.lkp.clone(); BULL.sniffT=0; }
     BULL.senseT-=bdt; if(BULL.senseT<=0){ BULL.senseT=.15; if(bullSense(P,dist,true)){ BULL.lkp.copy(P); bullFound(); } } }
-  else if(BULL.mode==='chase'){ const car=!!activeCar, base=car?15.5:7.7;
-    BULL.senseT-=bdt; if(BULL.senseT<=0){ BULL.senseT=.15; BULL.sensed=bullSense(P,dist,false); } if(BULL.sensed){ BULL.lkp.copy(P); BULL.unseen=0; } else { BULL.unseen+=bdt; if(BULL.unseen>1.6&&!BULL.chDir){ bullLost(); } }
+  else if(BULL.mode==='chase'){ const car=!!activeCar, base=car?14:6.8;
+    BULL.senseT-=bdt; if(BULL.senseT<=0){ BULL.senseT=.15; BULL.sensed=bullSense(P,dist,false); } if(BULL.sensed){ BULL.lkp.copy(P); BULL.unseen=0; } else { BULL.unseen+=bdt; if(BULL.unseen>1.2&&!BULL.chDir){ bullLost(); } }
     if(BULL.chDir){ BULL.chDir.t-=bdt; if(BULL.chDir.t<=0) BULL.chDir=null; }
-    else { BULL.cd-=bdt; if(BULL.cd<=0&&BULL.sensed&&dist>5&&dist<24){ BULL.mode='tell'; BULL.t=0; bullSnd('snort',BULL.pos.x,BULL.pos.z); } }
-    BULL.spd=BULL.chDir?(car?22:13.5):base*(dist>18?1.25:1);
+    else { BULL.cd-=bdt; if(BULL.cd<=0&&BULL.sensed&&!HIDE.on&&dist>5&&dist<24){ BULL.mode='tell'; BULL.t=0; bullSnd('snort',BULL.pos.x,BULL.pos.z); } }
+    BULL.spd=BULL.chDir?(car?20:12):base*(dist>18?1.2:1);
   }
-  else if(BULL.mode==='tell'){ BULL.spd=0; if(BULL.t>.6){ const v=activeCar?activeCar.vel:player.vel, lead=Math.min(.6,dist/14); _bv.set(P.x+(v?v.x*lead:0)-BULL.pos.x,0,P.z+(v?v.z*lead:0)-BULL.pos.z).normalize(); BULL.chDir={x:_bv.x,z:_bv.z,t:1.5}; BULL.cd=R(3.5,6.5); BULL.mode='chase'; bullSnd('roar',BULL.pos.x,BULL.pos.z); } }
+  else if(BULL.mode==='tell'){ BULL.spd=0; if(BULL.t>.8){ const v=activeCar?activeCar.vel:player.vel, lead=Math.min(.6,dist/14); _bv.set(P.x+(v?v.x*lead:0)-BULL.pos.x,0,P.z+(v?v.z*lead:0)-BULL.pos.z).normalize(); BULL.chDir={x:_bv.x,z:_bv.z,t:1.5}; BULL.cd=R(3.5,6.5); BULL.mode='chase'; bullSnd('roar',BULL.pos.x,BULL.pos.z); } }
   else if(BULL.mode==='leave'){ BULL.spd=4; BULL.leaving=(BULL.leaving||0)+bdt; if(BULL.leaving>6||dist>22){ bullEnd(true); bullFog(bdt); return; } }
   // steer: straight at you, or locked in a straight line while charging
   let wx=dx/(dist||1), wz=dz/(dist||1); if(BULL.mode==='leave'){ wx=-wx; wz=-wz; }
@@ -6805,7 +6817,10 @@ function bullTick0(dt){
   if(BULL.mode==='search'&&dist>40&&bullPlace(22,false)) BULL.sniff=BULL.lkp.clone();
   BULL.pos.y+=(groundHeight(BULL.pos.x,BULL.pos.z)-BULL.pos.y)*Math.min(1,bdt*12);
   // caught you
-  if((BULL.mode==='chase'||BULL.mode==='tell'||BULL.mode==='search')&&dist<(activeCar?3.4:2.1)&&Math.abs(P.y-HIP-BULL.pos.y)<3&&!(player.immune>0)&&state.downT<=0) { bullScareStart(); return; }
+  if(HIDE.on&&HIDE.doomed&&dist<2.8&&BULL.mode!=='stun'){ // it rips the lid or door open and drags you out
+    hideClank('dump'); bullSnd('roar',BULL.pos.x,BULL.pos.z); hideExit(true); bullScareStart(); return; }
+  if(HIDE.on&&HIDE.doomed&&(BULL.mode==='search'||BULL.mode==='stalk')){ BULL.lkp.copy(P); bullFound(); }
+  if(!HIDE.on&&(BULL.mode==='chase'||BULL.mode==='tell'||BULL.mode==='search')&&dist<(activeCar?3.4:1.9)&&Math.abs(P.y-HIP-BULL.pos.y)<3&&!(player.immune>0)&&state.downT<=0) { bullScareStart(); return; }
   // body, animation, footsteps, breath
   M.g.position.copy(BULL.pos); M.g.rotation.y=BULL.yaw; if(BULL.mode!=='omen') M.g.visible=true;
   if(BULL.mode==='search'&&BULL.spd===0) bullPlay('walk',.3,.2);
@@ -6841,8 +6856,54 @@ function bullScareTick(dt){ const S=BULL.scare, M=BULL.M; S.t+=dt; M.mixer.updat
   const f=BULL.scareEl; if(S.t>.06&&S.t<.18) f.style.background='#fff'; else if(S.t<1.15) f.style.background='radial-gradient(ellipse at center,rgba(255,40,10,0) 25%,rgba(140,0,0,.9) 100%)';
   else { f.style.background='#000'; f.style.opacity=String(Math.min(1,(S.t-1.15)/.25)); }
   if(S.t>2.6){ bullScareEnd(); } }
-function bullScareEnd(){ const S=BULL.scare; BULL.scare=null; document.body.classList.remove('bscare'); if(!S.mp) state.paused=false; if(typeof XP!=='undefined'&&XP.torch){ XP.torch.intensity=0; XP.torch.position.set(0,-80,0); } BULL.on=false; BULL.mode='off'; BULL.fogK=0; if(BULL.M) BULL.M.g.visible=false; bullMusic(); skyDome.visible=true; scene.background=skyCol;
+function bullScareEnd(){ const S=BULL.scare; BULL.scare=null; try{ hideTempClear(); }catch(e){} document.body.classList.remove('bscare'); if(!S.mp) state.paused=false; if(typeof XP!=='undefined'&&XP.torch){ XP.torch.intensity=0; XP.torch.position.set(0,-80,0); } BULL.on=false; BULL.mode='off'; BULL.fogK=0; if(BULL.M) BULL.M.g.visible=false; bullMusic(); skyDome.visible=true; scene.background=skyCol;
   try{ freshPlayer(); }catch(e){} lastLook=-9; const f=BULL.scareEl; f.style.transition='opacity 1.6s ease-out'; f.style.opacity='0'; setTimeout(()=>{ flash('You wake up... the fog is gone. Nothing was lost'); },900); }
+
+/* ---------- hiding spots: wheelie bins, dumpsters, wall vents, lockers and portaloos. R (tap) hides and gets out; hold W to peek; zombies and the Bull lose you.
+   If the Bull is within 7 m when you climb in, it rips the thing open and pulls you out ---------- */
+var HIDES; HIDES=HIDES||[];
+const HIDE={on:false,s:null,peek:0,doomed:false,ov:null,yaw0:0,tmp:[]};
+function hideNear(){ if(HIDE.on||activeCar||activeHeli||activeJet||activeCrane||!player||player.mode!=='walk'||state.downT>0) return null; const P=player.pos; let best=null,bd=1.9;
+  for(const h of HIDES){ const dx=h.x+h.nx*(h.front+.45)-P.x, dz=h.z+h.nz*(h.front+.45)-P.z; if(Math.abs(dx)>bd||Math.abs(dz)>bd) continue; const d=Math.hypot(dx,dz); if(d<bd&&Math.abs(groundHeight(h.x,h.z)-(P.y-HIP))<1.2){ bd=d; best=h; } } return best; }
+function hidePrompt(){ if(HIDE.on) return '<kbd>R</kbd> Get out · hold <kbd>W</kbd> to peek · move the mouse to look'; const h=hideNear(); return h?'<kbd>R</kbd> Hide in '+h.name:''; }
+function hideClank(k){ Snd.fx&&Snd.fx((ctx,out,noise,tone)=>{ if(k==='vent'){ tone('square',320,300,.12,.05); noise(.18,'bandpass',2200,1400,.12,3); } else if(k==='locker'||k==='loo'){ tone('square',210,190,.2,.07); tone('triangle',520,500,.25,.05); noise(.08,'highpass',3000,2000,.15,1); } else { tone('triangle',140,120,.3,.12); noise(.2,'lowpass',900,300,.2,1); } }); }
+function hideUse(){ if(HIDE.on){ hideExit(false); return true; } const h=hideNear(); if(!h) return false; hideEnter(h); return true; }
+function hideEnter(h){ HIDE.on=true; HIDE.s=h; HIDE.peek=0; HIDE.doomed=false; player.mode='lift'; player.vel.set(0,0,0); player.crouch=false; player.g.visible=false;
+  player.pos.set(h.x,groundHeight(h.x,h.z)+HIP,h.z); player.g.position.copy(player.pos);
+  HIDE.yaw0=Math.atan2(h.nx,h.nz); camYaw=HIDE.yaw0; camPitch=0; player.yaw=HIDE.yaw0;
+  try{ if(typeof FLT!=='undefined'&&FLT.on) flToggle(); }catch(e){}
+  // too close: it saw where you went
+  if(BULL.on&&BULL.M&&BULL.M.g.visible&&['stalk','rage','chase','tell','search','stun'].includes(BULL.mode)&&Math.hypot(BULL.pos.x-h.x,BULL.pos.z-h.z)<7) HIDE.doomed=true;
+  hideClank(h.k); hideOverlay(); }
+function hideExit(force){ const h=HIDE.s; HIDE.on=false; HIDE.s=null; HIDE.doomed=false; if(HIDE.ov) HIDE.ov.style.display='none'; if(!h) return; player.g.visible=true; if(!BULL.on&&HIDE.tmp.length) setTimeout(hideTempClear,0);
+  if(player.mode==='lift'){ player.mode='walk'; const x=h.x+h.nx*(h.front+.7), z=h.z+h.nz*(h.front+.7); player.pos.set(x,groundHeight(x,z)+HIP,z); player.g.position.copy(player.pos); player.vel.set(0,0,0); }
+  if(!force) hideClank(h.k); }
+function hideOverlay(){ let o=HIDE.ov; if(!o){ o=HIDE.ov=document.createElement('div'); o.style.cssText='position:fixed;inset:0;z-index:0;pointer-events:none;transition:opacity .12s'; const cvs=renderer.domElement; if(cvs.parentNode) cvs.parentNode.insertBefore(o,cvs.nextSibling); else document.body.appendChild(o); }
+  const k=HIDE.s.k, D='#040405', vig='radial-gradient(ellipse at center,rgba(0,0,0,0) 35%,rgba(0,0,0,.85) 100%)';
+  o.style.background=k==='locker'||k==='loo'?`linear-gradient(${D},${D}) top/100% 28% no-repeat,linear-gradient(${D},${D}) bottom/100% 34% no-repeat,repeating-linear-gradient(180deg,${D} 0 12px,rgba(0,0,0,.12) 12px 30px),${vig}`
+    :k==='vent'?`repeating-linear-gradient(180deg,#15171a 0 12px,rgba(0,0,0,.1) 12px 38px),linear-gradient(90deg,${D} 0 6%,transparent 6% 94%,${D} 94%),${vig}`
+    :`linear-gradient(180deg,${D} 0 33%,rgba(0,0,0,.1) 40% 60%,${D} 67%),${vig}`;
+  o.style.display='block'; }
+// runs before render: the camera looks out from inside; W lifts the lid or opens the door a crack
+function hideTick(dt){ if(!HIDE.on) return; const h=HIDE.s; if(!h||player.mode!=='lift'||state.downT>0||activeCar){ hideExit(true); return; } player.g.visible=false;
+  const want=K('KeyW')>.5||K('ArrowUp')>.5?1:0; HIDE.peek+=(want-HIDE.peek)*Math.min(1,dt*7);
+  if(HIDE.ov) HIDE.ov.style.opacity=String(1-HIDE.peek*.85);
+  // look around, but only as far as the gap lets you
+  const dy=wrapA(camYaw-HIDE.yaw0), lim=.75+HIDE.peek*.6; if(Math.abs(dy)>lim) camYaw=HIDE.yaw0+Math.sign(dy)*lim; camPitch=Math.max(-.5,Math.min(.45,camPitch));
+  const gy=groundHeight(h.x,h.z), f=h.front+HIDE.peek*.25, ex=h.x+h.nx*f, ez=h.z+h.nz*f, ey=gy+h.eye+HIDE.peek*(h.k==='bin'||h.k==='dump'?.22:.02);
+  const pp=-camPitch, cp=Math.cos(pp); camera.position.set(ex,ey,ez); camera.lookAt(ex+Math.sin(camYaw)*cp,ey+Math.sin(pp),ez+Math.cos(camYaw)*cp);
+  // peeking when it's right there in front of you: it notices
+  if(BULL.on&&HIDE.peek>.5&&!HIDE.doomed&&BULL.M&&BULL.M.g.visible){ const dx=ex-BULL.pos.x, dz=ez-BULL.pos.z; if(Math.hypot(dx,dz)<4&&Math.abs(wrapA(Math.atan2(dx,dz)-BULL.yaw))<.9) HIDE.doomed=true; } }
+// out in the country there may be nothing to hide in: when the Bull comes, a few things to hide in turn up in the fog nearby
+function hideTemp(){ const P=player.pos; let n=0; for(const h of HIDES) if(!h.tmp&&Math.hypot(h.x-P.x,h.z-P.z)<55) n++; if(n>=3) return;
+  for(let k=0,made=0;k<40&&made<4-Math.min(n,3);k++){ const a=Math.random()*TAU, r=R(16,34), x=P.x+Math.sin(a)*r, z=P.z+Math.cos(a)*r, y=groundHeight(x,z);
+    if(Math.abs(y-(P.y-HIP))>3||solidAt(x,y+1,z)||solidAt(x,y+.4,z)||y<WATER_Y+.2) continue;
+    const nx=-Math.sin(a), nz=-Math.cos(a), kind=made%2?'locker':'dump', g=new THREE.Group(), yaw=Math.atan2(nx,nz), lam2=c=>new THREE.MeshLambertMaterial({color:c});
+    if(kind==='dump'){ const b=new THREE.Mesh(new THREE.BoxGeometry(2.2,1.2,1.3),lam2('#2f6b45')); b.position.y=.6; g.add(b); const l=new THREE.Mesh(new THREE.BoxGeometry(2.3,.1,1.4),lam2('#1b1c1f')); l.position.y=1.25; g.add(l); }
+    else for(let q=0;q<3;q++){ const b=new THREE.Mesh(new THREE.BoxGeometry(.56,1.9,.5),lam2(['#5d7184','#6f7f52','#8a5a3c'][q])); b.position.set((q-1)*.58,.95,0); g.add(b); }
+    g.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.receiveShadow=true; } }); g.position.set(x,y,z); g.rotation.y=yaw; scene.add(g);
+    const h={k:kind,x,z,nx,nz,eye:kind==='dump'?1.05:1.58,front:kind==='dump'?.6:.2,name:kind==='dump'?'the dumpster':'the locker',tmp:g}; HIDES.push(h); HIDE.tmp.push(h); made++; } }
+function hideTempClear(){ if(HIDE.on&&HIDE.s&&HIDE.s.tmp) return; for(const h of HIDE.tmp){ scene.remove(h.tmp); h.tmp.traverse(o=>{ if(o.isMesh){ o.geometry.dispose(); o.material.dispose(); } }); const i=HIDES.indexOf(h); if(i>=0) HIDES.splice(i,1); } HIDE.tmp=[]; }
 
 /* ---------- keys (creator's layout): R is use (tap) and reload (hold), Q and E lean left and right on foot, C switches weapon, ` clears.
    This layer runs after the rebinding layer, on the game's own key names, so rebinding still works ---------- */
@@ -6852,6 +6913,7 @@ function leanOnFoot(){ return !!(state.started&&!state.paused&&!state.cine&&!(ty
 function keySend(type,code){ const ev=new KeyboardEvent(type,{code,key:code,bubbles:true,cancelable:true}); ev.__tb=1; ev.__lay=1; dispatchEvent(ev); }
 function keyLayer(e){ if(e.__lay||e.__touch||!e.code) return; if(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')) return; if(typeof SETUI!=='undefined'&&SETUI.waiting) return;
   const c=e.code, dn=e.type==='keydown';
+  if(c==='Space'&&HIDE.on){ e.stopImmediatePropagation(); e.preventDefault(); if(dn&&!e.repeat) hideExit(false); return; }
   if(c==='KeyQ'){ // lean left on foot; in vehicles Q is still the horn and siren
     if(dn&&!LEAN.q&&!leanOnFoot()) return; if(!dn&&!LEAN.q) return;
     e.stopImmediatePropagation(); e.preventDefault(); LEAN.q=dn; return; }
@@ -7954,7 +8016,7 @@ addEventListener('keydown',e=>{
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
   keys[e.code]=true; if(e.repeat) return;
   const c=e.code;
-  if(c==='KeyE'){ if(!craneE()&&!jetE()&&!storyE()&&!storeE()&&!sewerE()) enterExit(); }
+  if(c==='KeyE'){ if(!hideUse()&&!craneE()&&!jetE()&&!storyE()&&!storeE()&&!sewerE()) enterExit(); }
   else if(c==='KeyF'){ if(activeHeli) heliRocket(); else if(activeCar&&padUse()){} else if((activeCar&&(activeCar.emerg||activeCar.tur||activeCar.arm))||MPG.id!==null){} else spawnSelected(); }
   else if(c==='KeyY') toggle('slow');
   else if(c==='KeyT') openRestart();
@@ -8204,7 +8266,7 @@ function updateHUD(){
   if(zs!==lastZ||state.defeated!==lastD){ lastZ=zs; lastD=state.defeated; zcEl.textContent=zs; zdEl.textContent=state.defeated; zplateEl.hidden=!(zs||state.defeated); }
   let pr='';
   if(state.msgT>0&&state.started&&!state.over) pr=state.msg; else
-  if(state.started){ const stp=jetPrompt()||cranePrompt()||storyPrompt()||storePrompt()||motorPrompt()||trainPrompt()||ferryPrompt()||gondPrompt()||ridePrompt()||jobPrompt()||sentryPrompt()||nestPrompt()||questPrompt()||hatchPrompt()||furnPrompt()||fstorePrompt()||clothesPrompt()||fishPrompt()||surfPrompt()||bbPrompt()||arcPrompt()||marketPrompt()||canPrompt()||pizPrompt()||huntPrompt()||xpPrompt()||twgPrompt()||postPrompt()||fuelPrompt()||machPrompt()||bootPrompt()||tlPrompt()||cbPrompt()||gardPrompt()||dogPrompt()||sewerPrompt(); if(stp) pr=stp; else if(activeHeli) pr='<kbd>R</kbd> Get out · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>Click</kbd> guns · <kbd>Right-click</kbd> rockets';  else if(player.chute) pr='<kbd>WASD</kbd> steer · <kbd>Space</kbd> cut away';
+  if(state.started){ const stp=hidePrompt()||jetPrompt()||cranePrompt()||storyPrompt()||storePrompt()||motorPrompt()||trainPrompt()||ferryPrompt()||gondPrompt()||ridePrompt()||jobPrompt()||sentryPrompt()||nestPrompt()||questPrompt()||hatchPrompt()||furnPrompt()||fstorePrompt()||clothesPrompt()||fishPrompt()||surfPrompt()||bbPrompt()||arcPrompt()||marketPrompt()||canPrompt()||pizPrompt()||huntPrompt()||xpPrompt()||twgPrompt()||postPrompt()||fuelPrompt()||machPrompt()||bootPrompt()||tlPrompt()||cbPrompt()||gardPrompt()||dogPrompt()||sewerPrompt(); if(stp) pr=stp; else if(activeHeli) pr='<kbd>R</kbd> Get out · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>Click</kbd> guns · <kbd>Right-click</kbd> rockets';  else if(player.chute) pr='<kbd>WASD</kbd> steer · <kbd>Space</kbd> cut away';
     else if(player.mode==='walk'&&!player.ground&&player.vel.y<-2&&player.pos.y-HIP-groundHeight(player.pos.x,player.pos.z,player.pos.y-HIP)>3.5) pr='<kbd>Space</kbd> Open parachute';
     else if(activeCar) pr=activeCar.boat?'<kbd>W</kbd><kbd>S</kbd> throttle · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>R</kbd> Get out':'<kbd>R</kbd> Get out'+keepHint(activeCar); else if(state.downT>0) pr='Knocked out. Heading back to the plaza…'; else if(state.over) pr=''; else if(player.mode==='held') pr=player.heldBy&&!player.heldBy.zombie?'They grabbed you! Brace for the throw…':'A grabber has you! Brace for the throw…'; else if(player.mode==='ragdoll'||player.mode==='getup') pr='Ouch. Getting back up…'; else if(player.immune>0&&people.some(q=>q.zombie)) pr='Back on your feet. Run!'; else if(player.mode==='walk'&&liftNear()){ const n=liftNear(); pr=n.L.v!==0?(n.inside?'Going '+(n.L.v>0?'up':'down')+'…':'Lift is moving…'):Math.abs(n.L.y-n.lvl)>.05?'<kbd>R</kbd> Call the lift':n.inside?'<kbd>R</kbd> Ride the lift '+(n.lvl===0?'up':'down'):'Step into the lift'; } else if(player.mode==='walk'&&nearestHeli()) pr='<kbd>R</kbd> Fly the helicopter'; else if(nearestCar()) pr=nearestCar().boat?'<kbd>R</kbd> Drive this boat':'<kbd>R</kbd> Drive this car'; }
   if(pr!==lastPrompt){ lastPrompt=pr; promptEl.innerHTML=pr; promptEl.hidden=!pr; }
@@ -9325,8 +9387,8 @@ function frameBody(now){
     Snd.wind(player.chute?Math.min(.2,.08+sp*.02):clamp((sp-7)/34,0,1)*.6,!!player.chute); }
   mpTick(dt); updateCamera(dt); if(state.cine) cineUpdate(dt); mhTick(dt); updateBubbles(dt); storyHUD(); policeHUD(); updateGhost(); try{ screenFx(dt); }catch(e){} try{ hudLayout(dt); }catch(e){} if(state.msgT>0) state.msgT-=dt; updateHUD();
   Snd.engine(activeJet&&!state.over?20+activeJet.spd*.5:activeCar&&!state.over&&!activeCar.pedal?Math.hypot(activeCar.vel.x,activeCar.vel.z):-1);
-  try{ xpLight(dt); }catch(e){} try{ flTick(dt); }catch(e){ console.warn('flashlight',e); } try{ leanTick(dt); }catch(e){} cosTick(); bullTick(dt); screenGuard(dt); shadowPace(); renderer.clear(); renderer.render(scene,camera);
-  if(fp&&!state.cine&&state.started&&!state.over&&!activeCar&&!activeHeli&&!player.chute&&(player.mode==='walk'||player.mode==='lift')){ updateViewModel(dt); renderer.clearDepth(); renderer.render(vmScene,vmCam); }
+  try{ xpLight(dt); }catch(e){} try{ flTick(dt); }catch(e){ console.warn('flashlight',e); } try{ leanTick(dt); hideTick(dt); }catch(e){ console.warn('hide',e); } cosTick(); bullTick(dt); screenGuard(dt); shadowPace(); renderer.clear(); renderer.render(scene,camera);
+  if(fp&&!state.cine&&state.started&&!state.over&&!activeCar&&!activeHeli&&!player.chute&&!HIDE.on&&(player.mode==='walk'||player.mode==='lift')){ updateViewModel(dt); renderer.clearDepth(); renderer.render(vmScene,vmCam); }
 }
 
 /* ---------- life indoors: home residents, shoppers and cafe customers (only near the player) ---------- */
