@@ -4773,7 +4773,7 @@ function outfitApply(){ const p=player; if(!p||!p.g) return; try{ cosTick(); }ca
   if(!g.children.length) return; const par=p.headIn||p.rig; if(POLY){ g.position.set(0,1.0,0); g.scale.set(.18,.19,.18); } else { g.position.set(0,1.02,0); g.scale.setScalar(.26); } par.add(g); OUTFIT.g=g; g.visible=!OUTFIT.body; }
 const THREADS={x:-301,z:63.2};
 function clothesNear(){ if(activeCar||player.mode!=='walk') return false; return Math.hypot(player.pos.x-THREADS.x,player.pos.z-THREADS.z)<3; }
-function clothesPrompt(){ return clothesNear()?'<kbd>R</kbd> Try on clothes':''; }
+function clothesPrompt(){ const k=typeof threadsSkinNear==='function'?threadsSkinNear():null; if(k) return threadsSkinPrompt(k); return clothesNear()?'<kbd>R</kbd> Try on clothes':''; }
 function clothesMenu(slot){ const wasOpen=!cfEl.hidden, prev=cfPrevPaused, add=menuOpen('Kia Ora Threads · '+money(state.money)); if(wasOpen) cfPrevPaused=prev; const tabs=[['hat','Hats'],['mask','Face'],['top','Tops'],['pants','Pants'],['body','Costumes']]; slot=slot||'hat';
   const row=document.createElement('div'); row.className='pick-ms'; cfOpts.appendChild(row); for(const [k,n] of tabs){ const b=document.createElement('button'); b.type='button'; b.className='pick-m'; b.textContent=n; if(k===slot) b.style.outline='3px solid #fff'; b.addEventListener('click',()=>clothesMenu(k)); row.appendChild(b); }
   if(slot==='body'&&SAMST) menuHead('You\'re in Sam style, so you always look like Sam. Press O to change style');
@@ -4786,7 +4786,7 @@ function clothesMenu(slot){ const wasOpen=!cfEl.hidden, prev=cfPrevPaused, add=m
     const free=sl==='body'&&!OUTFIT.freeUsed, pr2=free?0:pr;
     add((on?'✓ ':'')+n+(own?(on?' · wearing':' · yours'):free?' · FREE':' · '+money(pr)),cdesc+(own?(on?'Looking sharp':'Put it on'):free?'Your first look is on us':'Buy it and put it on'),()=>{
       if(!own){ if(state.money<pr2){ flash('Not enough cash'); return; } state.money-=pr2; save(); OUTFIT.own.push(id); if(sl==='body') OUTFIT.freeUsed=true; Snd.pop&&Snd.pop(); }
-      OUTFIT[slot]=id; outfitSave(); outfitApply(); clothesMenu(slot); },'',!own&&state.money<pr2); }
+      OUTFIT[slot]=id; outfitSave(); outfitApply(); try{ threadsTagsAll(); }catch(e){} clothesMenu(slot); },'',!own&&state.money<pr2); }
   add('Done','',()=>menuDone('Looking good!')); }
 
 /* ---------- the kiwi hunt: 50 kiwi statues hidden around the map ---------- */
@@ -5254,22 +5254,32 @@ function shopDoorsTick(dt){ for(const D of LIVE.doors){ let near=Math.hypot(play
   D.o+=((near?1:0)-D.o)*Math.min(1,dt*5); for(const p of D.ps) p.m.position.x=p.x0+p.s*D.o*(D.w/2-.05); } }
 
 /* ---------- Kia Ora Threads: a walk-in clothes shop in the west suburbs ---------- */
-function threadsSetup(){ const W=12, D=9, sp=liveSpot(0,5,W,D,1.5,2.5), T={x:sp.x,z:sp.z,y:groundHeight(sp.x,sp.z),cols:[],W,D}; THREADS.T=T;
-  const g=new THREE.Group(); g.position.set(T.x,T.y,T.z); const P=[], B=(w,h,d,x,y,z)=>new THREE.BoxGeometry(w,h,d).translate(x,y,z), put=(geo,c)=>P.push({g:geo,c});
-  const H=4, FZ=D/2, BZ=-D/2, XL=-W/2, XR=W/2, wt=.25, wall='#f6f0ff', pu='#7b2fe0', pud='#4b1d8f', yel='#ffd166', wood='#a8784c', dark='#26222e', steel='#b9c0c7';
+function threadsSetup(){ const W=34, D=20, sp=liveSpot(0,5,W,D,1.2,2.5), T={x:sp.x,z:sp.z,y:groundHeight(sp.x,sp.z),cols:[],W,D}; THREADS.T=T;
+  const g=new THREE.Group(); g.position.set(T.x,T.y,T.z); const P=[], B=(w,h,d,x,y,z)=>new THREE.BoxGeometry(w,h,d).translate(x,y,z); let OFF=false; const OX=10.5, OZ=-5.5, put=(geo,c)=>{ if(OFF) geo.translate(OX,0,OZ); P.push({g:geo,c}); };
+  const H=5.2, FZ=D/2, BZ=-D/2, XL=-W/2, XR=W/2, wt=.25, wall='#f6f0ff', pu='#7b2fe0', pud='#4b1d8f', yel='#ffd166', wood='#a8784c', dark='#26222e', steel='#b9c0c7';
+  const oFZ=4.5, oBZ=-4.5, oXL=-6, oXR=6;
+  // the shell: back and side walls, a long glass shop front with the door left of centre, a purple fascia and a striped awning
   put(B(W,H,wt,0,H/2,BZ+wt/2),wall); put(B(wt,H,D,XL+wt/2,H/2,0),wall); put(B(wt,H,D,XR-wt/2,H/2,0),wall);
   put(B(W,.35,wt+.02,0,.175,BZ+wt/2),pud); put(B(wt+.02,.35,D,XL+wt/2,.175,0),pud); put(B(wt+.02,.35,D,XR-wt/2,.175,0),pud);
-  put(B(.6,H,wt,XL+.3,H/2,FZ-wt/2),pu); put(B(.4,H,wt,XR-.2,H/2,FZ-wt/2),pu); put(B(W,1,wt,0,3.5,FZ-wt/2),pu); put(B(9.4,.45,wt,.9,.225,FZ-wt/2),pud);
-  for(const mx of [-5.4,-3.8,-.6,2.6,5.6]) put(B(.12,3,.3,mx,1.5,FZ-wt/2),dark); put(B(W-.4,.1,.3,0,3,FZ-wt/2),dark);
-  put(B(W+.4,.5,.2,0,H+.45,FZ+.1),pu); put(B(W+.4,.5,.2,0,H+.45,BZ-.1),wall); put(B(.2,.5,D+.4,XL-.1,H+.45,0),wall); put(B(.2,.5,D+.4,XR+.1,H+.45,0),wall);
-  for(let k=0;k<12;k++){ const ge=B(1,.06,1.4,XL+.5+k,0,0); ge.rotateX(-.32); ge.translate(0,2.95,FZ+.68); put(ge,k%2?yel:pu); }
+  const DX=-2.2, DW=2.2; for(const [a,b] of [[XL,DX-DW/2],[DX+DW/2,XR]]){ put(B(b-a,.45,wt,(a+b)/2,.225,FZ-wt/2),pud); } put(B(W,1.4,wt,0,H-.7,FZ-wt/2),pu);
+  for(let mx=XL+.3;mx<=XR-.2;mx+=3.4){ if(Math.abs(mx-DX)<DW/2+.2) continue; put(B(.14,H-1.4,.3,mx,(H-1.4)/2,FZ-wt/2),dark); } put(B(.14,H-1.4,.3,DX-DW/2,(H-1.4)/2,FZ-wt/2),dark); put(B(.14,H-1.4,.3,DX+DW/2,(H-1.4)/2,FZ-wt/2),dark); put(B(W-.4,.12,.3,0,H-1.4,FZ-wt/2),dark);
+  put(B(W+.4,.6,.2,0,H+.5,FZ+.1),pu); put(B(W+.4,.6,.2,0,H+.5,BZ-.1),wall); put(B(.2,.6,D+.4,XL-.1,H+.5,0),wall); put(B(.2,.6,D+.4,XR+.1,H+.5,0),wall);
+  for(let k=0;k<34;k++){ const ge=B(1,.06,1.6,XL+.5+k,0,0); ge.rotateX(-.32); ge.translate(0,H-1.5,FZ+.75); put(ge,k%2?yel:pu); }
+  // SKIN HALL (left two-thirds): a raised catwalk of mannequins wearing every look you can buy, each with a price tag
+  put(B(18.6,.06,13.4,-7.6,.15,-1.2),'#e9e1f5'); put(B(18.6,.04,.25,-7.6,.17,5.4),pu); put(B(18.6,.04,.25,-7.6,.17,-7.8),pu);
+  put(B(18.2,.34,1.6,-7.6,.17,-8.6),pud); put(B(18.2,.34,1.6,-7.6,.17,1.9),pud); put(B(1.6,.34,8.8,-15.6,.17,-3.3),pud);
+  put(B(.08,.6,13,XL+wt+.04,H-.9,-1.2),yel); put(B(18.4,.6,.08,-7.6,H-.9,BZ+wt+.04),yel);
+  for(const [px,pz] of [[XL+.8,FZ-1],[-.6,FZ-1],[XL+.8,BZ+1.1],[XR-.8,FZ-1]]){ put(new THREE.CylinderGeometry(.3,.24,.55,10).translate(px,.27,pz),'#b5651d'); put(new THREE.ConeGeometry(.55,1.4,7).translate(px,1.2,pz),'#2f7d32'); }
+  put(B(2.4,.9,.6,-7.6,.45,-3.3),pud); put(B(2.6,.06,.8,-7.6,.93,-3.3),'#efe6da'); // a little info desk in the middle of the hall
+  // the old shop, moved into the right-hand third
+  OFF=true;
   // window display: a platform and two mannequins
-  put(B(7.6,.25,1.1,1,.125,FZ-.85),pud);
+  put(B(7.6,.25,1.1,1,.125,oFZ-.85),pud);
   const manq=(x,z,top,pants,ry)=>{ const m=[]; const r=(ge)=>{ ge.rotateY(ry||0); ge.translate(x,0,z); return ge; };
     m.push({g:r(B(.1,.3,.1,0,.4,0)),c:steel},{g:r(B(.4,.05,.4,0,.27,0)),c:dark},{g:r(B(.13,.75,.15,-.1,.75,0)),c:pants},{g:r(B(.13,.75,.15,.1,.75,0)),c:pants},{g:r(B(.46,.6,.26,0,1.42,0)),c:top},{g:r(B(.12,.55,.13,-.3,1.4,0)),c:top},{g:r(B(.12,.55,.13,.3,1.4,0)),c:top},{g:r(new THREE.SphereGeometry(.17,10,8).translate(0,1.95,0)),c:'#efe6da'});
     for(const q of m) put(q.g,q.c); };
-  manq(-1.6,FZ-.85,'#ff6fb5','#2d3142',0); manq(1.2,FZ-.85,'#2f80ed','#d9c49a',.2); manq(3.8,FZ-.85,yel,'#22252a',-.2);
-  for(const [id,x] of [['cowboy',-1.6],['tophat',3.8]]){ const ge=clothGeo(id); if(ge){ ge.scale(.4,.4,.4); ge.translate(x,1.98,FZ-.85); g.add(new THREE.Mesh(ge,VC)); } }
+  manq(-1.6,oFZ-.85,'#ff6fb5','#2d3142',0); manq(1.2,oFZ-.85,'#2f80ed','#d9c49a',.2); manq(3.8,oFZ-.85,yel,'#22252a',-.2);
+  for(const [id,x] of [['cowboy',-1.6],['tophat',3.8]]){ const ge=clothGeo(id); if(ge){ ge.scale(.4,.4,.4); ge.translate(x+OX,1.98,oFZ-.85+OZ); g.add(new THREE.Mesh(ge,VC)); } }
   // clothing racks with hanging shirts
   const cols=['#d62828','#2f80ed','#27ae60','#ff6fb5','#ffd166','#22252a','#8338ec','#f77f00','#ffffff','#2a9d8f'];
   const rack=(x,z,len,seed)=>{ put(B(.05,1.5,.05,x-len/2,.75,z),steel); put(B(.05,1.5,.05,x+len/2,.75,z),steel); put(B(len,.04,.04,x,1.48,z),steel); put(B(.5,.04,.5,x-len/2,.02,z),steel); put(B(.5,.04,.5,x+len/2,.02,z),steel);
@@ -5279,16 +5289,17 @@ function threadsSetup(){ const W=12, D=9, sp=liveSpot(0,5,W,D,1.5,2.5), T={x:sp.
   for(const [tx,tz] of [[-1.4,-1.5],[1.8,-.9]]){ put(B(1.4,.06,.8,tx,.8,tz),wood); for(const lx of [-.6,.6]) for(const lz of [-.32,.32]) put(B(.06,.78,.06,tx+lx,.39,tz+lz),dark);
     for(let s=0;s<3;s++) for(let h=0;h<4;h++) put(B(.36,.06,.3,tx-.42+s*.42,.86+h*.065,tz),cols[(s*4+h+tz*3|0)%cols.length]); }
   // wall shelves of folded clothes on the left wall
-  for(let r=0;r<3;r++){ put(B(.4,.04,4.2,XL+wt+.2,.9+r*.55,.3),wood); for(let s=0;s<6;s++) for(let h=0;h<3;h++) put(B(.32,.06,.3,XL+wt+.2,.94+r*.55+h*.065,-1.5+s*.65),cols[(r*5+s+h)%cols.length]); }
+  for(let r=0;r<3;r++){ put(B(.4,.04,4.2,oXL+wt+.2,.9+r*.55,.3),wood); for(let s=0;s<6;s++) for(let h=0;h<3;h++) put(B(.32,.06,.3,oXL+wt+.2,.94+r*.55+h*.065,-1.5+s*.65),cols[(r*5+s+h)%cols.length]); }
   // hat stand
-  put(B(.08,1.7,.08,4.9,.85,-1),steel); put(B(.5,.04,.5,4.9,.02,-1),steel); for(const [id,a] of [['cowboy',0],['tophat',2.1],['party',4.2]]){ const ge=clothGeo(id); if(ge){ ge.scale(.42,.42,.42); ge.translate(4.9+Math.sin(a)*.22,1.25+a*.07,-1+Math.cos(a)*.22); g.add(new THREE.Mesh(ge,VC)); } }
+  put(B(.08,1.7,.08,4.9,.85,-1),steel); put(B(.5,.04,.5,4.9,.02,-1),steel); for(const [id,a] of [['cowboy',0],['tophat',2.1],['party',4.2]]){ const ge=clothGeo(id); if(ge){ ge.scale(.42,.42,.42); ge.translate(4.9+Math.sin(a)*.22+OX,1.25+a*.07,-1+Math.cos(a)*.22+OZ); g.add(new THREE.Mesh(ge,VC)); } }
   // counter at the back right
   put(B(3.2,1,.65,3.6,.5,-2.6),pu); put(B(3.4,.07,.8,3.6,1.03,-2.6),'#efe6da'); put(B(.5,.25,.45,3,1.2,-2.7),'#222'); put(B(.45,.22,.05,3,1.42,-2.82),'#3d4a5c'); for(let k=0;k<3;k++) put(B(.4,.3,.25,4.3+k*.0,1.2+k*.3,-2.6),['#c62828','#ffd166','#2f80ed'][k]);
-  put(B(4,1,.5,3.6,.5,BZ+wt+.25),wood); for(let k=0;k<8;k++) put(B(.32,.06,.3,1.9+k*.48,1.04,BZ+wt+.25),cols[k%cols.length]);
+  put(B(4,1,.5,3.6,.5,oBZ+wt+.25),wood); for(let k=0;k<8;k++) put(B(.32,.06,.3,1.9+k*.48,1.04,oBZ+wt+.25),cols[k%cols.length]);
   // fitting rooms at the back left
   put(B(.1,2.3,1.7,-4.1,1.15,-3.4),wall); put(B(.1,2.3,1.7,-2.5,1.15,-3.4),wall); put(B(3.3,.1,1.7,-4.1+.85-.85,2.3,-3.4),wall); put(B(1.4,.08,.08,-4.9,2.2,-2.6),steel); put(B(1.4,.08,.08,-3.3,2.2,-2.6),steel);
   put(B(.6,.45,.4,-4.9,.22,-4.1),'#9e9e9e'); put(B(.6,.45,.4,-3.3,.22,-4.1),'#9e9e9e');
   // mirror frame and plants
+  OFF=false;
   put(B(1.1,2.2,.06,-1.1,1.3,BZ+wt+.04),yel); for(const [px,pz] of [[XR-.6,FZ-1.8],[XL+.7,FZ-2.1]]){ put(new THREE.CylinderGeometry(.25,.2,.45,10).translate(px,.22,pz),'#b5651d'); put(new THREE.ConeGeometry(.45,1.1,7).translate(px,1,pz),'#2f7d32'); }
   const body=new THREE.Mesh(mergeGeos(P,true),VC); body.castShadow=true; body.receiveShadow=true; g.add(body);
   const roof=new THREE.Mesh(mergeGeos([{g:B(W+.4,.3,D+.4,0,H+.15,0),c:'#d9d2e4'},{g:B(W-.5,.04,D-.5,0,3.98,0),c:'#fbf8ff'}],true),VC); roof.castShadow=false; roof.receiveShadow=true; g.add(roof);
@@ -5296,30 +5307,69 @@ function threadsSetup(){ const W=12, D=9, sp=liveSpot(0,5,W,D,1.5,2.5), T={x:sp.
   fl.material.map.wrapS=fl.material.map.wrapT=THREE.RepeatWrapping; fl.material.map.repeat.set(3,3); fl.position.y=.13; fl.receiveShadow=true; g.add(fl);
   { const sl=new THREE.Mesh(new THREE.BoxGeometry(W-.5,.4,D-.5).translate(0,-.08,0),new THREE.MeshLambertMaterial({color:'#8a8478'})); g.add(sl); }
   const glass=new THREE.MeshLambertMaterial({color:'#e3d7ff',transparent:true,opacity:.22,depthWrite:false,side:THREE.DoubleSide});
-  for(const [a,b] of [[-3.8,-.6],[-.6,2.6],[2.6,5.6]]){ const m=new THREE.Mesh(new THREE.PlaneGeometry(b-a-.12,2.55),glass); m.position.set((a+b)/2,1.73,FZ-wt/2); g.add(m); }
-  shopDoor(g,T,-4.6,FZ-wt/2+.06,1.6,glass,dark);
-  const curtM=new THREE.MeshLambertMaterial({color:'#9b5de5',side:THREE.DoubleSide}); for(const cx of [-4.9,-3.3]){ const c=new THREE.Mesh(new THREE.PlaneGeometry(1.3,2.05,6,1),curtM); const pa=c.geometry.attributes.position; for(let i=0;i<pa.count;i++) pa.setZ(i,Math.sin(pa.getX(i)*14)*.05); c.geometry.computeVertexNormals(); c.position.set(cx,1.17,-2.6); g.add(c); }
-  const mir=new THREE.Mesh(new THREE.PlaneGeometry(.95,2.05),pzTex(64,128,(x,w,h)=>{ const gr=x.createLinearGradient(0,0,w,h); gr.addColorStop(0,'#dfe9f3'); gr.addColorStop(.5,'#9fb4c7'); gr.addColorStop(1,'#e8f0f7'); x.fillStyle=gr; x.fillRect(0,0,w,h); x.fillStyle='rgba(255,255,255,.5)'; x.fillRect(10,0,6,h); x.fillRect(22,0,3,h); },true)); mir.position.set(-1.1,1.3,BZ+wt+.08); g.add(mir);
+  for(const [a,b] of [[XL+.3,DX-DW/2],[DX+DW/2,XR-.2]]){ const m=new THREE.Mesh(new THREE.PlaneGeometry(b-a-.12,H-1.85),glass); m.position.set((a+b)/2,.45+(H-1.85)/2,FZ-wt/2); g.add(m); }
+  shopDoor(g,T,DX,FZ-wt/2+.06,DW,glass,dark);
+  const curtM=new THREE.MeshLambertMaterial({color:'#9b5de5',side:THREE.DoubleSide}); for(const cx of [-4.9,-3.3]){ const c=new THREE.Mesh(new THREE.PlaneGeometry(1.3,2.05,6,1),curtM); const pa=c.geometry.attributes.position; for(let i=0;i<pa.count;i++) pa.setZ(i,Math.sin(pa.getX(i)*14)*.05); c.geometry.computeVertexNormals(); c.position.set(cx+OX,1.17,-2.6+OZ); g.add(c); }
+  const mir=new THREE.Mesh(new THREE.PlaneGeometry(.95,2.05),pzTex(64,128,(x,w,h)=>{ const gr=x.createLinearGradient(0,0,w,h); gr.addColorStop(0,'#dfe9f3'); gr.addColorStop(.5,'#9fb4c7'); gr.addColorStop(1,'#e8f0f7'); x.fillStyle=gr; x.fillRect(0,0,w,h); x.fillStyle='rgba(255,255,255,.5)'; x.fillRect(10,0,6,h); x.fillRect(22,0,3,h); },true)); mir.position.set(-1.1+OX,1.3,oBZ+wt+.08+OZ); g.add(mir);
   const plane=(w,h,mat,x,y,z,ry)=>{ const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),mat); m.position.set(x,y,z); m.rotation.y=ry||0; g.add(m); return m; };
-  plane(9.6,.82,pzTex(1024,84,(x,w,h)=>{ x.fillStyle=pu; x.fillRect(0,0,w,h); PZT(x,'KIA ORA THREADS',w/2-80,h/2+3,62,'#ffffff'); PZT(x,'hats · masks · tops · pants',w-170,h/2+4,26,yel,'700 '); },true),0,3.6,FZ+.01);
-  plane(1.5,.38,pzTex(300,76,(x,w,h)=>{ x.fillStyle='#fff'; x.fillRect(0,0,w,h); x.strokeStyle=pu; x.lineWidth=5; x.strokeRect(3,3,w-6,h-6); PZT(x,'FITTING ROOMS',w/2,h/2+2,30,pu); }),-4.1,2.6,-2.54);
+  plane(22,1.25,pzTex(2048,116,(x,w,h)=>{ x.fillStyle=pu; x.fillRect(0,0,w,h); PZT(x,'KIA ORA THREADS',w/2-230,h/2+5,92,'#ffffff'); PZT(x,'skins · hats · masks · tops · pants',w-330,h/2+6,38,yel,'700 '); },true),0,H-.7,FZ+.01);
+  plane(9,.75,pzTex(1200,100,(x,w,h)=>{ x.fillStyle=yel; x.fillRect(0,0,w,h); PZT(x,'★ SKIN HALL · try on a whole new you ★',w/2,h/2+4,46,pud); },true),-7.6,H-1.55,BZ+wt+.1);
+  plane(1.5,.38,pzTex(300,76,(x,w,h)=>{ x.fillStyle='#fff'; x.fillRect(0,0,w,h); x.strokeStyle=pu; x.lineWidth=5; x.strokeRect(3,3,w-6,h-6); PZT(x,'FITTING ROOMS',w/2,h/2+2,30,pu); }),-4.1+OX,2.6,-2.54+OZ);
   const post=(fn,x,y,z,ry,w,h)=>plane(w||.9,h||1.2,pzTex(180,240,fn),x,y,z,ry);
-  post((x,w,h)=>{ x.fillStyle=pu; x.fillRect(0,0,w,h); PZT(x,'NEW',w/2,50,48,yel); PZT(x,'SEASON',w/2,100,34,'#fff'); x.fillStyle=yel; x.fillRect(40,140,100,70); x.fillStyle=pu; x.fillRect(70,140,40,25); },XR-wt-.01,2.4,1.2,-PI/2);
-  post((x,w,h)=>{ x.fillStyle='#2a9d8f'; x.fillRect(0,0,w,h); PZT(x,'Kia ora!',w/2,60,38,'#fff'); x.strokeStyle='#fff'; x.lineWidth=6; x.beginPath(); x.arc(w/2,150,40,0,5.2); x.stroke(); x.beginPath(); x.arc(w/2+8,150,22,.5,5.6); x.stroke(); },XR-wt-.01,2.4,3,-PI/2);
-  post((x,w,h)=>{ x.fillStyle=yel; x.fillRect(0,0,w,h); PZT(x,'TRY IT',w/2,70,40,pu); PZT(x,'ON!',w/2,130,52,pu); },.8,2.55,BZ+wt+.01,0);
-  post((x,w,h)=>{ x.fillStyle='#d62828'; x.fillRect(0,0,w,h); PZT(x,'SALE',w/2,80,56,'#fff'); PZT(x,'20% OFF',w/2,150,34,yel); PZT(x,'hats',w/2,200,24,'#fff','700 '); },XL+wt+.01,2.75,2.6,PI/2);
+  post((x,w,h)=>{ x.fillStyle=pu; x.fillRect(0,0,w,h); PZT(x,'NEW',w/2,50,48,yel); PZT(x,'SEASON',w/2,100,34,'#fff'); x.fillStyle=yel; x.fillRect(40,140,100,70); x.fillStyle=pu; x.fillRect(70,140,40,25); },XR-wt-.01,2.6,-2,-PI/2);
+  post((x,w,h)=>{ x.fillStyle='#2a9d8f'; x.fillRect(0,0,w,h); PZT(x,'Kia ora!',w/2,60,38,'#fff'); x.strokeStyle='#fff'; x.lineWidth=6; x.beginPath(); x.arc(w/2,150,40,0,5.2); x.stroke(); x.beginPath(); x.arc(w/2+8,150,22,.5,5.6); x.stroke(); },XR-wt-.01,2.6,1,-PI/2);
+  post((x,w,h)=>{ x.fillStyle=yel; x.fillRect(0,0,w,h); PZT(x,'TRY IT',w/2,70,40,pu); PZT(x,'ON!',w/2,130,52,pu); },.8+OX,2.55,BZ+wt+.01,0);
+  post((x,w,h)=>{ x.fillStyle='#d62828'; x.fillRect(0,0,w,h); PZT(x,'SALE',w/2,80,56,'#fff'); PZT(x,'20% OFF',w/2,150,34,yel); PZT(x,'hats',w/2,200,24,'#fff','700 '); },XL+wt+.01,2.75,4,PI/2);
   scene.add(g); T.g=g;
-  const S=(x0,x1,z0,z1,h)=>townSolid(T,x0,x1,z0,z1,h);
-  S(XL,XR,BZ,BZ+wt,H); S(XL,XL+wt,BZ,FZ,H); S(XR-wt,XR,BZ,FZ,H); S(XL,-5.4,FZ-wt,FZ,H); S(-3.8,XR,FZ-wt,FZ,H); S(-2.8,4.8,FZ-1.4,FZ-.3,.25);
-  S(-4.55,-2.25,.5,.7,1.5); S(-.95,1.35,.3,.5,1.5); S(2.3,4.1,1.6,1.8,1.5); S(-2.1,-.7,-1.9,-1.1,.9); S(1.1,2.5,-1.3,-.5,.9); S(XL+wt,XL+wt+.45,-1.8,2.4,2.1);
-  S(2,5.2,-2.95,-2.25,1.05); S(1.6,5.6,BZ+wt,BZ+wt+.5,1.05); S(-4.15,-4.05,-4.25,-2.55,2.3); S(-2.55,-2.45,-4.25,-2.55,2.3); S(4.85,4.95,-1.05,-.95,1.7);
-  { const b={x0:T.x+XL,x1:T.x+XR,z0:T.z+BZ,z1:T.z+FZ,y0:T.y+H,h:T.y+H+.6}; const inCity=Math.abs(T.x)<HALF&&Math.abs(T.z)<HALF; const L=inCity?cellPush(b):(AIR.boxes.push(b),[AIR.boxes]); T.cols.push([b,L]); }
-  THREADS.x=T.x+3.6; THREADS.z=T.z-1.9; THREADS.door={x:T.x-4.6,z:T.z+FZ+2};
+  const S=(x0,x1,z0,z1,h)=>townSolid(T,x0,x1,z0,z1,h), So=(x0,x1,z0,z1,h)=>S(x0+OX,x1+OX,z0+OZ,z1+OZ,h);
+  S(XL,XR,BZ,BZ+wt,H); S(XL,XL+wt,BZ,FZ,H); S(XR-wt,XR,BZ,FZ,H); S(XL,DX-DW/2,FZ-wt,FZ,H); S(DX+DW/2,XR,FZ-wt,FZ,H); S(-8.8,-6.4,-3.6,-3,1);
+  So(-2.8,4.8,oFZ-1.4,oFZ-.3,.25); So(-4.55,-2.25,.5,.7,1.5); So(-.95,1.35,.3,.5,1.5); So(2.3,4.1,1.6,1.8,1.5); So(-2.1,-.7,-1.9,-1.1,.9); So(1.1,2.5,-1.3,-.5,.9);
+  So(2,5.2,-2.95,-2.25,1.05); So(1.6,5.6,oBZ+wt,oBZ+wt+.5,1.05); So(-4.15,-4.05,-4.25,-2.55,2.3); So(-2.55,-2.45,-4.25,-2.55,2.3); So(4.85,4.95,-1.05,-.95,1.7);
+  { const b={x0:T.x+XL,x1:T.x+XR,z0:T.z+BZ,z1:T.z+FZ,y0:T.y+H,h:T.y+H+.7}; const inCity=Math.abs(T.x)<HALF&&Math.abs(T.z)<HALF; const L=inCity?cellPush(b):(AIR.boxes.push(b),[AIR.boxes]); T.cols.push([b,L]); }
+  THREADS.x=T.x+3.6+OX; THREADS.z=T.z-1.9+OZ; THREADS.door={x:T.x+DX,z:T.z+FZ+2};
+  setTimeout(()=>{ try{ staticCarve(T.x+XL-.6,T.x+XR+.6,T.z+BZ-.6,T.z+FZ+5.5,T.y); }catch(e){ console.warn('threads carve',e); } try{ threadsSkins(T); }catch(e){ console.warn('threads skins',e); } },0);
   // staff and shoppers
-  const mkP=(lx,lz,yaw,w,cols2)=>{ try{ const q=new Person(T.x+lx,T.z+lz,cols2?{colors:cols2}:{}); q.work=Object.assign({x:T.x+lx,z:T.z+lz,y:T.y,yaw},w); q.yaw=yaw; q.g.quaternion.setFromAxisAngle(UP,yaw); dressWorker(q,q.work); return q; }catch(e){ console.warn('threads person',e); return null; } };
+  const mkP=(lx,lz,yaw,w,cols2)=>{ lx+=OX; lz+=OZ; try{ const q=new Person(T.x+lx,T.z+lz,cols2?{colors:cols2}:{}); q.work=Object.assign({x:T.x+lx,z:T.z+lz,y:T.y,yaw},w); q.yaw=yaw; q.g.quaternion.setFromAxisAngle(UP,yaw); dressWorker(q,q.work); return q; }catch(e){ console.warn('threads person',e); return null; } };
   THREADS.staff=[mkP(3.6,-3.25,0,{kind:'shop',greet:'threads',outfit:'threads'},['#c68b62','#8338ec','#2d3142','#1b1b1b']),
-    mkP(-1.4,-2.2,0,{kind:'wipe',outfit:'threads',route:[{x:T.x-1.4,z:T.z-2.2,wait:7},{x:T.x+1.8,z:T.z-1.6,wait:6},{x:T.x-4.9,z:T.z+.3,wait:6}]},['#f1c9a5','#8338ec','#22252a','#a0522d'])];
-  THREADS.cust=[mkP(-3.4,1.3,PI,{kind:'inspect'}),mkP(-1.1,-3.3,PI,{kind:'shop'}),mkP(3.6,-1.85,PI,{kind:'shop'}),mkP(3.2,2.4,PI,{kind:'inspect'})].filter(Boolean); }
+    mkP(-1.4,-2.2,0,{kind:'wipe',outfit:'threads',route:[{x:T.x-1.4+OX,z:T.z-2.2+OZ,wait:7},{x:T.x+1.8+OX,z:T.z-1.6+OZ,wait:6},{x:T.x-4.9+OX,z:T.z+.3+OZ,wait:6}]},['#f1c9a5','#8338ec','#22252a','#a0522d'])];
+  THREADS.cust=[mkP(-3.4,1.3,PI,{kind:'inspect'}),mkP(-1.1,-3.3,PI,{kind:'shop'}),mkP(3.6,-1.85,PI,{kind:'shop'}),mkP(3.2,2.4,PI,{kind:'inspect'}),mkP(-18,0,PI,{kind:'inspect'}),mkP(-14,7,0,{kind:'inspect'}),mkP(-24,3,PI/2,{kind:'inspect'})].filter(Boolean); }
+
+// clear the park trees, lamps and benches a new building was put on top of: drop their colliders and fold their triangles away
+function staticCarve(x0,x1,z0,z1,y0){ const vic=[];
+  for(let i=0;i<N;i++) for(let j=0;j<N;j++){ const C=cells[i][j]; if(!C.c) continue; for(let k=C.c.length-1;k>=0;k--){ const q=C.c[k]; if(q.x>x0&&q.x<x1&&q.z>z0&&q.z<z1){ vic.push({x:q.x,z:q.z,R:(q.h||1)>4?3.4:Math.max(1.2,(q.r||.5)+1)}); C.c.splice(k,1); } } }
+  if(!vic.length) return 0; let n=0;
+  for(const m of STATIC_MESHES){ const g=m.geometry; if(!g.boundingBox) g.computeBoundingBox(); const b=g.boundingBox; if(b.max.x<x0-4||b.min.x>x1+4||b.max.z<z0-4||b.min.z>z1+4||!g.index) continue;
+    const P=g.attributes.position.array, I=g.index.array; let ch=false;
+    for(let t=0;t<I.length;t+=3){ const a=I[t]*3, b2=I[t+1]*3, c=I[t+2]*3; if(a===b2&&b2===c) continue; const cx=(P[a]+P[b2]+P[c])/3, cy=(P[a+1]+P[b2+1]+P[c+1])/3, cz=(P[a+2]+P[b2+2]+P[c+2])/3; if(cy<y0+.14) continue;
+      for(const v of vic) if(Math.hypot(cx-v.x,cz-v.z)<v.R){ I[t+1]=I[t]; I[t+2]=I[t]; ch=true; n++; break; } }
+    if(ch) g.index.needsUpdate=true; }
+  return n; }
+
+// Kia Ora Threads skin hall: every look you can buy, on a mannequin in its idle pose, with a price tag. Walk up and press R
+function threadsSkins(T){ const list=CLOTHES.filter(c=>c[2]==='body'&&COS_INFO[c[0]]&&HUM_DATA.c[COS_INFO[c[0]].key]); THREADS.skins=[];
+  const spots=[]; for(let i=0;i<8;i++) spots.push([-15.5+i*2.25,-8.6,0]); for(let i=0;i<8;i++) spots.push([-15.5+i*2.25,1.9,PI]); for(let i=0;i<5;i++) spots.push([-15.6,-6.4+i*1.6,PI/2]);
+  const stand=new THREE.MeshLambertMaterial({color:'#2b2d31'}), ring=new THREE.MeshBasicMaterial({color:'#ffd166'});
+  list.slice(0,spots.length).forEach(([id,n,sl,pr],i)=>{ const [lx,lz,yaw]=spots[i], key=COS_INFO[id].key, x=T.x+lx, z=T.z+lz, y=T.y+.34;
+    const c=cosBuild(key,0); if(!c) return; const Dk=HUM_DATA.c[key], ht=(Dk.mx[1]-Dk.mn[1])||1.8, sc=1.72/ht; c.root.scale.setScalar(sc); c.root.position.set(x,y+.1-Dk.mn[1]*sc,z); c.root.rotation.y=yaw; c.mesh.material=humMat(key,null,null);
+    try{ const cl=humClip(key[0]==='W'?'W':'M','U_Idle_Loop'); if(cl){ humSample(c,cl,(i*.37)%cl.d,1); } }catch(e){} scene.add(c.root);
+    const st=new THREE.Mesh(new THREE.CylinderGeometry(.42,.46,.1,16),stand); st.position.set(x,y+.05,z); scene.add(st); const rg=new THREE.Mesh(new THREE.TorusGeometry(.44,.025,6,24).rotateX(PI/2),ring); rg.position.set(x,y+.1,z); scene.add(rg);
+    const fx=Math.sin(yaw), fz=Math.cos(yaw), cv=document.createElement('canvas'); cv.width=256; cv.height=112; const tex=new THREE.CanvasTexture(cv); tex.encoding=THREE.sRGBEncoding;
+    const tag=new THREE.Mesh(new THREE.PlaneGeometry(.78,.34),new THREE.MeshBasicMaterial({map:tex})); tag.position.set(x+fx*.62,y+.42,z+fz*.62); tag.rotation.y=yaw; tag.rotation.x=0; scene.add(tag);
+    const post=new THREE.Mesh(new THREE.BoxGeometry(.05,.3,.05),stand); post.position.set(x+fx*.62,y+.15,z+fz*.62); scene.add(post);
+    const S={id,n,pr,key,x,z,yaw,fx,fz,cv,tex}; THREADS.skins.push(S); threadsTag(S);
+    townSolid(T,lx-.3,lx+.3,lz-.3,lz+.3,2); }); }
+function threadsTag(S){ const x=S.cv.getContext('2d'), w=256, h=112, own=OUTFIT.own.includes(S.id), on=OUTFIT.body===S.id, free=!own&&!OUTFIT.freeUsed;
+  x.fillStyle=on?'#2a9d8f':own?'#4b1d8f':'#ffffff'; x.fillRect(0,0,w,h); x.strokeStyle='#7b2fe0'; x.lineWidth=6; x.strokeRect(3,3,w-6,h-6);
+  x.fillStyle=own||on?'#ffffff':'#26222e'; x.font='800 30px system-ui,sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(S.n,w/2,38,w-20);
+  x.font='900 34px system-ui,sans-serif'; x.fillStyle=on?'#ffffff':own?'#ffd166':free?'#2a9d8f':'#c62828'; x.fillText(on?'WEARING':own?'OWNED':free?'FREE!':money(S.pr),w/2,82); S.tex.needsUpdate=true; }
+function threadsTagsAll(){ for(const S of THREADS.skins||[]) threadsTag(S); }
+function threadsSkinNear(){ if(!THREADS.skins||activeCar||player.mode!=='walk') return null; let best=null,bd=1.5; for(const S of THREADS.skins){ const d=Math.hypot(player.pos.x-(S.x+S.fx*1.25),player.pos.z-(S.z+S.fz*1.25)); if(d<bd){ bd=d; best=S; } } return best; }
+function threadsSkinPrompt(S){ const own=OUTFIT.own.includes(S.id), on=OUTFIT.body===S.id; return '<kbd>R</kbd> '+(on?'Take off '+S.n:own?'Wear '+S.n:!OUTFIT.freeUsed?'Get '+S.n+' FREE':'Buy '+S.n+' · '+money(S.pr)); }
+function threadsSkinUse(S){ if(SAMST){ flash('You\'re in Sam style. Press O to change style first'); return; } const own=OUTFIT.own.includes(S.id), on=OUTFIT.body===S.id;
+  if(on){ OUTFIT.body=null; outfitSave(); outfitApply(); flash('Back in your own clothes'); threadsTagsAll(); return; }
+  if(!own){ const free=!OUTFIT.freeUsed, pr=free?0:S.pr; if(state.money<pr){ flash('Not enough cash: '+S.n+' costs '+money(S.pr)); Snd.dry&&Snd.dry(); return; } state.money-=pr; save(); OUTFIT.own.push(S.id); OUTFIT.freeUsed=true; Snd.pop&&Snd.pop(); flash((free?'Your first look is free! ':'Bought! ')+'You\'re now '+S.n); }
+  else flash('Looking sharp as '+S.n);
+  OUTFIT.body=S.id; outfitSave(); outfitApply(); threadsTagsAll(); }
 
 /* ---------- Tumbleton Mall (creator's ask): a walk-in mall with a burger bar, a sweets shop, a fashion store selling the new people looks,
    a fresh market, a food court and a fountain ---------- */
@@ -8668,6 +8718,7 @@ function enterExit(){
   if(arcNear()){ arcOpen(); return; }
   { const T=marketNear(); if(T&&!nearestCar()){ marketMenu(T); return; } }
   if(fstoreNear()&&!nearestCar()){ fstoreMenu(); return; }
+  { const k=threadsSkinNear(); if(k&&!nearestCar()){ threadsSkinUse(k); return; } }
   if(clothesNear()&&!nearestCar()){ clothesMenu(); return; }
   if(dogNear()&&!nearestCar()){ dogMenu(); return; }
   { const jb=jobBoardNear(); if(jb&&!nearestCar()){ jobMenu(jb); return; } }
@@ -8941,7 +8992,7 @@ function findMenu(){ if(!state.started||state.over||!cfEl.hidden) return; const 
   add('Tumbleton Dam','A big dam and its lake in the hills · '+dist(NORTH.dam.x,NORTH.dam.z),go(NORTH.dam.x,NORTH.dam.z,'The dam is marked'));
   add('Quarry','A deep rock quarry with a digger · '+dist(NORTH.quarry.x,NORTH.quarry.z),go(NORTH.quarry.x,NORTH.quarry.z,'The quarry is marked'));
   { const n=KIWI.got.length; add('🥝 Kiwi hunt · '+n+' of '+KIWI.N+' found',n>=KIWI.N?'You found them all!':'Mark the nearest kiwi for $250. Listen for the chirp when you\'re close',()=>{ const k=kiwiNearest(); if(!k){ menuDone('You found them all!'); return; } if(state.money<250){ menuDone('You need $250 for a hint'); return; } state.money-=250; save(); go(k.x,k.z,'The nearest kiwi is marked')(); },'',n>=KIWI.N); }
-  add('Kia Ora Threads','Walk-in clothes shop in the west suburbs: hats, masks, tops and pants · '+dist(THREADS.x,THREADS.z),go((THREADS.door||THREADS).x,(THREADS.door||THREADS).z,'Kia Ora Threads is marked'));
+  add('Kia Ora Threads','Big walk-in clothes shop: a skin hall with every look on a mannequin, plus hats, masks, tops and pants · '+dist(THREADS.x,THREADS.z),go((THREADS.door||THREADS).x,(THREADS.door||THREADS).z,'Kia Ora Threads is marked'));
   if(MALL.T) add('🛍 Tumbleton Mall','Burgers, sweets, fresh food and new looks, all under one roof · '+dist(MALL.door.x,MALL.door.z),go(MALL.door.x,MALL.door.z+2,'The mall is marked'));
   if(LIVE.bank) add('🏦 Tumbleton Bank','The grand old bank in the north of the city. Robbers like it too · '+dist(LIVE.bank.door.x,LIVE.bank.door.z),go(LIVE.bank.door.x,LIVE.bank.door.z+3,'The bank is marked'));
   if(GARD.veg>0) add('🥕 Eat a home-grown vege · '+GARD.veg+' left','+40 health, +25 food',()=>{ gardEat(); menuDone('Fresh from the garden. +40 health, +25 food'); },'',state.hp>=100&&FOOD.v>=99);
