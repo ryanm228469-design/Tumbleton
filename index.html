@@ -7494,7 +7494,7 @@ function humPick(p,A){ const sp=A.sp, now=perfT, mv=sp>.35; A.tw=0; A.up=null;
       if(W.id==='fists') return {n:A.pn%2?'U_Punch_Jab':'U_Punch_Cross',once:1,ts:humClip(A.g,'U_Punch_Jab').d*ts*.55,key:'p'+A.pn,fade:.05};
       if(W.melee) return {n:'U_Sword_Attack',once:1,ts:humClip(A.g,'U_Sword_Attack').d*ts*.6,key:'p'+A.pn,fade:.05}; }
     A.lpT=0;
-    if(W.id==='gauntlet'){ if(now-GAUNT.fireT<.2&&!GAUNT.over) return mv?Object.assign(loco(false),{up:'U_Spell_Simple_Idle_Loop'}):{n:'U_Spell_Simple_Idle_Loop'}; return loco(false); }
+    if(W.id==='fists'&&gauntOn()&&now-GAUNT.fireT<.2&&!GAUNT.over){ return mv?Object.assign(loco(false),{up:'U_Spell_Simple_Idle_Loop'}):{n:'U_Spell_Simple_Idle_Loop'}; }
     if(W.ranged){ if(p.reloadT>0&&!mv) return {n:'U_Pistol_Reload',once:1,key:'r'+p.reloadW,ts:1.2};
       const shot=now-(p.shotAt||-9)<.3; if(shot&&!mv) return {n:'U_Pistol_Shoot',key:'s'+(p.shotN||0),once:1,ts:1.5,fade:.04};
       if(state.aimHeld||shot) return mv?loco(true):{n:'U_Pistol_Aim_Neutral'}; return loco(false); }
@@ -7597,19 +7597,26 @@ const _fq1=new THREE.Quaternion(), _fq2=new THREE.Quaternion();
 function fpaSample(F,cl,t,w,once){ const u=once?Math.min(t/cl.d,1)*(cl.f-1):((t%cl.d)/cl.d)*(cl.f-1), i0=Math.floor(u), i1=Math.min(cl.f-1,i0+1), a=u-i0, B=F.c.bones;
   for(let b=0;b<cl.nb;b++){ const k=F.idx[b], bone=B[k]; if(!bone) continue; const o0=(i0*cl.nb+b)*4, o1=(i1*cl.nb+b)*4; _fq1.set(cl.q[o0],cl.q[o0+1],cl.q[o0+2],cl.q[o0+3]); _fq2.set(cl.q[o1],cl.q[o1+1],cl.q[o1+2],cl.q[o1+3]); _fq1.slerp(_fq2,a).normalize(); if(w>=1) bone.quaternion.copy(_fq1); else bone.quaternion.slerp(_fq1,w); } }
 // called from the view model each frame; returns true when the character's own arms are showing
-function fpaTick(dt,bx,by,W){ const c=player.cos, key=c&&c.C.hum?c.key:'plain', use=(W.id==='fists'||W.id==='gauntlet')&&!(FOODH.out&&foodItem());
+function fpaTick(dt,bx,by,W){ const c=player.cos, key=c&&c.C.hum?c.key:'plain', use=(W.id==='fists')&&!(FOODH.out&&foodItem());
   const F=use?fpaBuild(key):null; if(FPA.on&&FPA.on!==F) FPA.on.c.root.visible=false; FPA.on=F; if(!F) return false; F.c.root.visible=true;
   const now=perfT, g='U'; let want={n:'guard_idle',fade:.18};
   // fists stay up for 10 seconds after a punch; otherwise the hands swing with your walk, jog or sprint (animation pack arm swing)
   if(W.id==='fists'&&(player.punchT>0||now-(player.useAt||-9)<.7)) FPA.guardUntil=now+10;
-  if(W.id==='fists'&&now>(FPA.guardUntil||0)){ const sp=Math.hypot(player.vel.x,player.vel.z); want=sp<.5||!player.ground?{n:'relax',fade:.4}:sp<3.1?{n:'u_walk',ts:clamp(sp/1.45,.6,1.6),fade:.35}:sp<6.2?{n:'u_jog',ts:clamp(sp/4.2,.75,1.5),fade:.35}:{n:'u_sprint',ts:clamp(sp/7,.8,1.4),fade:.35}; }
-  if(W.id==='gauntlet'){ if(perfT-GAUNT.fireT<.14&&!GAUNT.over) want={n:'push.L',key:'g',hold:.38,fade:.08}; }
+  if(W.id==='fists'&&now>(FPA.guardUntil||0)){ const sp=Math.hypot(player.vel.x,player.vel.z); want={n:'relax',fade:.4}; FPA.run=player.ground?clamp((sp-.4)/6.5,0,1):0; FPA.ph=(FPA.ph||0)+dt*clamp(sp,0,10)*1.15; }
+  if(W.id==='fists'&&gauntOn()&&perfT-GAUNT.fireT<.14&&!GAUNT.over) want={n:'push.L',key:'g',hold:.38,fade:.08};
   else if(player.punchT>0&&player.punchDur){ if(!(FPA.lpT>0)||player.punchT>FPA.lpT+.02) FPA.pn++; FPA.lpT=player.punchT; const cl=fpaClip(g,'jab.R'); want={n:FPA.pn%2?'jab.R':'jab.L',once:1,key:'p'+FPA.pn,ts:cl?cl.d/Math.max(.3,player.punchDur*2.2):1,fade:.05}; }
   else { FPA.lpT=0; if(now-(player.useAt||-9)<.7) want={n:'grab.R',once:1,key:'u'+player.useAt,fade:.08}; }
   const k=want.n+'|'+(want.key||''); if(k!==FPA.key){ FPA.prev=FPA.cur; FPA.pOnce=FPA.once; FPA.pt=FPA.t; FPA.cur=want.n; FPA.key=k; FPA.t=0; FPA.once=!!want.once; FPA.fd=want.fade||.2; FPA.fade=FPA.prev?FPA.fd:0; }
   FPA.t+=dt*(want.ts||1); if(want.hold!==undefined&&FPA.t>want.hold) FPA.t=want.hold; FPA.pt+=dt; const cl=fpaClip(g,FPA.cur); if(!cl) return false;
   if(FPA.fade>0&&FPA.prev){ const pc=fpaClip(g,FPA.prev); if(pc) fpaSample(F,pc,FPA.pt,1,FPA.pOnce); fpaSample(F,cl,FPA.t,1-FPA.fade/FPA.fd,FPA.once); FPA.fade-=dt; } else fpaSample(F,cl,FPA.t,1,FPA.once);
-  F.c.root.position.set(F.base.x+bx,F.base.y-by,F.base.z); return true; }
+  { const rk=W.id==='fists'&&FPA.cur==='relax'?(FPA.run||0):0; FPA.rk=(FPA.rk||0)+(rk-(FPA.rk||0))*Math.min(1,dt*5);
+    if(FPA.rk>.01){ const H=FPH_DATA, a=Math.sin(FPA.ph||0)*.3*FPA.rk;
+      for(const [side,sg] of [['l',1],['r',-1]]){ const k=H.bones.indexOf('upperarm_'+side), ck=H.bones.indexOf('clavicle_'+side), b=F.c.bones[k]; if(!b||ck<0) continue;
+        if(!FPA.ax) FPA.ax={}; if(!FPA.ax[side]) FPA.ax[side]=new THREE.Vector3(1,0,0).applyQuaternion(new THREE.Quaternion().fromArray(H.bq[ck]).invert());
+        b.quaternion.premultiply(_fq.setFromAxisAngle(FPA.ax[side],a*sg)); } } }
+  { const gx=W.id==='fists'&&gauntOn()&&now-GAUNT.fireT<.3?-.3:0, gy=gx?-.07:0; FPA.gx=(FPA.gx||0)+(gx-(FPA.gx||0))*Math.min(1,dt*10); FPA.gy=(FPA.gy||0)+(gy-(FPA.gy||0))*Math.min(1,dt*10); }
+  const rb=(FPA.rk||0); F.c.root.position.set(F.base.x+bx+(FPA.gx||0)+Math.sin(FPA.ph||0)*.012*rb,F.base.y-by+(FPA.gy||0)+rb*.07-Math.abs(Math.cos(FPA.ph||0))*.018*rb,F.base.z); return true; }
+const _fq=new THREE.Quaternion();
 function fpaHide(){ if(FPA.on){ FPA.on.c.root.visible=false; FPA.on=null; } }
 function humRestPos(c){ if(!c.posSaved) return; const D=c.C.D; for(let k=0;k<c.bones.length;k++) c.bones[k].position.fromArray(D.bt[k]); c.posSaved=false; }
 // costume pieces you can buy at Kia Ora Threads
@@ -9148,7 +9155,7 @@ function renderShop(){
   shopGrid.innerHTML='';
   const sec=t=>{ const h=document.createElement('div'); h.className='shop-sec'; h.textContent=t; shopGrid.appendChild(h); };
   sec('WEAPONS');
-  { const d=document.createElement('div'); d.className='item'; d.innerHTML='<div class="top"><svg viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="6" rx="3" fill="#e9b949"/><circle cx="7" cy="12" r="1.6" fill="#7a5a1a"/><circle cx="11" cy="12" r="1.6" fill="#7a5a1a"/><circle cx="15" cy="12" r="1.6" fill="#7a5a1a"/></svg><div><h3>Fist braces</h3><div class="price">from $1,000</div></div></div><p>Iron, gold, titanium, obsidian and diamond knuckle braces. Each tier punches harder.</p><div class="stats">'+(UPG.brace?'Wearing: '+UPG.brace:'None yet')+'</div><div class="buy"></div>'; const b=document.createElement('button'); b.type='button'; b.className='alt'; b.textContent='🔧 Braces'; b.addEventListener('click',()=>{ closeShop(); upgMenu('fists'); }); d.querySelector('.buy').appendChild(b); shopGrid.appendChild(d); }
+  { const d=document.createElement('div'); d.className='item'; d.innerHTML='<div class="top"><svg viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="6" rx="3" fill="#e9b949"/><circle cx="7" cy="12" r="1.6" fill="#7a5a1a"/><circle cx="11" cy="12" r="1.6" fill="#7a5a1a"/><circle cx="15" cy="12" r="1.6" fill="#7a5a1a"/></svg><div><h3>Fist upgrades</h3><div class="price">from $1,000</div></div></div><p>Knuckle braces from iron to diamond, and the power gauntlet: hold the left mouse button to blast a beam from your palm.</p><div class="stats">'+(UPG.brace?'Wearing: '+UPG.brace:'None yet')+'</div><div class="buy"></div>'; const b=document.createElement('button'); b.type='button'; b.className='alt'; b.textContent='🔧 Fist upgrades'; b.addEventListener('click',()=>{ closeShop(); upgMenu('fists'); }); d.querySelector('.buy').appendChild(b); shopGrid.appendChild(d); }
   WORDER.slice(1).forEach(id=>{ const it=WEAPONS[id], own=!!state.owned[id], A=AMMO[id], a=A&&own?ammoOf(id):null, d=document.createElement('div'); d.className='item';
     d.innerHTML='<div class="top">'+it.svg+'<div><h3>'+it.name+'</h3><div class="price">'+fmt$(it.price)+'</div></div></div><p>'+it.desc+'</p><div class="stats">'+it.stats+(A?' · Ammo '+A.tot+':'+A.mag:'')+'</div>'+(a?'<div class="own">AMMO '+a.mag+' + '+a.res+'</div>':'')+'<div class="buy"></div>';
     const b=document.createElement('button'); b.type='button';
@@ -9466,7 +9473,7 @@ function updateHUD(){
   if(wv){ let nm, at='', low=false;
     if(activeJet){ nm='STEALTH BOMBER'; at='BOMBS '+activeJet.bombs+' / '+JET_BOMBS+(activeJet.arm>0&&activeJet.bombs<JET_BOMBS?' · RE-ARMING…':''); low=activeJet.bombs===0; }
     else if(activeHeli){ const a=heliAm(activeHeli); nm='HELICOPTER'; at=a.arm>0?'RE-ARMING…':'GUN '+(a.gT>0?'RELOADING':a.g+' / '+a.gr)+' · RKT '+(a.rT>0?'RELOADING':a.r+' / '+a.rr); low=(a.g+a.gr===0)||(a.r+a.rr===0); }
-    else { nm=WEAPONS[state.weapon].name.toUpperCase(); const A=AMMO[state.weapon]; if(state.weapon==='gauntlet'){ at=GAUNT.over?'OVERHEATED · COOLING':'HEAT '+Math.round(GAUNT.heat*100)+'%'; low=GAUNT.over||GAUNT.heat>.8; } else if(A){ const a=ammoOf(state.weapon); at=player.reloadT>0?'RELOADING…':a.mag+' / '+a.res; low=a.mag===0; } }
+    else { nm=WEAPONS[state.weapon].name.toUpperCase(); const A=AMMO[state.weapon]; if(gauntOn()){ at=GAUNT.over?'GAUNTLET OVERHEATED':GAUNT.heat>.01?'GAUNTLET HEAT '+Math.round(GAUNT.heat*100)+'%':'HOLD TO BLAST'; low=GAUNT.over||GAUNT.heat>.8; } else if(A){ const a=ammoOf(state.weapon); at=player.reloadT>0?'RELOADING…':a.mag+' / '+a.res; low=a.mag===0; } }
     const k=nm+'|'+at+'|'+low; if(k!==lastWeapHud){ lastWeapHud=k; wnameEl.textContent=nm; wammoEl.textContent=at; wammoEl.hidden=!at; wammoEl.classList.toggle('low',low); } }
   const vg=!state.paused&&!state.cine&&((activeCar&&!!activeCar.tur)||MPG.id!==null);
   const cv=wv&&!state.paused&&(fp||WEAPONS[state.weapon].ranged)&&player.mode==='walk'||(!state.paused&&!!activeHeli)||vg; if(crossEl.hidden===cv) crossEl.hidden=!cv;
@@ -9666,7 +9673,11 @@ function upgMenu(id){ const W=WEAPONS[id]; if(!W){ return; } const nested=!cfEl.
     head('Add-ons'); for(const [k,ic,n,d,pr] of MEL_UPG){ const own=upgOwn(id,k), on=upgOn(id,k); card(ic,n+(own?(on?' ✓ ON':' · OFF'):' · '+money(pr)),own?(on?'Click to take it off':'Click to put it on'):d,on?'on':'',()=>{ if(!own){ if(!buy(k,pr)) return; set(k,true); } else set(k,!on); },!own&&state.money<pr); }
     head('Material (one at a time, each one stronger)'); const cur=UPG.on[id]&&UPG.on[id].mat;
     for(const [k,ic,n,d,col,pr] of MATS){ const own=upgOwn(id,k), on=cur===k; card(ic,n+(own?(on?' ✓ ON':' · OFF'):' · '+money(pr)),own?(on?'Click to go back to plain':'Click to use it'):d,on?'on':'',()=>{ if(!own){ if(!buy(k,pr)) return; set('mat',k); } else set('mat',on?null:k); },!own&&state.money<pr); } }
-  else if(id==='fists'){ head('Fist braces (each tier hits harder)');
+  else if(id==='fists'){ head('Power gauntlet (left hand · hold the left mouse button to blast)');
+    { const own=!!state.owned.gauntlet, on=own&&!(UPG.on.fists&&UPG.on.fists.gauntlet===false), pr=WEAPONS.gauntlet.price; card('⚡','Power gauntlet'+(own?(on?' ✓ ON':' · OFF'):' · '+money(pr)),own?(on?'Click to take it off':'Click to wear it'):'Tap to punch, hold to fire a palm beam. In your look\'s colours',on?'on':'',()=>{
+        if(!own){ if(state.money<pr){ flash('Not enough cash'); return; } state.money-=pr; state.owned.gauntlet=true; save(); Snd.pop&&Snd.pop(); (UPG.on.fists=UPG.on.fists||{}).gauntlet=true; flash('Power gauntlet fitted · hold the left mouse button to blast'); }
+        else (UPG.on.fists=UPG.on.fists||{}).gauntlet=!on; upgSave(); upgMenu(id); },!own&&state.money<pr); }
+    head('Fist braces (each tier hits harder)');
     for(const [k,n,col,pr,mul] of BRACES){ const own=UPG.braceOwn.includes(k), on=UPG.brace===k&&own; card(['🔩','🥇','⚙️','🖤','💎'][BRACES.findIndex(b=>b[0]===k)],n+' brace'+(own?(on?' ✓ ON':' · OFF'):' · '+money(pr)),own?(on?'Click to take them off':'Click to wear them'):mul+'× punch damage',on?'on':'',()=>{
         if(!own){ if(state.money<pr){ flash('Not enough cash'); return; } state.money-=pr; save(); UPG.braceOwn.push(k); UPG.brace=k; Snd.pop&&Snd.pop(); } else UPG.brace=on?null:k; upgSave(); upgLooks(); upgMenu(id); },!own&&state.money<pr); } }
   else head('This one can\'t be upgraded');
@@ -9679,7 +9690,8 @@ try{ upgLooks(); }catch(e){ console.warn('upgrade looks',e); }
    Hold the left mouse button to fire a continuous beam. It runs hot: let go to cool it down. Coloured with your character's own colours. */
 WEAPONS.gauntlet={id:'gauntlet',name:'Power gauntlet',price:35000,ranged:true,auto:true,cd:.08,stats:'Hold to fire a beam · overheats',desc:'A mechanical gauntlet with a palm blaster. Hold the left mouse button to fire a beam that burns through zombies. Coloured to match your look.',
   svg:'<svg viewBox="0 0 24 24"><rect x="2.5" y="9" width="9" height="6.5" rx="1.6" fill="#7b2fe0"/><rect x="11" y="8" width="6" height="8.5" rx="1.4" fill="#5b6068"/><circle cx="14" cy="12.25" r="2.1" fill="#9ff4ff"/><path d="M17 8.6h4v1.4h-4zM17 11.2h4.6v1.4H17zM17 13.8h4v1.4h-4z" fill="#5b6068"/></svg>'};
-WORDER.push('gauntlet');
+// it's part of your fists now (creator's ask): tap the left mouse button to punch, hold it to blast. Bought once at the fist upgrade bench
+function gauntOn(){ return !!state.owned.gauntlet&&!(UPG.on.fists&&UPG.on.fists.gauntlet===false)&&state.weapon==='fists'; }
 const GAUNT={heat:0,over:false,fireT:-9,tick:0,beam:null,glow:null,fpKey:null,tpKey:null,tp:null,cols:null};
 // colours: the gauntlet's plates take your look's forearm colour, the trim a darker shade, the glow your look's boldest colour
 function gauntCols(){ let main=player.colors[1], glow='#38e8ff'; const c=player.cos, C=c&&c.C.hum?humDecode(c.key):null;
@@ -9696,7 +9708,7 @@ function fphFrame(name,side){ const H=FPH_DATA, k=H.bones.indexOf(name), hk=H.bo
   const acr=new THREE.Vector3(0,0,1).applyQuaternion(q); acr.addScaledVector(dir,-acr.dot(dir)).normalize();
   const dor=new THREE.Vector3(side==='r'?-1:1,0,0).applyQuaternion(q); dor.addScaledVector(dir,-dor.dot(dir)).addScaledVector(acr,-dor.dot(acr)).normalize(); return {k,dir,acr,dor,L}; }
 function gauntPart(fr,geo,mat,a,d,c){ const m=new THREE.Mesh(geo,mat); m.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(fr.dor,fr.dir,fr.acr)); m.position.copy(fr.dir).multiplyScalar(a).addScaledVector(fr.dor,d).addScaledVector(fr.acr,c||0); return m; }
-function gauntFP(){ const F=FPA.on; if(!F) return; const W=WEAPONS[state.weapon], on=W&&W.id==='gauntlet'; const key=on?F.c.mesh.uuid:null;
+function gauntFP(){ const F=FPA.on; if(!F) return; const on=gauntOn(); const key=on?F.c.mesh.uuid:null;
   if(GAUNT.fpKey===key) return; if(GAUNT.fpParts) for(const m of GAUNT.fpParts) if(m.parent) m.parent.remove(m); GAUNT.fpParts=[]; GAUNT.fpKey=key; GAUNT.palmFP=null; if(!on) return;
   const M=gauntMats(gauntCols()), B=(x,y,z)=>new THREE.BoxGeometry(x,y,z), add=(name,m)=>{ const b=F.c.bones[FPH_DATA.bones.indexOf(name)]; if(b){ b.add(m); GAUNT.fpParts.push(m); } return m; };
   { const fr=fphFrame('lowerarm_l','l'); const L=fr.L;
@@ -9707,7 +9719,7 @@ function gauntFP(){ const F=FPA.on; if(!F) return; const W=WEAPONS[state.weapon]
     const halo=gauntPart(fr,new THREE.SphereGeometry(.05,12,8),M.halo,.058,-.04); add('hand_l',halo); GAUNT.palmFP=disc; GAUNT.haloFP=halo; }
   for(const f of ['index','middle','ring','pinky','thumb']) for(let i=1;i<=3;i++){ const nm=f+'_0'+i+'_l'; if(FPH_DATA.bones.indexOf(nm)<0) continue; const fr=fphFrame(nm,'l'), L=Math.max(.02,fr.L);
     add(nm,gauntPart(fr,B(.009,L*.78,.02),i===2?M.trim:M.main,L*.5,.012)); } }
-function gauntTP(){ const W=WEAPONS[state.weapon], on=W&&W.id==='gauntlet'&&!activeCar; const a=humHand(player,'L'), host=a||player.armL, key=on?(host.uuid+'|'+(player.cos?player.cos.key:'')):null;
+function gauntTP(){ const on=gauntOn()&&!activeCar; const a=humHand(player,'L'), host=a||player.armL, key=on?(host.uuid+'|'+(player.cos?player.cos.key:'')):null;
   if(GAUNT.tpKey===key) return; if(GAUNT.tp&&GAUNT.tp.parent) GAUNT.tp.parent.remove(GAUNT.tp); GAUNT.tp=null; GAUNT.tpKey=key; if(!on) return;
   const M=gauntMats(gauntCols()), g=new THREE.Group(), s=a?1:-1;
   const br=new THREE.Mesh(new THREE.CylinderGeometry(.085,.07,.42,10),M.main); br.position.y=s*.5; g.add(br); for(const y of [.32,.6]){ const r=new THREE.Mesh(new THREE.CylinderGeometry(.092,.092,.04,10),M.trim); r.position.y=s*y; g.add(r); }
@@ -9716,17 +9728,21 @@ function gauntTP(){ const W=WEAPONS[state.weapon], on=W&&W.id==='gauntlet'&&!act
   if(!a) g.position.y=0; host.add(g); GAUNT.tp=g; }
 // where the beam comes out
 const _gnv=new THREE.Vector3(), _gnd=new THREE.Vector3();
-function gauntOrigin(out,dir){ const o=camera.position; if(fp){ out.set(o.x+dir.x*.62+Math.cos(camYaw)*.1,o.y+dir.y*.62-.1,o.z+dir.z*.62-Math.sin(camYaw)*.1); return out; }
+function gauntOrigin(out,dir){ const o=camera.position; if(fp){ if(GAUNT.palmFP&&GAUNT.palmFP.parent){ GAUNT.palmFP.getWorldPosition(out); camera.updateMatrixWorld(); camera.localToWorld(out); return out; } out.set(o.x+dir.x*.62+Math.cos(camYaw)*.1,o.y+dir.y*.62-.1,o.z+dir.z*.62-Math.sin(camYaw)*.1); return out; }
   if(GAUNT.tp){ GAUNT.tp.updateMatrixWorld(true); out.set(0,GAUNT.tp.userData.s*.9,0); GAUNT.tp.localToWorld(out); return out; } out.set(player.pos.x+Math.sin(camYaw)*.6+Math.cos(camYaw)*.3,player.pos.y+.5,player.pos.z+Math.cos(camYaw)*.6-Math.sin(camYaw)*.3); return out; }
 function gauntFire(){ if(GAUNT.over){ if(!GAUNT.warned||perfT-GAUNT.warned>1.2){ GAUNT.warned=perfT; flash('Gauntlet overheated · let it cool'); Snd.dry&&Snd.dry(); } return; } GAUNT.fireT=perfT; }
-function gauntTick(dt){ const W=WEAPONS[state.weapon], has=W&&W.id==='gauntlet'&&state.started&&!state.over&&player.mode==='walk'&&!activeCar&&!activeHeli&&!FOODH.out;
-  const firing=has&&perfT-GAUNT.fireT<.14&&!GAUNT.over;
+function gauntTick(dt){ if(state.weapon==='gauntlet') equip('fists');
+  const has=gauntOn()&&state.started&&!state.over&&!state.paused&&player.mode==='walk'&&!activeCar&&!activeHeli&&!FOODH.out&&!state.cine;
+  // only a held button fires: a quick tap is still a normal punch
+  GAUNT.hold=has&&(state.mouseHeld||state.touchFire)?(GAUNT.hold||0)+dt:0;
+  if(GAUNT.hold>=.4){ if(GAUNT.over){ if(!GAUNT.warned||perfT-GAUNT.warned>1.2){ GAUNT.warned=perfT; flash('Gauntlet overheated · let it cool'); Snd.dry&&Snd.dry(); } } else GAUNT.fireT=perfT; }
+  const firing=has&&perfT-GAUNT.fireT<.14&&!GAUNT.over; if(firing) FPA.guardUntil=perfT+10;
   if(firing){ GAUNT.heat=Math.min(1,GAUNT.heat+dt/4.5); if(GAUNT.heat>=1){ GAUNT.over=true; flash('Gauntlet overheated!'); Snd.dry&&Snd.dry(); } }
   else { GAUNT.heat=Math.max(0,GAUNT.heat-dt/(GAUNT.over?2.6:1.8)); if(GAUNT.over&&GAUNT.heat<.25) GAUNT.over=false; }
   try{ gauntTP(); if(fp) gauntFP(); }catch(e){}
   if(GAUNT.palmFP){ const k=firing?1:.35+GAUNT.heat*.3; GAUNT.haloFP.scale.setScalar(firing?1.6+Math.sin(perfT*40)*.25:1); GAUNT.haloFP.material.opacity=.2+.5*k; }
-  if(!GAUNT.beam){ const C=gauntCols(); GAUNT.beam=new THREE.Group(); const core=new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,1,8,1,true).translate(0,.5,0).rotateX(PI/2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.95,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));
-    const outer=new THREE.Mesh(new THREE.CylinderGeometry(.14,.14,1,10,1,true).translate(0,.5,0).rotateX(PI/2),new THREE.MeshBasicMaterial({color:C.glow,transparent:true,opacity:.45,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));
+  if(!GAUNT.beam){ const C=gauntCols(); GAUNT.beam=new THREE.Group(); const core=new THREE.Mesh(new THREE.CylinderGeometry(.05,.01,1,8,1,true).translate(0,.5,0).rotateX(PI/2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.95,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));
+    const outer=new THREE.Mesh(new THREE.CylinderGeometry(.15,.022,1,10,1,true).translate(0,.5,0).rotateX(PI/2),new THREE.MeshBasicMaterial({color:C.glow,transparent:true,opacity:.45,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));
     const hit=new THREE.Mesh(new THREE.SphereGeometry(.35,12,8),new THREE.MeshBasicMaterial({color:C.glow,transparent:true,opacity:.7,blending:THREE.AdditiveBlending,depthWrite:false,fog:false})); GAUNT.beam.add(core,outer); scene.add(GAUNT.beam,hit); GAUNT.hit=hit; GAUNT.outer=outer; GAUNT.beamCol=C.glow; }
   GAUNT.beam.visible=GAUNT.hit.visible=firing; if(!firing) return;
   { const C=gauntCols(); if(C.glow!==GAUNT.beamCol){ GAUNT.beamCol=C.glow; GAUNT.outer.material.color.set(C.glow); GAUNT.hit.material.color.set(C.glow); } }
@@ -9746,7 +9762,9 @@ function updateViewModel(dt){
   const bx=Math.cos(fpBob*.5)*.017*a, by=(Math.sin(fpBob)*.5+.5)*.026*a;
   for(const k in VM) VM[k].visible=k===state.weapon;
   vmLeft.visible=W.id==='fists';
-  { let fa=false; try{ fa=fpaTick(dt,bx,by,W); }catch(e){ fpaHide(); } vmHand.visible=!fa; if(fa) vmLeft.visible=false; }
+  { let fa=false; try{ fa=fpaTick(dt,bx,by,W); }catch(e){ fpaHide(); } vmHand.visible=!fa; if(fa) vmLeft.visible=false;
+    // with a weapon out only the weapon shows: hands are for fists and the gauntlet (and holding food)
+    const hideH=W.id!=='fists'&&!(FOODH.out&&foodItem()), hum=!!(player.cos&&player.cos.C.hum); for(const m of VMX.hb||[]) m.visible=!hideH&&!hum; for(const m of VMX.fpm||[]) m.visible=!hideH; if(hideH) vmLeft.visible=false; }
   const dY=vmLastYaw===null?0:wrapA(camYaw-vmLastYaw), dP=camPitch-vmLastPitch; vmLastYaw=camYaw; vmLastPitch=camPitch;
   vmSwX+=(clamp(dY*1.6,-.09,.09)-vmSwX)*Math.min(1,dt*9); vmSwY+=(clamp(dP*1.4,-.07,.07)-vmSwY)*Math.min(1,dt*9);
   vmHand.position.set(.3+bx+vmSwX,-.28-by+vmSwY,-.82); vmHand.rotation.set(0,vmSwX*1.5,0);
@@ -10757,7 +10775,7 @@ function frameBody(now){
   Snd.engine(activeJet&&!state.over?20+activeJet.spd*.5:activeCar&&!state.over&&!activeCar.pedal?Math.hypot(activeCar.vel.x,activeCar.vel.z):-1);
   try{ xpLight(dt); }catch(e){} try{ flTick(dt); }catch(e){ console.warn('flashlight',e); } try{ leanTick(dt); hideTick(dt); }catch(e){ console.warn('hide',e); } try{ handFoodTick(dt); }catch(e){ console.warn('food',e); } try{ liveTick(dt); }catch(e){ console.warn('live',e); } cosTick(); bullTick(dt); screenGuard(dt); shadowPace(); cullBegin(); renderer.clear(); renderer.render(scene,camera); cullEnd();
   { const zm=gunZoom(), sc=zm>=4&&aimK>.82, dt2=zm>1&&zm<4&&aimK>.6, st=sc?'s':dt2?'d':''; if(SCOPE.st!==st){ SCOPE.st=st; SCOPE.on=sc; const el=$('scope'); el.hidden=!st; el.className='scope'+(dt2?' dot':''); } }
-  try{ gauntTick(Math.min(.1,dt)); }catch(e){}
+  try{ gauntTick(Math.min(.1,dt)); }catch(e){ if(!GAUNT.err){ GAUNT.err=1; console.warn('gauntlet',e); } }
   try{ laserTick(); if(BRV.ck!==(player.cos?player.cos.key:'-')){ BRV.ck=player.cos?player.cos.key:'-'; braceLooks(); } braceFP(); }catch(e){}
   if(fp&&!SCOPE.on&&!state.cine&&state.started&&!state.over&&!activeCar&&!activeHeli&&!player.chute&&!HIDE.on&&(player.mode==='walk'||player.mode==='lift')){ updateViewModel(dt); renderer.clearDepth(); renderer.render(vmScene,vmCam); }
 }
