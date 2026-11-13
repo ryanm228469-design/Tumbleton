@@ -302,6 +302,33 @@ kbd{font:700 12px/1 var(--f-body);min-width:22px;padding:4px 6px 3px;border-radi
   .modes .mode span{display:none}
 }
 .confirm .opt:disabled{opacity:.42;cursor:default}
+.wallet.chaosbtn .lbl{font-weight:800;letter-spacing:.04em;color:#ffd166}
+.chaosfx{position:absolute;inset:0;pointer-events:none;background:#fff;opacity:0;z-index:2}
+.chaosfx.storm{background:transparent;box-shadow:inset 0 0 0 100vmax rgba(14,20,38,.38);opacity:1;transition:none}
+.confirm.metal .card{width:min(760px,100%);position:relative;border:3px solid #2a2f34;border-radius:16px;padding:22px 22px 18px;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.045) 0 1px,rgba(0,0,0,.03) 1px 3px),linear-gradient(160deg,#a3abb3 0%,#646c74 42%,#868f97 68%,#4d545b 100%);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.4),inset 0 -3px 0 rgba(0,0,0,.35),0 20px 50px rgba(0,0,0,.65)}
+.confirm.metal .card::before{content:"";position:absolute;inset:7px;border-radius:11px;pointer-events:none;
+  background:radial-gradient(circle,#e8ecef 0 2.5px,#30363b 3.5px,transparent 4.5px) left top/16px 16px no-repeat,radial-gradient(circle,#e8ecef 0 2.5px,#30363b 3.5px,transparent 4.5px) right top/16px 16px no-repeat,radial-gradient(circle,#e8ecef 0 2.5px,#30363b 3.5px,transparent 4.5px) left bottom/16px 16px no-repeat,radial-gradient(circle,#e8ecef 0 2.5px,#30363b 3.5px,transparent 4.5px) right bottom/16px 16px no-repeat}
+.confirm.metal h2{color:#fff;letter-spacing:.06em;text-shadow:0 2px 0 #2a2f34,0 0 12px rgba(255,140,40,.45);text-align:center}
+.confirm.metal .cancel{background:linear-gradient(#59616a,#3b4147);border-color:#262a2e;color:#fff}
+.chaos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.chaos-card{display:grid;grid-template-columns:54px 1fr;grid-template-rows:auto auto;column-gap:10px;row-gap:2px;align-items:center;text-align:left;padding:10px 12px;border-radius:11px;cursor:pointer;color:#14171a;
+  background:linear-gradient(180deg,#eef1f3 0%,#b3bbc2 55%,#cfd5da 100%);border:2px solid #353b41;box-shadow:inset 0 1px 0 #fff,0 3px 0 #23272b;transition:transform .08s,filter .08s}
+.chaos-card i{grid-row:1/3;font-style:normal;font-size:32px;line-height:1;display:grid;place-items:center;width:54px;height:54px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#69737c,#1d2125);border:2px solid #23272b;box-shadow:inset 0 3px 6px rgba(0,0,0,.6),0 1px 0 rgba(255,255,255,.6)}
+.chaos-card b{font:800 15px/1.15 var(--f-body);align-self:end}
+.chaos-card span{font:600 12px/1.25 var(--f-body);color:#363d43;align-self:start}
+.chaos-card:hover:not(:disabled){filter:brightness(1.07);transform:translateY(-2px)}
+.chaos-card:active:not(:disabled){transform:translateY(1px);box-shadow:inset 0 1px 0 #fff,0 1px 0 #23272b}
+.chaos-card:disabled{opacity:.5;cursor:default}
+.chaos-card:focus-visible{outline:3px solid #ffd166;outline-offset:2px}
+.chaos-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px}
+.chaos-small{font:700 13px var(--f-body);padding:7px 12px;border-radius:8px;cursor:pointer;color:#fff;background:linear-gradient(#59616a,#3b4147);border:1px solid #262a2e}
+.banner.metal{padding:14px 22px;border-radius:14px;border:3px solid #2a2f34;background:repeating-linear-gradient(90deg,rgba(255,255,255,.045) 0 1px,rgba(0,0,0,.03) 1px 3px),linear-gradient(160deg,#a3abb3 0%,#646c74 42%,#868f97 68%,#4d545b 100%);box-shadow:inset 0 2px 0 rgba(255,255,255,.4),0 14px 34px rgba(0,0,0,.55)}
+.banner.metal h2{color:#ffd166}
+@media (max-width:560px){ .chaos-grid{grid-template-columns:1fr} }
+
 
 
 /* start and game-over screens scroll instead of being cut off on short screens (phones, small windows) */
@@ -414,9 +441,10 @@ body.touch .dlg .nx kbd{display:none}
   <div class="hud limit" aria-live="off"><div class="name">TUMBLETON</div><div class="pop">POP. <span id="pop">0</span></div></div>
 
   <div class="hud hp" id="hp" hidden><div class="row"><span>HEALTH</span><b id="hpn">100</b></div><div class="track"><div class="fill" id="hpf"></div></div><div class="row"><span id="fdl">FOOD</span><b id="fdn">100</b></div><div class="track"><div class="fill" id="fdf" style="background:#e8a33d"></div></div></div>
-  <button class="hud wallet" id="wallet" hidden aria-label="Find a place"><b id="cash">$0</b><span class="gain" id="gain">+$10</span><span class="lbl">FIND PLACES</span><kbd>B</kbd></button>
+  <button class="hud wallet chaosbtn" id="wallet" hidden aria-label="Chaos and destruction"><b id="cash">$0</b><span class="gain" id="gain">+$10</span><span class="lbl">💥 CHAOS</span><kbd>B</kbd></button>
   <div class="hud surv" id="surv" hidden><span>LAST STAND</span><span>WAVE<b id="sw">1</b></span><span>TIME<b id="st">0:00</b></span><span>BEATEN<b id="sk">0</b></span></div>
   <div class="hurt" id="hurt"></div>
+  <div class="chaosfx" id="chaosfx"></div>
   <div class="hud zplate" id="zplate" hidden><span>ZOMBIES<b id="zc">0</b></span><span>DEFEATED<b id="zd">0</b></span></div>
 
   <div class="hud modes">
@@ -473,7 +501,7 @@ body.touch .dlg .nx kbd{display:none}
       <dt><kbd>R</kbd></dt><dd>At the airport (east of the city): fly a bomber jet. <kbd>W</kbd>/<kbd>S</kbd> throttle, mouse steers (look up to climb), <kbd>Space</kbd> or <kbd>Click</kbd> drops a bomb, <kbd>R</kbd> bails out</dd>
       <dt><kbd>R</kbd></dt><dd>At a tower crane's base: drive the wrecking ball (<kbd>A</kbd><kbd>D</kbd> swing, <kbd>W</kbd><kbd>S</kbd> trolley, <kbd>Space</kbd>/<kbd>Shift</kbd> cable)</dd>
       <dt><kbd>X</kbd></dt><dd>Crouch down on one knee (Space stands up) · with the build bar open, pick up a block you placed</dd>
-      <dt><kbd>B</kbd></dt><dd>Find places: the Hardware &amp; Arms store, Vehicles R Us, Tumbleton Motors, houses for sale and your garage. An arrow shows the way</dd>
+      <dt><kbd>B</kbd></dt><dd>Chaos &amp; destruction: tornadoes, nukes, UFOs and more. Places, shops &amp; more is at the bottom: the Hardware &amp; Arms store, Vehicles R Us, Tumbleton Motors, houses for sale and your garage. An arrow shows the way</dd>
       <dt><kbd>`</kbd></dt><dd>Clear dropped items and zombies</dd>
       <dt><kbd>R</kbd></dt><dd>Next to a wheelie bin, dumpster, wall vent, locker or portaloo: hide inside (zombies and the Bull lose you). Hold <kbd>W</kbd> to peek, <kbd>R</kbd> or <kbd>Space</kbd> to get out. If the Bull is within 7 m when you climb in, it pulls you out</dd>
       <dt>Click</dt><dd>With food in your hands (pizza from the pizza shop, drinks and snacks from vending machines): eat it. You walk slower while eating. <kbd>C</kbd> switches between your weapons and the food</dd>
@@ -510,7 +538,7 @@ body.touch .dlg .nx kbd{display:none}
         <dt><kbd>T</kbd></dt><dd>Restart</dd>
         <dt><kbd>Z</kbd></dt><dd>Zombie wave</dd>
         <dt><kbd>L</kbd></dt><dd>Last stand mode</dd>
-        <dt><kbd>B</kbd></dt><dd>Find places: shops, houses for sale and your garage</dd>
+        <dt><kbd>B</kbd></dt><dd>Chaos &amp; destruction, plus places: shops, houses for sale and your garage</dd>
         <dt><kbd>Q</kbd></dt><dd>Switch weapon</dd>
         <dt><kbd>Tab</kbd></dt><dd>First or third person</dd>
         <dt><kbd>/</kbd></dt><dd>Map</dd>
@@ -3935,7 +3963,7 @@ function hornBlast(c){ let n=0; for(const z of people){ if(!z.zombie||z.dead) co
 function repairCar(c){ const n=new Car(c.pos.x,c.pos.z,c.yaw,'player',{variant:c.variant,color:c.color}); n.pos.y=c.pos.y; if(c.gid){ n.gid=c.gid; } n.mods={}; applyMods(n,c.mods||{});
   const i=cars.indexOf(c); if(i>=0) cars.splice(i,1); const b=burning.indexOf(c); if(b>=0) burning.splice(b,1); if(c.towBy) towRelease(c.towBy); if(c.towed) towRelease(c); scene.remove(c.g); disposeTree(c.g); activeCar=n; return n; }
 function menuOpen(title){ cfPrevPaused=state.paused; if(state.started){ state.paused=true; for(const k in keys) keys[k]=false; state.mouseHeld=false; state.aimHeld=false; try{ if(document.exitPointerLock) document.exitPointerLock(); }catch(e){} }
-  $('cfh').textContent=title; cfOpts.textContent=''; cfEl.hidden=false;
+  $('cfh').textContent=title; cfOpts.textContent=''; cfEl.hidden=false; cfEl.classList.remove('metal');
   return (t,sub,fn,cls,dis)=>{ const b=document.createElement('button'); b.type='button'; b.className='opt'+(cls?' '+cls:''); b.textContent=t; const sp=document.createElement('span'); sp.textContent=sub; b.appendChild(sp); b.disabled=!!dis; if(fn) b.addEventListener('click',fn); cfOpts.appendChild(b); return b; }; }
 function menuHead(t){ const h=document.createElement('div'); h.className='pick-ch'; h.textContent=t; cfOpts.appendChild(h); }
 function menuDone(msg){ closeRestart(); if(msg) flash(msg); }
@@ -4478,7 +4506,7 @@ function furnMenu(S){ const h=GAR.h[S.i], add=menuOpen('Your furniture · '+S.D.
   add('Close','',()=>menuDone()); }
 function fstoreNear(){ if(activeCar||player.mode!=='walk') return false; return Math.hypot(player.pos.x-FSTORE.counter.x,player.pos.z-FSTORE.counter.z)<3; }
 function fstoreMenu(){ const add=menuOpen('Tumbleton Furniture Co. · you have '+money(state.money)); let cat='';
-  for(const k in FURN){ const D=FURN[k]; if(D[2]!==cat){ cat=D[2]; menuHead(cat); } add(D[0]+' · '+money(D[1]),D[7]+((FP.inv[k]||0)?' · you have '+FP.inv[k]+' to place':''),()=>{ if(state.money<D[1]){ menuDone('Not enough cash'); return; } state.money-=D[1]; save(); FP.inv[k]=(FP.inv[k]||0)+1; furnSave(); menuDone('Bought! Go home and press B → Your furniture to place it'); Snd.tink(FSTORE.counter.x,FSTORE.counter.z); },'',state.money<D[1]); }
+  for(const k in FURN){ const D=FURN[k]; if(D[2]!==cat){ cat=D[2]; menuHead(cat); } add(D[0]+' · '+money(D[1]),D[7]+((FP.inv[k]||0)?' · you have '+FP.inv[k]+' to place':''),()=>{ if(state.money<D[1]){ menuDone('Not enough cash'); return; } state.money-=D[1]; save(); FP.inv[k]=(FP.inv[k]||0)+1; furnSave(); menuDone('Bought! Go home and press B → Places, shops & more → Your furniture to place it'); Snd.tink(FSTORE.counter.x,FSTORE.counter.z); },'',state.money<D[1]); }
   add('Close','',()=>menuDone()); }
 function fstorePrompt(){ return fstoreNear()?'<kbd>R</kbd> Buy furniture':''; }
 
@@ -4956,7 +4984,7 @@ function tornadoStart(){ if(CHAOS.torn) return; const pc=activeCar?activeCar.pos
   for(let k=0;k<14;k++){ const r=1.2+k*.75, y=k*2.4; const m=new THREE.Mesh(new THREE.TorusGeometry(r,.35+k*.06,6,18).rotateX(PI/2),new THREE.MeshBasicMaterial({color:0x8e9196,transparent:true,opacity:.55-k*.02,depthWrite:false})); m.position.y=y; g.add(m); parts.push(m); }
   g.position.set(pc.x+Math.cos(a)*55,0,pc.z+Math.sin(a)*55); scene.add(g); CHAOS.torn={g,parts,t:45,a:Math.random()*TAU}; Snd.blow&&Snd.blow(); banner('TORNADO!','Get out of its way... or don\'t'); }
 function meteorStart(){ CHAOS.met={t:30,next:0}; banner('METEOR SHOWER','Fiery rocks are falling from the sky!',true); }
-function chaosTick(dt){ const T=CHAOS.torn; if(T){ T.t-=dt; const pc=activeCar?activeCar.pos:player.pos; T.a+=R(-.6,.6)*dt; const dx=pc.x-T.g.position.x, dz=pc.z-T.g.position.z, d=Math.hypot(dx,dz)||1;
+function chaosTick(dt){ chxTick(dt); const T=CHAOS.torn; if(T){ T.t-=dt; const pc=activeCar?activeCar.pos:player.pos; T.a+=R(-.6,.6)*dt; const dx=pc.x-T.g.position.x, dz=pc.z-T.g.position.z, d=Math.hypot(dx,dz)||1;
     T.g.position.x+=(Math.cos(T.a)*4+dx/d*3)*dt; T.g.position.z+=(Math.sin(T.a)*4+dz/d*3)*dt; T.g.position.y=groundHeight(T.g.position.x,T.g.position.z);
     T.parts.forEach((m,i)=>{ m.rotation.y+=dt*(4+i*.3); m.position.x=Math.sin(perfT*2+i*.5)*i*.12; });
     const tx=T.g.position.x, tz=T.g.position.z;
@@ -4966,13 +4994,123 @@ function chaosTick(dt){ const T=CHAOS.torn; if(T){ T.t-=dt; const pc=activeCar?a
   const M=CHAOS.met; if(M){ M.t-=dt; M.next-=dt; if(M.next<=0&&M.t>0){ M.next=R(.5,1.3); const pc=activeCar?activeCar.pos:player.pos, a=Math.random()*TAU, r=R(10,75), x=pc.x+Math.cos(a)*r, z=pc.z+Math.sin(a)*r;
       const m=new THREE.Group(); m.add(new THREE.Mesh(new THREE.SphereGeometry(.9,9,7),new THREE.MeshBasicMaterial({color:0xffb347}))); const tail=new THREE.Mesh(new THREE.ConeGeometry(.8,9,8,1,true).translate(0,4.5,0),new THREE.MeshBasicMaterial({color:0xff5a1a,transparent:true,opacity:.55,depthWrite:false,blending:THREE.AdditiveBlending})); tail.rotation.z=-.45; m.add(tail); m.position.set(x+30,90,z+10); scene.add(m); (M.rocks=M.rocks||[]).push({m,x,z,y:groundHeight(x,z,200)}); }
     for(let i=(M.rocks||[]).length-1;i>=0;i--){ const k=M.rocks[i], m=k.m; m.position.x+=(k.x-m.position.x)*Math.min(1,dt*2.2); m.position.z+=(k.z-m.position.z)*Math.min(1,dt*2.2); m.position.y-=60*dt;
-      if(m.position.y<=k.y+.5){ scene.remove(m); disposeTree(m); M.rocks.splice(i,1); explode(k.x,k.y+.3,k.z,1.1); } }
+      if(m.position.y<=k.y+.5){ scene.remove(m); disposeTree(m); M.rocks.splice(i,1); explode(k.x,k.y+.3,k.z,1.1,'chaos'); } }
     if(M.t<=0&&!(M.rocks||[]).length) CHAOS.met=null; } }
-function chaosMenu(){ const prev=cfPrevPaused, add=menuOpen('Sandbox chaos'); cfPrevPaused=prev;
-  add('🌪 Tornado','A twister wanders towards you, flinging people, zombies and cars',()=>{ menuDone(); tornadoStart(); },'',!!CHAOS.torn||story.on);
-  add('☄️ Meteor shower','30 seconds of fiery rocks raining down around you',()=>{ menuDone(); meteorStart(); },'',!!CHAOS.met||story.on);
-  add('🍂 Change the season','Now: '+seasonNow()+(SEAS.over?' (locked)':' (follows the calendar)'),()=>seasonMenu());
-  add('Back','',()=>{ menuDone(); findMenu(); }); }
+/* ---------- Chaos & Destruction: ten disasters on the B menu ---------- */
+const CHX={quake:null,air:null,storm:null,crain:null,ufo:null,nuke:null,rocks:null};
+const chxC=()=>activeCar?activeCar.pos:player.pos;
+function chxPt(r0,r1){ const c=chxC(), a=Math.random()*TAU, r=R(r0,r1), x=c.x+Math.cos(a)*r, z=c.z+Math.sin(a)*r; return {x,z,y:groundHeight(x,z,c.y+40)}; }
+function chxBanner(t,s){ banner(t,s,true); banEl.classList.add('metal'); }
+function chxFlash(op,ms){ const f=$('chaosfx'); if(!f||reduceMotion) return; f.style.transition='none'; f.style.opacity=op; void f.offsetWidth; f.style.transition='opacity '+(ms||600)+'ms ease-out'; f.style.opacity=0; }
+function chxNear(x,z,r,fn){ for(const q of people){ if(q.mode==='drive'||(q.dead&&!q.corpse)) continue; const d=Math.hypot(q.pos.x-x,q.pos.z-z); if(d<r) fn(q,d); } }
+// earthquake
+function quakeStart(){ CHX.quake={t:16,nx:0,bx:2}; chxBanner('🌍 EARTHQUAKE!','The whole town is shaking. Hold on!'); Snd.thud&&Snd.thud(chxC().x,chxC().z,12); }
+function quakeTick(Q,dt){ Q.t-=dt; Q.nx-=dt; Q.bx-=dt; const k=Math.min(1,Q.t/3,(16-Q.t)/1.5+.2); if(!reduceMotion) state.shake=Math.max(state.shake,.32*k); const c=chxC();
+  if(Q.nx<=0){ Q.nx=.3; chxNear(c.x,c.z,70,(q)=>{ if(!q.isPlayer&&Math.random()<.18) knock(q,R(-2,2),R(2,5),R(-2,2),3); });
+    for(const v of cars){ if(v.boat||v.display||v===activeCar) continue; if(Math.hypot(v.pos.x-c.x,v.pos.z-c.z)<70&&!v.air&&Math.random()<.15){ v.air=true; v.vy=R(1.5,4); v.spin=(v.spin||0)+R(-.6,.6); } }
+    for(const o of props){ if(Math.hypot(o.pos.x-c.x,o.pos.z-c.z)<40&&Math.random()<.2){ wake(o); o.vel.y+=R(1,3); } }
+    if(player.ground&&!activeCar&&Math.random()<.25) player.vel.y=Math.max(player.vel.y,R(1,2.4));
+    for(let i=0;i<3;i++){ const p=chxPt(5,60); puff(p.x,p.y+.3,p.z,0xb8a58a,R(1,2),false); } }
+  if(Q.bx<=0){ Q.bx=R(1.4,2.6); const p=chxPt(25,70); explode(p.x,p.y+.2,p.z,.8,'chaos'); }
+  if(Q.t<=0){ CHX.quake=null; flash('The shaking has stopped'); } }
+// air strike
+function airStart(){ const c=chxC(), a=Math.random()*TAU, dx=Math.cos(a), dz=Math.sin(a), off=R(14,24)*(Math.random()<.5?1:-1), mx=c.x-dz*off, mz=c.z+dx*off;
+  const jets=[]; for(let j=0;j<2;j++){ const g=new THREE.Group(), m=new THREE.MeshLambertMaterial({color:0x6b7178}), m2=new THREE.MeshLambertMaterial({color:0x3c4146});
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(.55,.35,9,8).rotateX(PI/2),m)); const w=new THREE.Mesh(new THREE.BoxGeometry(9,.18,2.4),m2); w.position.z=.4; g.add(w); const t=new THREE.Mesh(new THREE.BoxGeometry(3.4,.14,1.2),m2); t.position.z=-3.9; g.add(t); const f=new THREE.Mesh(new THREE.BoxGeometry(.14,1.6,1.4),m2); f.position.set(0,.8,-3.9); g.add(f);
+    const ex=new THREE.Mesh(new THREE.ConeGeometry(.35,2.2,8).rotateX(-PI/2),new THREE.MeshBasicMaterial({color:0xffa040,transparent:true,opacity:.8,blending:THREE.AdditiveBlending,depthWrite:false})); ex.position.z=-5.4; g.add(ex);
+    g.rotation.y=Math.atan2(dx,dz); scene.add(g); jets.push({g,s:-260-j*26,side:(j?1:-1)*7}); }
+  CHX.air={jets,dx,dz,mx,mz,bombs:[],drop:0}; chxBanner('✈️ AIR STRIKE INBOUND!','Jets are coming in for a bombing run. Take cover!'); Snd.launch&&Snd.launch(c.x,c.z); }
+function airStrikeTick(A,dt){ for(const J of A.jets){ J.s+=95*dt; const x=A.mx+A.dx*J.s-A.dz*J.side, z=A.mz+A.dz*J.s+A.dx*J.side; J.g.position.set(x,groundHeight(x,z,80)+48,z);
+    if(J.s>-70&&J.s<70&&(J.ls===undefined||J.s-J.ls>7)){ J.ls=J.s; const m=new THREE.Mesh(new THREE.SphereGeometry(.35,8,6),new THREE.MeshLambertMaterial({color:0x2a2e33})); m.scale.set(1,1,2.4); m.position.copy(J.g.position); scene.add(m); A.bombs.push({m,vx:A.dx*60,vz:A.dz*60,vy:0}); } }
+  for(let i=A.bombs.length-1;i>=0;i--){ const b=A.bombs[i]; b.vy-=30*dt; b.vx*=1-dt*.8; b.vz*=1-dt*.8; b.m.position.x+=b.vx*dt; b.m.position.y+=b.vy*dt; b.m.position.z+=b.vz*dt; b.m.lookAt(b.m.position.x+b.vx,b.m.position.y+b.vy,b.m.position.z+b.vz);
+    const gh=groundHeight(b.m.position.x,b.m.position.z,b.m.position.y+2); if(b.m.position.y<=gh+.3){ scene.remove(b.m); b.m.geometry.dispose(); A.bombs.splice(i,1); explode(b.m.position.x,gh+.3,b.m.position.z,1.35,'chaos'); } }
+  if(A.jets[1].s>300&&!A.bombs.length){ for(const J of A.jets){ scene.remove(J.g); disposeTree(J.g); } CHX.air=null; } }
+// lightning storm
+function stormStart(){ CHX.storm={t:24,nx:1.2}; chxBanner('⚡ LIGHTNING STORM!','Bolts are striking all over town'); const f=$('chaosfx'); if(f) f.classList.add('storm'); }
+function boltAt(x,z){ const y0=groundHeight(x,z,200), g=new THREE.Group(), mat=new THREE.MeshBasicMaterial({color:0xe4f2ff,transparent:true,opacity:.95,blending:THREE.AdditiveBlending,depthWrite:false,fog:false});
+  let px=x+R(-6,6), py=y0+110, pz=z+R(-6,6); for(let i=0;i<11;i++){ const nx=i===10?x:px+R(-5,5)*(1-i/12), ny=i===10?y0:py-R(8,12), nz=i===10?z:pz+R(-5,5)*(1-i/12); const L=Math.hypot(nx-px,ny-py,nz-pz);
+    const s=new THREE.Mesh(new THREE.CylinderGeometry(.22,.3,L,5),mat); s.position.set((px+nx)/2,(py+ny)/2,(pz+nz)/2); s.lookAt(nx,ny,nz); s.rotateX(PI/2); g.add(s); px=nx; py=ny; pz=nz; }
+  scene.add(g); effects.push&&0; setTimeout(()=>{ scene.remove(g); disposeTree(g); },220); chxFlash(.55,350); explode(x,y0+.2,z,.75,'chaos'); Snd.thud&&Snd.thud(x,z,14); }
+function stormTick(S,dt){ S.t-=dt; S.nx-=dt; if(S.nx<=0&&S.t>0){ S.nx=R(.7,1.6); const p=Math.random()<.12?chxPt(8,15):chxPt(15,80); boltAt(p.x,p.z); }
+  if(S.t<=0){ CHX.storm=null; const f=$('chaosfx'); if(f) f.classList.remove('storm'); flash('The storm has passed'); } }
+// raining cars
+function crainStart(){ CHX.crain={t:9,nx:0,n:0}; chxBanner('🚗 IT\'S RAINING CARS!','Look up!'); }
+function crainTick(C,dt){ C.t-=dt; C.nx-=dt; if(C.nx<=0&&C.n<16&&C.t>0){ C.nx=R(.35,.7); C.n++; const p=chxPt(6,50); try{ const v=new Car(p.x,p.z,R(0,TAU),'free',{spawned:true}); v.pos.y=p.y+R(35,55); v.air=true; v.vy=-R(2,8); v.spin=R(-2.5,2.5); v.roll=R(-.6,.6); v.pitch=R(-.5,.5); }catch(e){} }
+  if(C.t<=0) CHX.crain=null; }
+// UFO
+function ufoStart(){ const c=chxC(), g=new THREE.Group(), hull=new THREE.MeshLambertMaterial({color:0xaeb6bd}), dark=new THREE.MeshLambertMaterial({color:0x50575e});
+  const body=new THREE.Mesh(new THREE.SphereGeometry(7,24,12),hull); body.scale.set(1,.22,1); g.add(body); const rim=new THREE.Mesh(new THREE.TorusGeometry(7,.45,8,32).rotateX(PI/2),dark); g.add(rim);
+  const dome=new THREE.Mesh(new THREE.SphereGeometry(2.6,18,10,0,TAU,0,PI/2),new THREE.MeshLambertMaterial({color:0x7fe3c2,transparent:true,opacity:.75})); dome.position.y=1.1; g.add(dome);
+  const lights=[]; for(let i=0;i<12;i++){ const a=i/12*TAU, l=new THREE.Mesh(new THREE.SphereGeometry(.35,8,6),new THREE.MeshBasicMaterial({color:0xfff27a})); l.position.set(Math.cos(a)*6.2,-.6,Math.sin(a)*6.2); g.add(l); lights.push(l); }
+  const beam=new THREE.Mesh(new THREE.CylinderGeometry(1.2,4.2,1,20,1,true).translate(0,-.5,0),new THREE.MeshBasicMaterial({color:0x8dffb4,transparent:true,opacity:.28,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide})); beam.visible=false; g.add(beam);
+  const a=Math.random()*TAU; g.position.set(c.x+Math.cos(a)*90,groundHeight(c.x,c.z,c.y+40)+60,c.z+Math.sin(a)*90); scene.add(g);
+  CHX.ufo={g,lights,beam,t:30,tgt:null,hold:0,zap:3,leave:false}; chxBanner('🛸 UFO SIGHTING!','Something is beaming people up...'); }
+function ufoPick(U){ const c=chxC(); let best=null,bd=70; for(const q of people){ if(q.isPlayer||q.mode==='drive'||q.dead||q.pos.y>groundHeight(q.pos.x,q.pos.z,q.pos.y+2)+2) continue; const d=Math.hypot(q.pos.x-c.x,q.pos.z-c.z)+Math.random()*20; if(d<bd){ bd=d; best={p:q}; } }
+  for(const v of cars){ if(v===activeCar||v.boat||v.display||v.air) continue; const d=Math.hypot(v.pos.x-c.x,v.pos.z-c.z)+Math.random()*20+8; if(d<bd){ bd=d; best={c:v}; } } return best; }
+function ufoTick(U,dt){ U.t-=dt; const g=U.g; U.lights.forEach((l,i)=>l.material.color.setHSL(((perfT*.6+i/12)%1),.9,.65)); g.rotation.y+=dt*.8;
+  if(U.t<=0&&!U.leave){ U.leave=true; U.beam.visible=false; flash('The UFO is leaving'); }
+  if(U.leave){ g.position.y+=30*dt; g.position.x+=20*dt; if(g.position.y>260){ scene.remove(g); disposeTree(g); CHX.ufo=null; } return; }
+  if(!U.tgt||U.hold>4.5){ if(U.tgt&&U.tgt.p) knock(U.tgt.p,R(-6,6),2,R(-6,6),6); if(U.tgt&&U.tgt.c){ U.tgt.c.vy=Math.min(U.tgt.c.vy,0); } U.tgt=ufoPick(U); U.hold=0; }
+  const T=U.tgt, tp=T?(T.p?T.p.pos:T.c.pos):chxC(), gy=groundHeight(tp.x,tp.z,tp.y+3), hy=gy+20, dx=tp.x-g.position.x, dz=tp.z-g.position.z, d=Math.hypot(dx,dz)||1, sp=Math.min(d,14*dt);
+  g.position.x+=dx/d*sp; g.position.z+=dz/d*sp; g.position.y+=(hy-g.position.y)*Math.min(1,dt*1.5);
+  const over=T&&d<3; U.beam.visible=!!over; if(over){ U.hold+=dt; const L=g.position.y-gy; U.beam.scale.set(1,L,1);
+    if(T.p){ const q=T.p; q.vel&&(q.vel.y=Math.max(q.vel.y,3.2)); if(q.pos.y<gy+.5) knock(q,0,4,0,2); }
+    if(T.c){ const v=T.c; v.air=true; v.vy=Math.max(v.vy||0,3); v.spin=(v.spin||0)+dt; } }
+  U.zap-=dt; if(U.zap<=0){ U.zap=R(2.5,4); const p=chxPt(10,45); explode(p.x,p.y+.2,p.z,.7,'chaos'); } }
+// nuke
+function nukeStart(){ const c=chxC(), a=Math.random()*TAU, x=c.x+Math.cos(a)*140, z=c.z+Math.sin(a)*140; CHX.nuke={x,z,y:groundHeight(x,z,200),ph:'warn',t:4.5,ring:null,r:0,hit:new Set()}; chxBanner('☢️ NUCLEAR STRIKE INCOMING','Detonation in 5 seconds... look away!'); Snd.beep&&Snd.beep(); }
+function nukeTick(K,dt){ K.t-=dt; const c=chxC();
+  if(K.ph==='warn'){ if(K.t<=0){ K.ph='boom'; K.t=30; chxFlash(1,1800); if(!reduceMotion) state.shake=Math.max(state.shake,1);
+      const g=new THREE.Group(); const fire=new THREE.Mesh(new THREE.SphereGeometry(1,24,16),new THREE.MeshBasicMaterial({color:0xffd27a,fog:false})); g.add(fire);
+      const stem=new THREE.Mesh(new THREE.CylinderGeometry(5,9,1,16).translate(0,.5,0),new THREE.MeshLambertMaterial({color:0x8a7f74,transparent:true,opacity:.92})); g.add(stem);
+      const cap=new THREE.Mesh(new THREE.SphereGeometry(1,24,14),new THREE.MeshLambertMaterial({color:0x9b8f83,transparent:true,opacity:.95,emissive:0x5a2a10})); cap.scale.set(1,.55,1); g.add(cap);
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(1,.6,8,48).rotateX(PI/2),new THREE.MeshBasicMaterial({color:0xfff1d6,transparent:true,opacity:.7,depthWrite:false})); g.add(ring);
+      g.position.set(K.x,K.y,K.z); scene.add(g); Object.assign(K,{g,fire,stem,cap,ring});
+      for(let i=0;i<9;i++){ const a=i/9*TAU, r=i?R(8,26):0; explode(K.x+Math.cos(a)*r,K.y+.3,K.z+Math.sin(a)*r,1.6,'chaos'); } Snd.boom&&Snd.boom(K.x,K.z); } return; }
+  const e=30-K.t; K.fire.scale.setScalar(Math.min(28,4+e*22)); K.fire.material.color.setHSL(.09,1,Math.max(.25,.7-e*.12)); K.fire.visible=e<3.5;
+  const h=Math.min(70,e*16); K.stem.scale.set(1+e*.05,h,1+e*.05); K.cap.position.y=h; K.cap.scale.set(Math.min(30,8+e*6),Math.min(16,4+e*3.2),Math.min(30,8+e*6)); K.cap.material.emissive.setHSL(.06,1,Math.max(0,.25-e*.04));
+  if(K.t<6){ const o=K.t/6; K.stem.material.opacity=.92*o; K.cap.material.opacity=.95*o; }
+  K.r=e*95; K.ring.scale.setScalar(K.r); K.ring.material.opacity=Math.max(0,.7-K.r/450); K.ring.visible=K.r<420;
+  if(K.r<420){ const R0=K.r-12, R1=K.r;
+    for(const q of people){ if(K.hit.has(q)||q.mode==='drive') continue; const d=Math.hypot(q.pos.x-K.x,q.pos.z-K.z); if(d<R1&&d>R0-30){ K.hit.add(q); const f=Math.max(.15,1-d/420), ux=(q.pos.x-K.x)/(d||1), uz=(q.pos.z-K.z)/(d||1); knock(q,ux*26*f,6+10*f,uz*26*f,8,0); if(q.isPlayer) damagePlayer(Math.round(40*f)); else if(!q.zombie) civHurt(q,4*f); } }
+    for(const v of cars){ if(K.hit.has(v)||v.boat||v.display) continue; const d=Math.hypot(v.pos.x-K.x,v.pos.z-K.z); if(d<R1&&d>R0-30){ K.hit.add(v); const f=Math.max(.15,1-d/420); v.air=true; v.vy=4+10*f; v.vel.x+=(v.pos.x-K.x)/(d||1)*22*f; v.vel.z+=(v.pos.z-K.z)/(d||1)*22*f; v.spin=(v.spin||0)+R(-3,3)*f; vehDmg(v,30*f); if(v===activeCar) damagePlayer(Math.round(25*f)); } }
+    for(const o of props){ if(K.hit.has(o)) continue; const d=Math.hypot(o.pos.x-K.x,o.pos.z-K.z); if(d<R1&&d>R0-30){ K.hit.add(o); const f=Math.max(.15,1-d/420); wake(o); o.vel.x+=(o.pos.x-K.x)/(d||1)*18*f; o.vel.y+=6*f; o.vel.z+=(o.pos.z-K.z)/(d||1)*18*f; } }
+    const dc=Math.hypot(c.x-K.x,c.z-K.z); if(dc<R1&&dc>R0&&!K.felt){ K.felt=true; if(!reduceMotion) state.shake=Math.max(state.shake,1); chxFlash(.35,500); } }
+  if(K.t<=0){ scene.remove(K.g); disposeTree(K.g); CHX.nuke=null; } }
+// giant boulders
+function rocksStart(){ const c=chxC(), a0=Math.random()*TAU, list=[], mat=new THREE.MeshLambertMaterial({color:0x7c746a});
+  for(let i=0;i<5;i++){ const a=a0+R(-.5,.5), r=R(80,100), sx=c.x+Math.cos(a)*r, sz=c.z+Math.sin(a)*r, tx=c.x+R(-25,25), tz=c.z+R(-25,25), d=Math.hypot(tx-sx,tz-sz), rad=R(2.4,3.4);
+    const m=new THREE.Mesh(new THREE.IcosahedronGeometry(rad,1),mat); m.castShadow=true; m.position.set(sx,groundHeight(sx,sz,c.y+40)+rad,sz); scene.add(m); list.push({m,r:rad,dx:(tx-sx)/d,dz:(tz-sz)/d,sp:R(12,17),go:0,delay:i*.7}); }
+  CHX.rocks={list,t:26}; chxBanner('🪨 GIANT BOULDERS!','Huge rocks are rolling through town'); }
+function rocksTick(Kr,dt){ Kr.t-=dt; for(let i=Kr.list.length-1;i>=0;i--){ const B=Kr.list[i], m=B.m; if(B.delay>0){ B.delay-=dt; continue; }
+    const st=B.sp*dt, nx=m.position.x+B.dx*st, nz=m.position.z+B.dz*st, gy=groundHeight(nx,nz,m.position.y+2);
+    if(solidAt(nx+B.dx*B.r,gy+B.r,nz+B.dz*B.r)||B.go>220||Kr.t<=0){ scene.remove(m); m.geometry.dispose(); Kr.list.splice(i,1); explode(m.position.x,m.position.y-B.r*.5,m.position.z,1.2,'chaos'); for(let k=0;k<6;k++) puff(m.position.x+R(-2,2),m.position.y+R(-1,1),m.position.z+R(-2,2),0x8a8178,R(1.5,2.5),false); continue; }
+    m.position.set(nx,gy+B.r,nz); B.go+=st; m.rotateOnWorldAxis(_v.set(B.dz,0,-B.dx),st/B.r);
+    if(Math.random()<dt*3) puff(nx,gy+.3,nz,0xb8a58a,1.2,false); if(!reduceMotion){ const dc=Math.hypot(chxC().x-nx,chxC().z-nz); if(dc<40) state.shake=Math.max(state.shake,.18*(1-dc/40)); }
+    chxNear(nx,nz,B.r+.8,(q)=>{ if((q.rockT||0)>perfT) return; q.rockT=perfT+1; knock(q,B.dx*B.sp*1.2+R(-3,3),7,B.dz*B.sp*1.2+R(-3,3),8,0); if(q.isPlayer) damagePlayer(25); else if(!q.zombie) civHurt(q,3); else hurt(q,3); });
+    for(const v of cars){ if(v.boat||v.display) continue; const d=Math.hypot(v.pos.x-nx,v.pos.z-nz); if(d<B.r+2&&(v.rockT||0)<perfT){ v.rockT=perfT+1; vehDmg(v,25); v.vel.x+=B.dx*B.sp; v.vel.z+=B.dz*B.sp; v.air=true; v.vy=5; v.spin=(v.spin||0)+R(-2,2); if(v===activeCar) damagePlayer(10); if(v.mode==='traffic') v.mode='free'; } } }
+  if(!Kr.list.length) CHX.rocks=null; }
+// zombie horde
+function hordeStart(){ if(mpClient()){ flash('Only the server\'s host can start a horde'); return; } let n=0; for(let i=0;i<60&&n<30;i++){ const pt=mpRing(()=>ringPointFar(22,60)); if(!pt) continue; new Person(pt.x,pt.z,{spawned:true,zombie:true,kind:pickZKind(3)}); puff(pt.x,.6,pt.z,0x7bc950,.6,false); n++; }
+  chxBanner('🧟 ZOMBIE HORDE!',n+' zombies are closing in from every direction'); }
+function chxTick(dt){ if(CHX.quake) quakeTick(CHX.quake,dt); if(CHX.air) airStrikeTick(CHX.air,dt); if(CHX.storm) stormTick(CHX.storm,dt); if(CHX.crain) crainTick(CHX.crain,dt); if(CHX.ufo) ufoTick(CHX.ufo,dt); if(CHX.nuke) nukeTick(CHX.nuke,dt); if(CHX.rocks) rocksTick(CHX.rocks,dt); }
+const CHAOS_EV=[
+  ['🌪️','Spawn a tornado!','A twister flings people, zombies and cars',()=>!!CHAOS.torn,()=>{ tornadoStart(); banEl.classList.add('metal'); }],
+  ['☄️','Call a meteor shower!','30 seconds of fiery rocks from the sky',()=>!!CHAOS.met,()=>{ meteorStart(); banEl.classList.add('metal'); }],
+  ['🌍','Start an earthquake!','The ground shakes, cars bounce, things blow',()=>!!CHX.quake,quakeStart],
+  ['✈️','Order an air strike!','Two jets carpet-bomb a street near you',()=>!!CHX.air,airStart],
+  ['⚡','Summon a lightning storm!','Bolts strike all over town for 25 seconds',()=>!!CHX.storm,stormStart],
+  ['🚗','Make it rain cars!','16 cars drop out of the sky around you',()=>!!CHX.crain,crainStart],
+  ['🛸','Invite a UFO!','A saucer beams up people and cars',()=>!!CHX.ufo,ufoStart],
+  ['☢️','Launch a nuke!','A mushroom cloud and a huge shockwave',()=>!!CHX.nuke,nukeStart],
+  ['🪨','Roll giant boulders!','Five huge rocks roll through the streets',()=>!!CHX.rocks,rocksStart],
+  ['🧟','Unleash a zombie horde!','30 zombies close in from all sides',()=>false,hordeStart]];
+function chaosMenu(){ if(!state.started||state.over) return; const nested=!cfEl.hidden, prev=cfPrevPaused; menuOpen('💥 CHAOS & DESTRUCTION'); if(nested) cfPrevPaused=prev; cfEl.classList.add('metal');
+  const g=document.createElement('div'); g.className='chaos-grid'; cfOpts.appendChild(g);
+  for(const [ic,t,d,busy,go] of CHAOS_EV){ const b=document.createElement('button'); b.type='button'; b.className='chaos-card'; const i=document.createElement('i'); i.textContent=ic; const bt=document.createElement('b'); bt.textContent=t+' '+ic; const sp=document.createElement('span'); sp.textContent=story.on?'Not during the story':busy()?'Happening now!':d; b.append(i,bt,sp); b.disabled=story.on||busy(); b.addEventListener('click',()=>{ menuDone(); go(); }); g.appendChild(b); }
+  const row=document.createElement('div'); row.className='chaos-row'; cfOpts.appendChild(row);
+  const mk=(t,fn)=>{ const b=document.createElement('button'); b.type='button'; b.className='chaos-small'; b.textContent=t; b.addEventListener('click',fn); row.appendChild(b); };
+  mk('🍂 Change the season',()=>seasonMenu()); mk('📍 Places, shops & more',()=>{ menuDone(); findMenu(); }); }
 
 /* ---------- shared helpers for jobs: a beam and a HUD line ---------- */
 function mkBeam(col){ const m=new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.3,80,10,1,true),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.32,depthWrite:false,side:THREE.DoubleSide,fog:false})); m.renderOrder=4; m.visible=false; scene.add(m);
@@ -8813,7 +8951,6 @@ function findMenu(){ if(!state.started||state.over||!cfEl.hidden) return; const 
   add('🏁 Racing league','Season '+LEAGUE.season+' · race '+(LEAGUE.race+1)+' of 5 · you have '+(LEAGUE.pts.you||0)+' points',()=>leagueMenu(),'');
   add('🎯 Hunting contracts','Bounties for killing certain zombies · '+HUNT.list.map(c=>{ const t=HUNTT.find(q=>q[0]===c.id); return t?c.n+'/'+t[2]:''; }).join(' · '),()=>huntMenu(),'');
   if(PIZ.T) add('🍕 Tumbleton Pizza','Deliver pizzas on a scooter for cash · '+dist(PIZ.T.x,PIZ.T.z),go(PIZ.T.x-5,PIZ.T.z+PIZ.T.D/2+2,'The Pizza Shop is marked'));
-  if(!story.on) add('🌪 Sandbox chaos','Start a tornado or a meteor shower',()=>chaosMenu(),'');
   add('Fun & games','Fishing off the pier, surf hire, basketball hoops, Rangiwai Arcade and the drive-in',()=>{ const prev=cfPrevPaused, a2=menuOpen('Fun & games'); cfPrevPaused=prev; a2('🎣 Fishing','End of the Tumbleton Beach pier · '+dist(FUN.fish.x,FUN.fish.z),go(FUN.fish.x,FUN.fish.z,'The end of the pier is marked'));
     a2('🏄 Surf hire','Tumbleton Beach · ride the waves for cash · '+dist(FUN.surf.x,FUN.surf.z),go(FUN.surf.x,FUN.surf.z-3,'The surf hire is marked')); a2('🏀 Basketball hoops','Behind the furniture store · '+dist(FUN.court.x,FUN.court.z),go(FUN.court.spot.x,FUN.court.spot.z,'The court is marked'));
     a2('🕹 Rangiwai Arcade','Kiwi Dash. High scores pay cash · '+dist(-523,-80),go(-523,-80,'The arcade is marked')); a2('💥 Human cannonball','Send It Stunt Park · fire yourself at the targets · '+dist(CANNON.x,CANNON.z),go(CANNON.x,CANNON.z+3,'The cannon is marked')); a2('🎬 Tumbleton Drive-in','Park up and watch a movie · '+dist(FUN.drive.x,FUN.drive.z),go(-600,-190,'The drive-in is marked')); a2('Back','',()=>{ menuDone(); findMenu(); }); },'pick-go');
@@ -8990,7 +9127,7 @@ addEventListener('keydown',e=>{
   else if(c==='KeyZ'){ if(mpClient()) flash('Only the server\'s host can start zombie waves'); else if(!state.surv.on) toggle('zwave'); }
   else if(c==='KeyP'){ if(state.resetArm>0){ hardRestart(); } else { state.resetArm=3; flash('Press P again to restart from nothing. All cash, weapons and builds will be lost'); } }
   else if(c==='KeyK') toggleGfx();
-  else if(c==='KeyB') findMenu();
+  else if(c==='KeyB') chaosMenu();
   else if(c==='KeyX'){ if(state.bar==='build') removeBuild(); else if(!activeCar&&!activeHeli&&player.mode==='walk'&&!player.chute) player.crouch=!player.crouch; }
   else if(c==='KeyQ'){ if(activeCar){ if(activeCar.emerg){ activeCar.sirenOn=!activeCar.sirenOn; flash(activeCar.sirenOn?'Siren on':'Siren off'); } else if(activeCar.variant==='icecream') Snd.jingle(activeCar.pos.x,activeCar.pos.z); else Snd.horn(activeCar.pos.x,activeCar.pos.z,true); if(activeCar.mods&&activeCar.mods.horn&&(activeCar.hornCD||0)<perfT){ activeCar.hornCD=perfT+2; hornBlast(activeCar); } } else cycleWeapon(); }
   else if(c==='KeyM') toggleSound();
@@ -9078,7 +9215,7 @@ function select(i,user){ const list=curList(), build=state.bar==='build';
   selEl.innerHTML=build?'<b>'+it.name.toUpperCase()+'</b>'+inv[it.id]+' left · F to place · X to pick up':(state.surv.on?'<b>TOYS ARE OFF</b>in Last Stand · V for your Build bar':it.id==='zombie'?'<b>ZOMBIE · '+ZNAMES[state.zKind].toUpperCase()+'</b>Press 9 again to change type · F to drop':it.id==='person'?'<b>'+(state.pKind==='police'?'POLICE OFFICER':'PERSON')+'</b>Press 4 again to switch between people and police · F to drop':'<b>'+it.name.toUpperCase()+'</b>Press F to drop'); }
 function setBar(b){ state.bar=b; renderBar(); }
 $('tab-toys').addEventListener('click',()=>{ setBar('toys'); canvas.focus(); }); $('tab-build').addEventListener('click',()=>{ setBar('build'); canvas.focus(); });
-$('wallet').addEventListener('click',()=>findMenu());
+$('wallet').addEventListener('click',()=>chaosMenu());
 equip(state.weapon);
 renderBar();
 const modeBtns={slow:$('m-slow'),low:$('m-grav'),night:$('m-night'),zwave:$('m-wave'),infection:$('m-inf')};
@@ -9117,7 +9254,7 @@ $('tosand').addEventListener('click',()=>{ removeAllZombies(); freshPlayer(); $(
 function start(){ if(state.started) return; state.started=true; if(!OUTFIT.lookAsked&&!OUTFIT.freeUsed) setTimeout(()=>{ if(!state.started||story.on||state.over||OUTFIT.freeUsed||OUTFIT.lookAsked||!cfEl.hidden) return; OUTFIT.lookAsked=true; outfitSave(); clothesMenu('body'); },2500); $('start').hidden=true; helpEl.hidden=!state.help; $('hp').hidden=false; $('wallet').hidden=false; Snd.init(); canvas.focus(); requestLock(); }
 
 /* ---------- settings panel: everything here is saved and applied straight away ---------- */
-const BINDABLE=[['KeyW','Move forward'],['KeyS','Move back'],['KeyA','Move left'],['KeyD','Move right'],['Space','Jump / handbrake / up'],['ShiftLeft','Sprint / down'],['KeyR','Use, get in and out (tap) · reload (hold)'],['KeyQ','Lean left · horn and siren'],['KeyE','Lean right'],['KeyC','Switch weapon'],['KeyF','Drop toy / place block'],['Backquote','Clear items and zombies'],['KeyX','Kneel / pick up block'],['Tab','First / third person'],['KeyV','Toys or build bar'],['KeyB','Find places (store, car yard, houses)'],['KeyH','Controls panel']];
+const BINDABLE=[['KeyW','Move forward'],['KeyS','Move back'],['KeyA','Move left'],['KeyD','Move right'],['Space','Jump / handbrake / up'],['ShiftLeft','Sprint / down'],['KeyR','Use, get in and out (tap) · reload (hold)'],['KeyQ','Lean left · horn and siren'],['KeyE','Lean right'],['KeyC','Switch weapon'],['KeyF','Drop toy / place block'],['Backquote','Clear items and zombies'],['KeyX','Kneel / pick up block'],['Tab','First / third person'],['KeyV','Toys or build bar'],['KeyB','Chaos & destruction (places are inside too)'],['KeyH','Controls panel']];
 const keyName=c=>!c?'—':c==='Backquote'?'`':c.startsWith('Key')?c.slice(3):c.startsWith('Digit')?c.slice(5):c==='Space'?'Space':c==='ShiftLeft'?'Left Shift':c==='ShiftRight'?'Right Shift':c==='ControlLeft'?'Left Ctrl':c==='AltLeft'?'Left Alt':c.replace('Arrow','')+(c.startsWith('Arrow')?' arrow':'');
 let REMAP={}, BOUNDDEF=new Set();
 function rebuildRemap(){ REMAP={}; BOUNDDEF=new Set(); for(const [act] of BINDABLE){ const k=SET.bind[act]; if(k&&k!==act){ REMAP[k]=act; BOUNDDEF.add(act); } } }
@@ -9174,7 +9311,7 @@ $('m-set').addEventListener('click',()=>openSettings());
 $('gosettings').addEventListener('click',()=>openSettings());
 /* ---------- the How to play guide ---------- */
 const GUIDE=[
- ['Basics',`<p><b>WASD</b> walk or drive · <b>mouse</b> looks · <b>R</b> (tap) gets in and out of vehicles and uses things, hold <b>R</b> to reload · <b>Space</b> jumps · <b>click</b> attacks · <b>C</b> switches weapon · <b>Q</b>/<b>E</b> lean to peek round corners · <b>Tab</b> first or third person · <b>/</b> opens the <b>map</b> (a real bird's-eye view; click a place to mark it) · <b>,</b> opens your <b>phone</b> · <b>.</b> throws a bottle · <b>B</b> opens <b>Find Places</b>, which marks anywhere on the map with an arrow.</p><p>Keep an eye on the two bars top left: <b>health</b> and <b>food</b>. Eat at vending machines, the pizza shop, town markets or from your garden, or you'll be poisoned. Cars need <b>petrol</b> (gauge bottom right): fill up at the Rangiwai pumps.</p>
+ ['Basics',`<p><b>WASD</b> walk or drive · <b>mouse</b> looks · <b>R</b> (tap) gets in and out of vehicles and uses things, hold <b>R</b> to reload · <b>Space</b> jumps · <b>click</b> attacks · <b>C</b> switches weapon · <b>Q</b>/<b>E</b> lean to peek round corners · <b>Tab</b> first or third person · <b>/</b> opens the <b>map</b> (a real bird's-eye view; click a place to mark it) · <b>,</b> opens your <b>phone</b> · <b>.</b> throws a bottle · <b>B</b> opens <b>Chaos &amp; Destruction</b>: ten disasters to set off. <b>Places, shops &amp; more</b> at the bottom of it marks anywhere on the map with an arrow.</p><p>Keep an eye on the two bars top left: <b>health</b> and <b>food</b>. Eat at vending machines, the pizza shop, town markets or from your garden, or you'll be poisoned. Cars need <b>petrol</b> (gauge bottom right): fill up at the Rangiwai pumps.</p>
   <p>Two ways to play: <b>Story mode</b> follows the outbreak in Tumbleton city. <b>Sandbox</b> lets you do anything: zombie waves (<b>Z</b>), last stand (<b>L</b>), toys and building (<b>V</b>). The new areas are open in both.</p><p><b>H</b> shows every key. Change controls, graphics and the weather in <b>⚙ Settings</b>.</p>`],
  ['The map',`<ul><li><b>Tumbleton city</b> in the middle, with the river running through it.</li><li><b>West:</b> SH1, Rangiwai township, two farms, the airstrip with small planes, the train, and <b>Camp Kahu</b> army base.</li><li><b>North:</b> Mt Tumbleton: the mountain road and tunnel, the gondola to the lookout, the dam, the quarry, and the overrun <b>Fort Kererū</b>.</li>
   <li><b>South:</b> Marine Parade, the beach, the port, the industry area with the car crusher, and the ferry to <b>Mōtu Island</b>.</li><li><b>East:</b> the airport, <b>Tumbleton Raceway</b>, <b>Send It Stunt Park</b> and the <b>Kiwi Land</b> theme park.</li><li>The <b>Ring Road</b> loops round all of it.</li></ul><p>Zombies get more common and tougher the further you go from the city.</p>`],
@@ -9632,7 +9769,7 @@ function cineUpdate(dt){ const C=state.cine; if(!C) return; const s=C.shots[C.i]
   else { camera.position.lerpVectors(C.a,C.b,e); _v.lerpVectors(C.la,C.lb,e); camera.lookAt(_v); } player.g.visible=!activeCar||!!activeCar.ride;
   if(C.t>=s.dur){ C.i++; if(C.i>=C.shots.length) cineEnd(); else cineShot(); } }
 function cineEnd(){ const C=state.cine; if(!C) return; state.cine=null; if(C.shots.cleanup) try{ C.shots.cleanup(); }catch(e){} document.body.classList.remove('cine'); barsEl.hidden=true; player.immune=2; try{ speechSynthesis.cancel(); }catch(e){} if(C.done) C.done(); }
-function banner(big,small,bad){ $('banh').textContent=big; $('banp').textContent=small||''; banEl.classList.remove('show','bad'); void banEl.offsetWidth; if(bad) banEl.classList.add('bad'); banEl.classList.add('show'); }
+function banner(big,small,bad){ $('banh').textContent=big; $('banp').textContent=small||''; banEl.classList.remove('show','bad','metal'); void banEl.offsetWidth; if(bad) banEl.classList.add('bad'); banEl.classList.add('show'); }
 /* places */
 function freeSpot(x,z,maxR,y){ y=y||0; maxR=maxR===undefined?10:maxR;
   for(let r=0;r<=maxR;r+=.75){ const n=r?Math.max(6,Math.ceil(r*TAU/1.2)):1; for(let k=0;k<n;k++){ const a=k/n*TAU, px=x+Math.cos(a)*r, pz=z+Math.sin(a)*r, gh=groundHeight(px,pz,y+.6);
@@ -10313,7 +10450,7 @@ function openRestart(){ if(!state.started||!cfEl.hidden) return; cfPrevPaused=st
     add('Restart the town','Resets the city, people and zombies. Your cash, weapons and blocks stay.',()=>restartTo('sandbox'));
     add('Start from nothing','Wipes your cash, weapons, blocks and story progress too.',()=>hardRestart(),true); }
   cfEl.hidden=false; cfOpts.querySelector('button').focus(); }
-function closeRestart(){ if(cfEl.hidden) return; cfEl.hidden=true; if(state.started){ state.paused=cfPrevPaused; canvas.focus(); requestLock(); } }
+function closeRestart(){ if(cfEl.hidden) return; cfEl.hidden=true; cfEl.classList.remove('metal'); if(state.started){ state.paused=cfPrevPaused; canvas.focus(); requestLock(); } }
 $('cfcancel').addEventListener('click',closeRestart);
 cfEl.addEventListener('mousedown',e=>{ if(e.target===cfEl) closeRestart(); });
 
