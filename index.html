@@ -9182,7 +9182,9 @@ document.getElementById('shopclose').addEventListener('click',closeShop);
 
 /* ---------- input ---------- */
 let locked=false, drag=null;
-function requestLock(){ try{ const r=canvas.requestPointerLock&&canvas.requestPointerLock(); if(r&&r.catch) r.catch(()=>{}); }catch(e){} }
+/* a click on the game, the HUD or the page background always tries to capture the mouse (an invisible overlay or HUD layer could eat the click before it reached the canvas) */
+document.addEventListener('mousedown',e=>{ try{ if(e.button!==0||!state.started||state.paused||locked||TOUCH.on||!cfEl.hidden||!shopEl.hidden||PHONE.on||MAP.on||PHOTO.on) return; const t=e.target; if(t===canvas||t===document.body||t===document.documentElement||(t.classList&&t.classList.contains('hud')&&!t.closest('button,input,select,textarea,a'))) requestLock(); }catch(err){} },true);
+function requestLock(){ try{ const r=canvas.requestPointerLock&&canvas.requestPointerLock(); if(r&&r.catch) r.catch(err=>{ if(!window.__lockWarned){ window.__lockWarned=1; console.warn('pointer lock refused',err&&err.message); } }); }catch(e){} }
 let unlockT=0; document.addEventListener('pointerlockchange',()=>{ const was=locked; locked=document.pointerLockElement===canvas; if(was&&!locked) unlockT=performance.now(); });
 function look(dx,dy){ if((!dx&&!dy)||state.cine) return; const zm=gunZoom(), ms=(1-.45*aimK)*SET.sens*(zm>1?1-(1-1.3/zm)*aimK:1); dx*=ms; dy*=ms*(SET.inv?-1:1); camYaw-=dx*.0025; camPitch=activeCrane?clamp(camPitch+dy*.0025,-.5,1.45):activeJet?clamp(camPitch+dy*.0025,-1.25,1.25):fp?clamp(camPitch+dy*.0025,-1.45,1.45):clamp(camPitch+dy*.0025,activeHeli?-.75:-.25,1.25); lastLook=perfT; }
 canvas.addEventListener('mousedown',e=>{ if(!state.started||state.paused||state.cine) return; Snd.init(); canvas.focus();
@@ -9235,7 +9237,7 @@ addEventListener('keydown',e=>{
   else if(c==='KeyL'){ if(mpClient()) flash('Only the server\'s host can start Last Stand'); else if(story.on) flash('Last Stand is only in Sandbox mode'); else if(state.surv.on) stopSurvival(); else startSurvival(); }
   else if(c==='KeyI'){ if(mpClient()) flash('Only the server\'s host can change infection'); else toggle('infection'); }
   else if(c==='Semicolon'){ flToggle(); }
-  else if(c==='KeyO'){ const st=POLY?(SAMST?'sam':'poly'):'classic', nx=st==='poly'?'classic':st==='classic'?'sam':'poly'; try{ localStorage.setItem('tumbleton-style',nx==='classic'?'classic':'poly'); localStorage.setItem('tumbleton-sam',nx==='sam'?'1':'0'); }catch(e){} save(); restartTo(story.on?'story':'sandbox'); }
+  else if(c==='KeyO'){ const nx=(POLY&&!SAMST)?'classic':'poly'; try{ localStorage.setItem('tumbleton-style',nx==='classic'?'classic':'poly'); localStorage.setItem('tumbleton-sam','0'); }catch(e){} save(); restartTo(story.on?'story':'sandbox'); }
   else if(/^Digit[1-9]$/.test(c)){ const n=+c.slice(5)-1; if(n<curList().length) select(n,true); }
 });
 addEventListener('keyup',e=>{ keys[e.code]=false; });
