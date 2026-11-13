@@ -7613,10 +7613,11 @@ function fpaTick(dt,bx,by,W){ const c=player.cos, key=c&&c.C.hum?c.key:'plain', 
     if(FPA.rk>.01){ const H=FPH_DATA, a=Math.sin(FPA.ph||0)*.3*FPA.rk;
       for(const [side,sg] of [['l',1],['r',-1]]){ const k=H.bones.indexOf('upperarm_'+side), ck=H.bones.indexOf('clavicle_'+side), b=F.c.bones[k]; if(!b||ck<0) continue;
         if(!FPA.ax) FPA.ax={}; if(!FPA.ax[side]) FPA.ax[side]=new THREE.Vector3(1,0,0).applyQuaternion(new THREE.Quaternion().fromArray(H.bq[ck]).invert());
-        b.quaternion.premultiply(_fq.setFromAxisAngle(FPA.ax[side],a*sg)); } } }
+        b.quaternion.premultiply(_fq.setFromAxisAngle(FPA.ax[side],a*sg)); }
+      for(const [side,sg] of [['l',1],['r',-1]]){ const lb=F.c.bones[H.bones.indexOf('lowerarm_'+side)]; if(lb) lb.quaternion.multiply(_fq.setFromAxisAngle(_fy,-sg*Math.PI/2*FPA.rk)); } } }
   { const gx=W.id==='fists'&&gauntOn()&&now-GAUNT.fireT<.3?-.3:0, gy=gx?-.07:0; FPA.gx=(FPA.gx||0)+(gx-(FPA.gx||0))*Math.min(1,dt*10); FPA.gy=(FPA.gy||0)+(gy-(FPA.gy||0))*Math.min(1,dt*10); }
   const rb=(FPA.rk||0); F.c.root.position.set(F.base.x+bx+(FPA.gx||0)+Math.sin(FPA.ph||0)*.012*rb,F.base.y-by+(FPA.gy||0)+rb*.07-Math.abs(Math.cos(FPA.ph||0))*.018*rb,F.base.z); return true; }
-const _fq=new THREE.Quaternion();
+const _fq=new THREE.Quaternion(), _fy=new THREE.Vector3(0,1,0);
 function fpaHide(){ if(FPA.on){ FPA.on.c.root.visible=false; FPA.on=null; } }
 function humRestPos(c){ if(!c.posSaved) return; const D=c.C.D; for(let k=0;k<c.bones.length;k++) c.bones[k].position.fromArray(D.bt[k]); c.posSaved=false; }
 // costume pieces you can buy at Kia Ora Threads
@@ -9156,6 +9157,12 @@ function renderShop(){
   const sec=t=>{ const h=document.createElement('div'); h.className='shop-sec'; h.textContent=t; shopGrid.appendChild(h); };
   sec('WEAPONS');
   { const d=document.createElement('div'); d.className='item'; d.innerHTML='<div class="top"><svg viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="6" rx="3" fill="#e9b949"/><circle cx="7" cy="12" r="1.6" fill="#7a5a1a"/><circle cx="11" cy="12" r="1.6" fill="#7a5a1a"/><circle cx="15" cy="12" r="1.6" fill="#7a5a1a"/></svg><div><h3>Fist upgrades</h3><div class="price">from $1,000</div></div></div><p>Knuckle braces from iron to diamond, and the power gauntlet: hold the left mouse button to blast a beam from your palm.</p><div class="stats">'+(UPG.brace?'Wearing: '+UPG.brace:'None yet')+'</div><div class="buy"></div>'; const b=document.createElement('button'); b.type='button'; b.className='alt'; b.textContent='🔧 Fist upgrades'; b.addEventListener('click',()=>{ closeShop(); upgMenu('fists'); }); d.querySelector('.buy').appendChild(b); shopGrid.appendChild(d); }
+  { const G=WEAPONS.gauntlet, own=!!state.owned.gauntlet, on=own&&!(UPG.on.fists&&UPG.on.fists.gauntlet===false), d=document.createElement('div'); d.className='item';
+    d.innerHTML='<div class="top">'+(G.svg||'')+'<div><h3>Power gauntlet</h3><div class="price">'+fmt$(G.price)+'</div></div></div><p>Part of your fists. Tap the left mouse button to punch, hold it to fire a beam from your left palm. It overheats if you hold too long.</p><div class="stats">Hold to blast · coloured to match your look</div>'+(own?'<div class="own">'+(on?'WEARING':'OWNED · OFF')+'</div>':'')+'<div class="buy"></div>';
+    const b=document.createElement('button'); b.type='button'; if(own) b.className='alt'; b.textContent=own?(on?'Take it off':'Wear it'):'Buy'; b.disabled=!own&&state.money<G.price;
+    b.addEventListener('click',()=>{ if(!own){ if(state.money<G.price){ flash('Not enough cash'); return; } state.money-=G.price; state.owned.gauntlet=true; Snd.pop&&Snd.pop(); (UPG.on.fists=UPG.on.fists||{}).gauntlet=true; equip('fists'); save(); flash('Power gauntlet fitted · hold the left mouse button to blast'); }
+      else (UPG.on.fists=UPG.on.fists||{}).gauntlet=!on; upgSave(); renderShop(); });
+    d.querySelector('.buy').appendChild(b); shopGrid.appendChild(d); }
   WORDER.slice(1).forEach(id=>{ const it=WEAPONS[id], own=!!state.owned[id], A=AMMO[id], a=A&&own?ammoOf(id):null, d=document.createElement('div'); d.className='item';
     d.innerHTML='<div class="top">'+it.svg+'<div><h3>'+it.name+'</h3><div class="price">'+fmt$(it.price)+'</div></div></div><p>'+it.desc+'</p><div class="stats">'+it.stats+(A?' · Ammo '+A.tot+':'+A.mag:'')+'</div>'+(a?'<div class="own">AMMO '+a.mag+' + '+a.res+'</div>':'')+'<div class="buy"></div>';
     const b=document.createElement('button'); b.type='button';
