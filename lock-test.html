@@ -1,0 +1,15 @@
+<!doctype html><meta charset="utf-8"><title>Mouse lock test</title>
+<body style="font-family:system-ui;background:#111;color:#eee;padding:24px;max-width:640px;margin:auto">
+<h2>Mouse lock test</h2>
+<p>Click the grey box below. If the mouse locks, the box turns green. Press Esc to release it.</p>
+<div id="box" style="height:220px;background:#444;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:8px;user-select:none">Click me</div>
+<pre id="out" style="white-space:pre-wrap;margin-top:16px"></pre>
+<script>
+const box=document.getElementById('box'), out=document.getElementById('out'), log=m=>{ out.textContent+=m+'\n'; };
+log('Browser: '+navigator.userAgent);
+log('Pointer lock supported: '+('requestPointerLock' in box));
+log('Inside an iframe: '+(window.self!==window.top));
+box.addEventListener('click',()=>{ try{ const r=box.requestPointerLock(); if(r&&r.catch) r.catch(e=>log('Refused: '+e.name+' - '+e.message)); }catch(e){ log('Error: '+e.message); } });
+document.addEventListener('pointerlockchange',()=>{ const on=document.pointerLockElement===box; box.style.background=on?'#1a7f37':'#444'; box.textContent=on?'LOCKED. Press Esc to release':'Click me'; log(on?'Locked':'Released'); });
+document.addEventListener('pointerlockerror',()=>log('pointerlockerror event (the browser refused)'));
+</script>
