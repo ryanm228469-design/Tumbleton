@@ -7614,10 +7614,10 @@ function fpaTick(dt,bx,by,W){ const c=player.cos, key=c&&c.C.hum?c.key:'plain', 
       for(const [side,sg] of [['l',1],['r',-1]]){ const k=H.bones.indexOf('upperarm_'+side), ck=H.bones.indexOf('clavicle_'+side), b=F.c.bones[k]; if(!b||ck<0) continue;
         if(!FPA.ax) FPA.ax={}; if(!FPA.ax[side]) FPA.ax[side]=new THREE.Vector3(1,0,0).applyQuaternion(new THREE.Quaternion().fromArray(H.bq[ck]).invert());
         b.quaternion.premultiply(_fq.setFromAxisAngle(FPA.ax[side],a*sg)); }
-      for(const [side,sg] of [['l',1],['r',-1]]){ const lb=F.c.bones[H.bones.indexOf('lowerarm_'+side)]; if(lb) lb.quaternion.multiply(_fq.setFromAxisAngle(_fy,-sg*Math.PI/2*FPA.rk)); } } }
+      for(const [side,sg] of [['l',1],['r',-1]]){ const lb=F.c.bones[H.bones.indexOf('lowerarm_'+side)]; if(lb) lb.quaternion.multiply(_fq.setFromAxisAngle(_fy,-sg*Math.PI/2*FPA.rk)); const hb=F.c.bones[H.bones.indexOf('hand_'+side)]; if(hb) hb.quaternion.multiply(_fq.setFromAxisAngle(_fz,sg*.7*FPA.rk)); } } }
   { const gx=W.id==='fists'&&gauntOn()&&now-GAUNT.fireT<.3?-.3:0, gy=gx?-.07:0; FPA.gx=(FPA.gx||0)+(gx-(FPA.gx||0))*Math.min(1,dt*10); FPA.gy=(FPA.gy||0)+(gy-(FPA.gy||0))*Math.min(1,dt*10); }
   const rb=(FPA.rk||0); F.c.root.position.set(F.base.x+bx+(FPA.gx||0)+Math.sin(FPA.ph||0)*.012*rb,F.base.y-by+(FPA.gy||0)+rb*.07-Math.abs(Math.cos(FPA.ph||0))*.018*rb,F.base.z); return true; }
-const _fq=new THREE.Quaternion(), _fy=new THREE.Vector3(0,1,0);
+const _fq=new THREE.Quaternion(), _fy=new THREE.Vector3(0,1,0), _fz=new THREE.Vector3(0,0,1);
 function fpaHide(){ if(FPA.on){ FPA.on.c.root.visible=false; FPA.on=null; } }
 function humRestPos(c){ if(!c.posSaved) return; const D=c.C.D; for(let k=0;k<c.bones.length;k++) c.bones[k].position.fromArray(D.bt[k]); c.posSaved=false; }
 // costume pieces you can buy at Kia Ora Threads
