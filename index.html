@@ -675,7 +675,7 @@ let reduceMotion=SYS_REDUCE||!SET.shake;
 const PR_MAX=()=>Math.min(window.devicePixelRatio||1,1.5)*SET.res/100; let prScale=1, frEma=16.7, frT=0, frGood=0;
 renderer.setPixelRatio(PR_MAX());
 renderer.shadowMap.enabled=true;
-renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.shadowMap.type=THREE.PCFShadowMap;
 renderer.autoClear=false;
 renderer.outputEncoding=THREE.sRGBEncoding; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=POLY?.8:.78;
 const scene=new THREE.Scene();
@@ -813,7 +813,7 @@ const VCtrim=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.55,met
 const carGlassMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#1f2c3a').convertSRGBToLinear(),roughness:.06,metalness:.5,envMapIntensity:1.4}); ALLMATS.push(carGlassMat);
 const GRASS=grassTex(), GRASS2=GRASS.clone(), PAVE=POLY?pavingTex2('#a49d91',32):pavingTex(), PLAZA_TX=POLY?pavingTex2('#9f978a',64):noiseTex('#a69e8f','rgba(0,0,0,.05)','rgba(255,255,255,.1)',1200), ASPH=POLY?asphTex2():noiseTex('#3c4047','#464a52','#33363c',1600);
 GRASS.repeat.set(320,320); GRASS2.repeat.set(8,8); GRASS2.needsUpdate=true; PAVE.repeat.set(11,11); PLAZA_TX.repeat.set(10,10); ASPH.repeat.set(3,3);
-const matGrass=flat(lam('#ffffff',{map:GRASS,roughness:.95})), matRoad=flat(lam('#ffffff',{map:POLY?roadTex2():roadTex(),roughness:.82})), matAsphalt=flat(lam('#ffffff',{map:ASPH,roughness:.85})),
+const matGrass=flat(lam('#ffffff',{map:GRASS,roughness:.95})); matGrass.userData.tint=true; const matRoad=flat(lam('#ffffff',{map:POLY?roadTex2():roadTex(),roughness:.82})), matAsphalt=flat(lam('#ffffff',{map:ASPH,roughness:.85})),
   matWalk=flat(lam('#ffffff',{map:PAVE,roughness:.9})), matPark=flat(lam('#ffffff',{map:GRASS2,roughness:.95})), matPath=flat(lam('#d9ceb8',{roughness:.95})), matPond=flat(lam('#3f7ea6',{roughness:.05,metalness:.3,envMapIntensity:1.5})),
   matPlaza=flat(lam('#ffffff',{map:PLAZA_TX,roughness:.85})), matPaint=flat(lam('#f4c430')), matZebra=flat(lam('#ecebe4'));
 const matRoof=lam(POLY?'#9a958e':'#aaa49a'), matRoofDark=lam(POLY?'#7d7872':'#8a847b'), matTrunk=lam('#7a5233'), matLeaf=POLY?[lam('#4fa648'),lam('#6cbd52'),lam('#3d9444')]:[lam('#4f9a45'),lam('#64ae4f'),lam('#3e893f')],
@@ -902,15 +902,16 @@ const stairMats=[lam('#8d5d2e'),matsBuild.wood];
 const padTexture=padTex();
 
 /* ---------- geometry merge ---------- */
-function mergeGeos(list,withColor){
+function mergeGeos(list,withColor,withRM){
   let nv=0,ni=0;
   for(const it of list){ const g=it.isBufferGeometry?it:it.g; nv+=g.attributes.position.count; ni+=g.index?g.index.count:g.attributes.position.count; }
-  const pos=new Float32Array(nv*3), nor=new Float32Array(nv*3), uv=new Float32Array(nv*2), col=withColor?new Float32Array(nv*3):null, idx=new Uint32Array(ni);
+  const pos=new Float32Array(nv*3), nor=new Float32Array(nv*3), uv=new Float32Array(nv*2), col=withColor?new Float32Array(nv*3):null, rmA=withRM?new Float32Array(nv*2):null, idx=new Uint32Array(ni);
   let vo=0,io=0; const tc=new THREE.Color();
   for(const it of list){ const g=it.isBufferGeometry?it:it.g; const n=g.attributes.position.count;
     pos.set(g.attributes.position.array,vo*3); nor.set(g.attributes.normal.array,vo*3);
     if(g.attributes.uv) uv.set(g.attributes.uv.array,vo*2);
     if(col){ tc.set(it.c).convertSRGBToLinear(); for(let k=0;k<n;k++){ col[(vo+k)*3]=tc.r; col[(vo+k)*3+1]=tc.g; col[(vo+k)*3+2]=tc.b; } }
+    if(rmA){ const r=it.r!==undefined?it.r:.86, mt=it.mt||0; for(let k=0;k<n;k++){ rmA[(vo+k)*2]=r; rmA[(vo+k)*2+1]=mt; } }
     if(g.index){ const a=g.index.array; for(let k=0;k<a.length;k++) idx[io+k]=a[k]+vo; io+=a.length; }
     else { for(let k=0;k<n;k++) idx[io+k]=vo+k; io+=n; }
     vo+=n; }
@@ -919,26 +920,32 @@ function mergeGeos(list,withColor){
   out.setAttribute('normal',new THREE.BufferAttribute(nor,3));
   out.setAttribute('uv',new THREE.BufferAttribute(uv,2));
   if(col) out.setAttribute('color',new THREE.BufferAttribute(col,3));
+  if(rmA) out.setAttribute('rm',new THREE.BufferAttribute(rmA,2));
   out.setIndex(new THREE.BufferAttribute(idx,1));
   out.computeBoundingSphere();
   return out;
 }
 const buckets=new Map(); let staticSealed=false;
 const VCB=new Map();
-function vcMat(mat){ if(mat.map||mat.transparent||mat.vertexColors||mat.emissive.r+mat.emissive.g+mat.emissive.b>0||mat.userData.keep) return null;
-  const k=mat.roughness.toFixed(2)+'|'+mat.metalness.toFixed(2)+'|'+mat.envMapIntensity.toFixed(2)+'|'+mat.side+'|'+(mat.userData.flat?1:0);
-  let m=VCB.get(k); if(!m){ m=lam('#ffffff',{vertexColors:true,roughness:mat.roughness,metalness:mat.metalness,envMapIntensity:mat.envMapIntensity,side:mat.side}); if(mat.userData.flat) m.userData.flat=true; m.userData.vc=true; VCB.set(k,m); } return m; }
+function vcMat(mat){ if(mat.type!=='MeshStandardMaterial'||mat.transparent||mat.vertexColors||mat.emissive.r+mat.emissive.g+mat.emissive.b>0||mat.userData.keep||mat.userData.tint||mat.alphaTest>0||mat.alphaMap||mat.normalMap||mat.bumpMap||mat.roughnessMap||mat.metalnessMap||mat.aoMap||mat.emissiveMap||mat.lightMap||mat.type!=='MeshStandardMaterial') return null;
+  if(mat.map&&(mat.polygonOffset||!mat.depthWrite||!mat.depthTest||mat.opacity<1||mat.flatShading||!mat.fog||mat.wireframe||mat.userData.vc)) return null;
+  const k=(mat.map?mat.map.uuid+'|':'')+mat.envMapIntensity.toFixed(2)+'|'+mat.side+'|'+(mat.userData.flat?1:0);
+  let m=VCB.get(k); if(!m){ m=lam('#ffffff',Object.assign({vertexColors:true,roughness:1,metalness:1,envMapIntensity:mat.envMapIntensity,side:mat.side},mat.map?{map:mat.map}:{})); if(mat.userData.flat) m.userData.flat=true; m.userData.vc=true; m.userData.rm=true; rmShader(m); VCB.set(k,m); } return m; }
+// lag fix: each vertex carries its own roughness and metalness, so every plain-coloured static piece in a chunk shares one material and one draw
+function rmShader(m){ m.onBeforeCompile=sh=>{ sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute vec2 rm; varying vec2 vRM;').replace('#include <begin_vertex>','#include <begin_vertex>\nvRM=rm;');
+    sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vRM;').replace('#include <roughnessmap_fragment>','float roughnessFactor = vRM.x;').replace('#include <metalnessmap_fragment>','float metalnessFactor = vRM.y;'); };
+  m.customProgramCacheKey=()=>'rmvc1'; }
 let suppressS=false; const STATIC_CHUNK=96, OCC_BOXES=[]; let ADD_TAG='';
 // solid, axis-aligned opaque boxes (walls, building blocks) are remembered as occluders for culling
 function occNote(geo,mat,bb){ if(geo.type!=='BoxGeometry'||mat.transparent||mat.opacity<1||mat.alphaTest>0||mat.alphaMap) return; const sx=bb.max.x-bb.min.x, sy=bb.max.y-bb.min.y, sz=bb.max.z-bb.min.z;
   if(sy<3||Math.max(sx,sz)<3.5||Math.min(sx,sz)<.12) return; const P=geo.attributes.position.array, e=1e-3;
   for(let i=0;i<P.length;i+=3){ if(Math.min(Math.abs(P[i]-bb.min.x),Math.abs(P[i]-bb.max.x))>e||Math.min(Math.abs(P[i+1]-bb.min.y),Math.abs(P[i+1]-bb.max.y))>e||Math.min(Math.abs(P[i+2]-bb.min.z),Math.abs(P[i+2]-bb.max.z))>e) return; }
   OCC_BOXES.push({x0:bb.min.x,x1:bb.max.x,y0:bb.min.y,h:bb.max.y,z0:bb.min.z,z1:bb.max.z}); }
-function addS(geo,mat){ if(suppressS) return; const CHUNK=STATIC_CHUNK; if(!geo.boundingBox) geo.computeBoundingBox(); const bb=geo.boundingBox, mx=(bb.min.x+bb.max.x)/2, mz=(bb.min.z+bb.max.z)/2; occNote(geo,mat,bb); const vm=vcMat(mat); if(vm){ geo={g:geo,c:'#'+mat.color.clone().convertLinearToSRGB().getHexString()}; mat=vm; }
+function addS(geo,mat){ if(suppressS) return; const CHUNK=STATIC_CHUNK; if(!geo.boundingBox) geo.computeBoundingBox(); const bb=geo.boundingBox, mx=(bb.min.x+bb.max.x)/2, mz=(bb.min.z+bb.max.z)/2; occNote(geo,mat,bb); const vm=vcMat(mat); if(vm){ geo={g:geo,c:'#'+mat.color.clone().convertLinearToSRGB().getHexString(),r:mat.roughness,mt:mat.metalness}; mat=vm; }
   const key=(bb.max.x-bb.min.x>CHUNK*1.5||bb.max.z-bb.min.z>CHUNK*1.5)?'all':Math.floor((mx+2048)/CHUNK)+','+Math.floor((mz+2048)/CHUNK)+ADD_TAG;
   let m=buckets.get(mat); if(!m){m=new Map();buckets.set(mat,m);} let b=m.get(key); if(!b){b=[];m.set(key,b);} b.push(geo); }
 const STATIC_MESHES=[];
-function flushS(){ for(const [mat,mm] of buckets) for(const [key,list] of mm){ const m=new THREE.Mesh(mergeGeos(list,!!mat.userData.vc),mat); m.receiveShadow=true; m.castShadow=!mat.userData.flat; m.matrixAutoUpdate=false; m.updateMatrix(); scene.add(m); STATIC_MESHES.push(m); } buckets.clear(); }
+function flushS(){ for(const [mat,mm] of buckets) for(const [key,list] of mm){ const m=new THREE.Mesh(mergeGeos(list,!!mat.userData.vc,!!mat.userData.rm),mat); m.receiveShadow=true; m.castShadow=!mat.userData.flat; m.matrixAutoUpdate=false; m.updateMatrix(); scene.add(m); STATIC_MESHES.push(m); } buckets.clear(); }
 const BX=(w,h,d,x,y,z)=>new THREE.BoxGeometry(w,h,d).translate(x,y,z);
 const PL=(w,d,x,y,z)=>new THREE.PlaneGeometry(w,d).rotateX(-PI/2).translate(x,y,z);
 
@@ -3867,8 +3874,8 @@ function garageTick2(dt){ const S=GAR_IN.S; if(!S) return; const O=gOrigin(S);
   const c=activeCar; if(c&&c.inGarage&&c.pos.z>O.z+32.5){ const e=GAR.cars.find(e=>e.id===c.gid); c.inGarage=false; garageClear(c); if(e) e.out=true;
     c.pos.set(S.padP.x,0,S.padP.z+2.5); c.yaw=S.exitYaw; c.vel.set(Math.sin(c.yaw)*7,0,Math.cos(c.yaw)*7); c.spin=0; c.air=false; c.vy=0; c.prevSp=0; c.parkT=-3; camYaw=c.yaw; camTarget.set(c.pos.x,c.pos.y+1.7,c.pos.z); flash('Out on the street!'); } }
 function houseMarks(){ if(!state.started||state.cine){ for(const S of SALE) if(S.mk) S.mk.hidden=true; return; } const w=canvas.clientWidth, h=canvas.clientHeight; camera.updateMatrixWorld();
-  for(const S of SALE){ if(!S.mk){ S.mk=document.createElement('div'); S.mk.className='mark'; marksEl.appendChild(S.mk); } const own=GAR.h[S.i]&&GAR.h[S.i].own, txt=own?'🏠 Your home · '+S.D.name:S.other?'🏠 '+S.other.name+'\'s home · '+S.D.name:'🏠 For sale · '+S.D.name+' · '+money(S.D.price);
-    if(S.mkT!==txt){ S.mkT=txt; S.mk.textContent=''; const sp=document.createElement('span'); sp.textContent=txt; S.mk.appendChild(sp); }
+  for(const S of SALE){ if(!S.mk){ S.mk=document.createElement('div'); S.mk.className='mark'; marksEl.appendChild(S.mk); } const own=GAR.h[S.i]&&GAR.h[S.i].own, mk=(own?1:0)+'|'+(S.other?S.other.name:'')+'|'+S.D.name+'|'+S.D.price;
+    if(S.mkK!==mk){ S.mkK=mk; const txt=own?'🏠 Your home · '+S.D.name:S.other?'🏠 '+S.other.name+'\'s home · '+S.D.name:'🏠 For sale · '+S.D.name+' · '+money(S.D.price); S.mkT=txt; S.mk.textContent=''; const sp=document.createElement('span'); sp.textContent=txt; S.mk.appendChild(sp); }
     _v.set(S.cx,16,S.cz-4); const d=_v.distanceTo(camera.position); _v.project(camera); const vis=!GAR_IN.S&&_v.z<1&&d<420&&d>14&&Math.abs(_v.x)<1.05&&Math.abs(_v.y)<1.05;
     if(S.mk.hidden===vis) S.mk.hidden=!vis; if(vis){ S.mk.style.transform='translate('+((_v.x*.5+.5)*w).toFixed(1)+'px,'+((-_v.y*.5+.5)*h).toFixed(1)+'px) translate(-50%,-100%)'; S.mk.style.opacity=d>250?.7:1; } } }
 function sellPrice(e){ const v=VEH_SHOP.find(q=>q[0]===e.v), base=v?v[2]:1000; let mods=0; for(const k in (e.mods||{})){ const M=MODS.find(q=>q[0]===k); if(M&&e.mods[k]) mods+=M[2]; } return Math.round((base*.5+mods*.25)/50)*50; }
@@ -6629,7 +6636,7 @@ function mpHouseSan(l){ const out=[]; if(!Array.isArray(l)) return out; for(cons
 function mpHouseTick(dt){ if(!MP.on) return; MPS.hT-=dt; if(MPS.hT>0) return; MPS.hT=2; const L=mpMyHouses(), sig=JSON.stringify(L); if(sig===MPS.hSig) return; MPS.hSig=sig; if(MP.host){ MPS.houses.set(0,L); mpHouseBroadcast(); } else mpSendHost({t:'hs',l:L}); }
 function mpHouseBroadcast(){ if(!MP.on||!MP.host) return; if(!MPS.houses.has(0)) MPS.houses.set(0,mpMyHouses()); const all=[]; for(const [id,L] of MPS.houses){ const P=MP.pl.get(id); if(!P) continue; for(const [i,u] of L) all.push([i,id,P.name,P.col,u]); } mpBroadcast({t:'hm',l:all}); mpHouseApply(all); }
 function mpHouseApply(all){ const map=new Map(); if(Array.isArray(all)) for(const e of all.slice(0,400)){ if(!Array.isArray(e)) continue; const id=e[1]|0; if(id===MP.id) continue; const i=e[0]|0; if(map.has(i)) continue; const s2=mpHouseSan([[i,e[4]]]); if(!s2.length) continue; map.set(i,{name:mpClean(e[2]),col:mpColOk(e[3]),u:s2[0][1]}); }
-  for(const S of SALE){ const o=map.get(S.i)||null, key=o?JSON.stringify(o):''; if((S.otherKey||'')===key) continue; S.otherKey=key; S.other=o; S.mkT=''; if(GAR.h[S.i]&&GAR.h[S.i].own) continue; try{ saleSign(S); }catch(e){}
+  for(const S of SALE){ const o=map.get(S.i)||null, key=o?JSON.stringify(o):''; if((S.otherKey||'')===key) continue; S.otherKey=key; S.other=o; S.mkT=''; S.mkK=''; if(GAR.h[S.i]&&GAR.h[S.i].own) continue; try{ saleSign(S); }catch(e){}
     if(o){ const had=Object.prototype.hasOwnProperty.call(GAR.h,S.i), keep=GAR.h[S.i]; GAR.h[S.i]=Object.assign({},o.u,{own:true}); try{ homeUpBuild(S); }catch(e){} if(had) GAR.h[S.i]=keep; else delete GAR.h[S.i]; } else { try{ homeUpBuild(S); }catch(e){} } } }
 
 /* ---------- online: a joined player's police chase shows up for everyone ---------- */
@@ -7613,7 +7620,10 @@ function fpaTick(dt,bx,by,W){ const c=player.cos, key=c&&c.C.hum?c.key:'plain', 
     if(FPA.rk>.01){ const H=FPH_DATA, a=Math.sin(FPA.ph||0)*.3*FPA.rk;
       for(const [side,sg] of [['l',1],['r',-1]]){ const k=H.bones.indexOf('upperarm_'+side), ck=H.bones.indexOf('clavicle_'+side), b=F.c.bones[k]; if(!b||ck<0) continue;
         if(!FPA.ax) FPA.ax={}; if(!FPA.ax[side]) FPA.ax[side]=new THREE.Vector3(1,0,0).applyQuaternion(new THREE.Quaternion().fromArray(H.bq[ck]).invert());
-        b.quaternion.premultiply(_fq.setFromAxisAngle(FPA.ax[side],a*sg)); }
+        b.quaternion.premultiply(_fq.setFromAxisAngle(FPA.ax[side],a*sg));
+        // the swing curves: as a hand comes up it also arcs in toward your chest, then curves back out on the way down
+        if(!FPA.ay) FPA.ay={}; if(!FPA.ay[side]) FPA.ay[side]=new THREE.Vector3(0,1,0).applyQuaternion(new THREE.Quaternion().fromArray(H.bq[ck]).invert());
+        const u=(1-Math.sin(FPA.ph||0)*sg)/2; b.quaternion.premultiply(_fq.setFromAxisAngle(FPA.ay[side],-sg*.3*u*u*FPA.rk)); }
       for(const [side,sg] of [['l',1],['r',-1]]){ const lb=F.c.bones[H.bones.indexOf('lowerarm_'+side)]; if(lb) lb.quaternion.multiply(_fq.setFromAxisAngle(_fy,-sg*Math.PI/2*FPA.rk)); const hb=F.c.bones[H.bones.indexOf('hand_'+side)]; if(hb) hb.quaternion.multiply(_fq.setFromAxisAngle(_fz,sg*.7*FPA.rk)); } } }
   { const gx=W.id==='fists'&&gauntOn()&&now-GAUNT.fireT<.3?-.3:0, gy=gx?-.07:0; FPA.gx=(FPA.gx||0)+(gx-(FPA.gx||0))*Math.min(1,dt*10); FPA.gy=(FPA.gy||0)+(gy-(FPA.gy||0))*Math.min(1,dt*10); }
   const rb=(FPA.rk||0); F.c.root.position.set(F.base.x+bx+(FPA.gx||0)+Math.sin(FPA.ph||0)*.012*rb,F.base.y-by+(FPA.gy||0)+rb*.07-Math.abs(Math.cos(FPA.ph||0))*.018*rb,F.base.z); return true; }
@@ -9876,11 +9886,13 @@ function updateNightLights(dt,t){
   if(on&&lampPick<=0){ lampPick=.35; const cx=camera.position.x, cz=camera.position.z, best=[];
     for(let i=0;i<lampHeads.length;i+=3){ const d=(lampHeads[i]-cx)**2+(lampHeads[i+2]-cz)**2; if(d>4900) continue; best.push([d,i]); }
     best.sort((a,b)=>a[0]-b[0]); lampLights.forEach((L,k)=>{ const b=best[k]; L.userData.on=!!b; if(b) L.position.set(lampHeads[b[1]],lampHeads[b[1]+1]-.3,lampHeads[b[1]+2]); }); }
-  for(const L of lampLights){ L.visible=state.gfxHi!==false; L.intensity=on&&L.userData.on?2.6*t:0; }
-  const hl=on&&activeCar; headLight.visible=state.gfxHi!==false; headLight.intensity=0; if(hl){ const c=activeCar, fx=Math.sin(c.yaw), fz=Math.cos(c.yaw); headLight.intensity=3.2*t;
+  // lag fix: street lamps and the headlight only exist in the shaders at night (both versions are compiled while loading, so dusk doesn't stutter)
+  for(const L of lampLights){ L.visible=on; L.intensity=on&&L.userData.on?2.6*t:0; }
+  const hl=on&&activeCar; headLight.visible=on; headLight.intensity=0; if(hl){ const c=activeCar, fx=Math.sin(c.yaw), fz=Math.cos(c.yaw); headLight.intensity=3.2*t;
     headLight.position.set(c.pos.x+fx*2.2,c.pos.y+1,c.pos.z+fz*2.2); headLight.target.position.set(c.pos.x+fx*16,c.pos.y,c.pos.z+fz*16); }
-  for(const m of ALLMATS){ if(m.userData.baseEnv===undefined) m.userData.baseEnv=m.envMapIntensity; m.envMapIntensity=m.userData.baseEnv*(1-.75*t); }
+  const ek=Math.round(t*500)+'|'+(sewSub?1:0)+'|'+ALLMATS.length; if(ek!==envK){ envK=ek; for(const m of ALLMATS){ if(m.userData.baseEnv===undefined) m.userData.baseEnv=m.envMapIntensity; m.envMapIntensity=m.userData.baseEnv*(1-.75*t); } }
 }
+let envK='';
 function ringPointFar(minD,maxD){ for(let t=0;t<40;t++){ const i=Math.floor(Math.random()*N), j=JS[Math.floor(Math.random()*JS.length)], s=BLOCK/2-2.2, e=Math.floor(Math.random()*4), f=Math.random();
     const x=lotC(i)+(CX[e]+(CX[(e+1)%4]-CX[e])*f)*s, z=lotC(j)+(CZ[e]+(CZ[(e+1)%4]-CZ[e])*f)*s; const fp=mpRingC||(activeCar?activeCar.pos:player.pos), d=Math.hypot(x-fp.x,z-fp.z);
     if(d>=minD&&d<=maxD) return {x,z}; } return null; }
@@ -11109,7 +11121,7 @@ function sewLight(dt){ if(!SEWG) return; const sub=camera.position.y<-4.2&&playe
   sun.intensity*=.03; hemi.intensity=.12; scene.fog.color.copy(SEWFOG); scene.fog.density=.045;
   for(const m of ALLMATS) if(m.userData.baseEnv!==undefined) m.envMapIntensity=m.userData.baseEnv*.15;
   SEW.pick=(SEW.pick||0)-dt; if(SEW.pick<=0){ SEW.pick=.3; const cx=camera.position.x, cz=camera.position.z; SEW.near=SEW.lamps.map(l=>[(l.x-cx)**2+(l.z-cz)**2,l]).filter(a=>a[0]<1600).sort((a,b)=>a[0]-b[0]).slice(0,lampLights.length).map(a=>a[1]); }
-  lampLights.forEach((Lt,k)=>{ const l=SEW.near&&SEW.near[k]; Lt.visible=state.gfxHi!==false; if(l){ Lt.position.set(l.x,l.y,l.z); Lt.intensity=l.fire?2.4+Math.sin(perfT*17+k)*.5+Math.sin(perfT*7.3)*.4:2.1; Lt.color.setHex(l.fire?0xff8a3a:0xffc878); } else Lt.intensity=0; }); }
+  headLight.visible=state.gfxHi!==false; lampLights.forEach((Lt,k)=>{ const l=SEW.near&&SEW.near[k]; Lt.visible=state.gfxHi!==false; if(l){ Lt.position.set(l.x,l.y,l.z); Lt.intensity=l.fire?2.4+Math.sin(perfT*17+k)*.5+Math.sin(perfT*7.3)*.4:2.1; Lt.color.setHex(l.fire?0xff8a3a:0xffc878); } else Lt.intensity=0; }); }
 function sewNear(){ if(!SEWG||activeCar||activeHeli||player.mode!=='walk'||state.over) return null; const p=player.pos;
   if(p.y<-4.2){ if(SEW.sal&&people.includes(SEW.sal)&&!SEW.sal.dead&&!SEW.sal.zombie&&Math.hypot(p.x-SEW.counter.x,p.z-SEW.counter.z)<2.4) return {k:'market'};
     if(SEW.stash&&!SEW.stash.taken&&Math.hypot(p.x-SEW.stash.x,p.z-SEW.stash.z)<1.9) return {k:'stash'};
@@ -11948,6 +11960,7 @@ if(STATION){ for(const q of STATION.park){ const c=new Car(q.x,q.z,q.yaw,'free',
 function heliSpot(){ if(!policeHeli||!heliSpotL) return; const on=!!state.wanted&&policeHeli.aiFly&&policeHeli.rot>.8&&!policeHeli.ground; heliCone.visible=on; heliSpotL.intensity=on?(state.night?6:2.5):0; if(!on) return;
   const src=activeCar?activeCar.pos:player.pos, h=policeHeli.pos; heliSpotL.position.set(h.x,h.y+.6,h.z); heliSpotL.target.position.set(src.x,src.y,src.z); heliSpotL.target.updateMatrixWorld();
   const dx=src.x-h.x, dy=src.y-.5-(h.y+.6), dz=src.z-h.z, L=Math.hypot(dx,dy,dz)||1; heliCone.position.set(h.x,h.y+.6,h.z); heliCone.scale.set(1,L,1); heliCone.quaternion.setFromUnitVectors(_v.set(0,-1,0),_v2.set(dx/L,dy/L,dz/L)); heliCone.material.opacity=state.night?.16:.07; }
+try{ const lv=lampLights.map(L=>L.visible), hv=headLight.visible; lampLights.forEach(L=>L.visible=true); headLight.visible=true; renderer.compile(scene,camera); lampLights.forEach((L,i)=>L.visible=lv[i]); headLight.visible=hv; }catch(e){ console.warn('prewarm',e); }
 requestAnimationFrame(frame);
 try{ const a=sessionStorage.getItem('tumbleton-autostart'); if(a){ sessionStorage.removeItem('tumbleton-autostart'); start(); if(a==='story') storyBegin(); } }catch(e){}
 
