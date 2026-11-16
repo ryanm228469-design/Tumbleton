@@ -2628,6 +2628,7 @@ function knock(p,vx,vy,vz,spin,dmg){
   if(p.net){ mpNetHit(p,vx,vy,vz,spin,dmg); return; }
   if(p.npc){ mpNPHit(p,vx,vy,vz,spin,dmg); return; }
   if(p.mode==='drive') return; if(p.dead){ if(p.corpse){ p.mode='ragdoll'; p.vel.set(vx*.6,vy*.6,vz*.6); p.angVel.set(R(-1,1)*spin*.5,0,R(-1,1)*spin*.5); p.ground=false; } return; }
+  if(!p.isPlayer&&(p.boss||p.zeroAI||p.named||p.xpBoss||p.climber)&&p.hp-(dmg||0)>0){ const F=Math.hypot(vx,vy,vz); if(p.climber||p.mode==='ragdoll'||p.mode==='getup'||p.mode==='lift'||F<32||perfT<(p.kdImm||0)){ if(p.mode==='walk'&&p.vel){ p.vel.x+=vx*.08; p.vel.z+=vz*.08; } p.atkCD=Math.max(p.atkCD||0,.3); if(dmg) hurt(p,dmg); return; } p.kdImm=perfT+12; }
   spin=spin||6; p.heldBy=null; if(p.cr) p.cr.mode='walk';
   if(p.zkind==='brute'&&Math.hypot(vx,vz)<26&&vy<14&&p.hp-(dmg||0)>0){ p.vel.x+=vx*.15; p.vel.z+=vz*.15; p.atkCD=Math.max(p.atkCD,.5); if(dmg) hurt(p,dmg); return; }
   const wasRag=p.mode==='ragdoll'; if(!wasRag&&p.mode!=='ragdoll') p.rd=null; p.mode='ragdoll'; if(wasRag&&p.rd){ p.vel.x+=vx*.8; p.vel.y=Math.max(p.vel.y,vy*.8); p.vel.z+=vz*.8; } else p.vel.set(vx,vy,vz); spin*=1.35; p.angVel.set(R(-1,1)*spin,R(-.5,.5)*spin,R(-1,1)*spin); p.restT=0; p.ground=false; p.punchT=0;
@@ -2647,7 +2648,7 @@ function playerDown(){
   knock(player,R(-2,2),5,R(-2,2),5);
   if(state.surv.on) endSurvival();
 }
-function hurt(p,d){ if(p.net){ mpNetHit(p,0,0,0,0,d); return; } if(p.npc){ mpNPHit(p,0,0,0,0,d); return; } if(p.isPlayer||p.dead) return; if(!p.zombie){ civHurt(p,d); return; } p.hp-=d; if(p.hp<=0){ p.dead=true; p.deadT=0; deadFall(p); } }
+function hurt(p,d){ if(p.net){ mpNetHit(p,0,0,0,0,d); return; } if(p.npc){ mpNPHit(p,0,0,0,0,d); return; } if(p.isPlayer||p.dead) return; if(!p.zombie){ civHurt(p,d); return; } if(p.climber&&!SP.pm) d*=spVul(p.climber)?2:.6; if((p.boss||p.zeroAI||p.named||p.xpBoss||p.climber)&&(p.mode==='ragdoll'||p.mode==='getup')) d*=.35; p.hp-=d; if(p.hp<=0){ p.dead=true; p.deadT=0; deadFall(p); } }
 function deadFall(p){ if(p.mode==='ragdoll'||p.mode==='drive'||p.mode==='lift'||!p.vel) return; p.heldBy=null; p.mode='ragdoll'; p.rd=null; p.vel.y=Math.max(p.vel.y||0,2.5); if(p.angVel) p.angVel.set(R(-3,3),R(-1,1),R(-3,3)); p.restT=0; p.ground=false; p.punchT=0; }
 // free the GPU memory of a body that's gone for good (otherwise long zombie waves slowly fill up memory)
 function disposeTree(o){ if(!o) return; o.traverse(m=>{ if(m.isMesh&&m.geometry&&!m.geometry.userData.keep) m.geometry.dispose(); }); }
@@ -3694,10 +3695,10 @@ function swingPose(table,id,e){ const S=table[id]||table.fists, n=S.wind.length,
   return a.map((v,i)=>v+(b[i]-v)*t); }
 function doPunchHit(p){
   const W=meleeEff(WEAPONS[state.weapon]), fx=Math.sin(camYaw), fz=Math.cos(camYaw), px=p.pos.x+fx*W.range*.55, pz=p.pos.z+fz*W.range*.55, hr=W.range*.62; let hitAny=false;
-  for(const o of dyn){ if(o===p) continue; const dx=o.pos.x-px, dz=o.pos.z-pz; if(Math.hypot(dx,dz)>hr+o.r||Math.abs(o.pos.y-p.pos.y)>1.7) continue; hitAny=true;
+  for(const o of dyn){ if(o===p||(o.climber&&!o.g.visible)) continue; const dx=o.pos.x-px, dz=o.pos.z-pz; if(Math.hypot(dx,dz)>hr+o.r||Math.abs(o.pos.y-p.pos.y)>1.7) continue; hitAny=true;
     if(o.isPerson){ provoke(o); if(o.mode==='ragdoll'){ o.vel.x+=fx*W.kh*.8; o.vel.y=Math.max(o.vel.y,W.kv*.7); o.vel.z+=fz*W.kh*.8; hurt(o,W.dmg); } else knock(o,fx*W.kh+o.vel.x,W.kv,fz*W.kh+o.vel.z,10,W.dmg); hitByPlayer(o,'hit'); }
     else { wake(o); const k=(W.kh+1)/Math.sqrt(o.mass); o.vel.x+=fx*k; o.vel.z+=fz*k; o.vel.y=Math.max(o.vel.y,W.kv*.85); o.angVel.set(R(-8,8),R(-4,4),R(-8,8)); light(o); } }
-  try{ if(pqMelee(W,px,pz,hr)) hitAny=true; }catch(e){} try{ if(cqMelee(W,px,pz,hr)) hitAny=true; }catch(e){} try{ if(bullMelee(W,px,pz,hr)) hitAny=true; }catch(e){}
+  try{ if(pqMelee(W,px,pz,hr)) hitAny=true; }catch(e){} try{ if(cqMelee(W,px,pz,hr)) hitAny=true; }catch(e){} try{ if(bullMelee(W,px,pz,hr)) hitAny=true; }catch(e){} try{ if(spArMelee(W,px,pz,hr)) hitAny=true; }catch(e){}
   for(const c of cars){ for(const s of c.offs){ const cx=c.pos.x+Math.sin(c.yaw)*c.off*s, cz=c.pos.z+Math.cos(c.yaw)*c.off*s;
     if(Math.hypot(cx-px,cz-pz)<c.cr+.6){ c.vel.x+=fx*2.5*W.kh/15; c.vel.z+=fz*2.5*W.kh/15; c.spin+=R(-.4,.4); hitAny=true; if(c.mode==='traffic') c.wait=0; break; } } }
   if(hitAny&&upgOn(W.id,'shock')){ for(let k=0;k<3;k++) puff(px+R(-.4,.4),p.pos.y+R(.2,1),pz+R(-.4,.4),0x7fd6ff,.25,false); Snd.tink&&Snd.tink(px,pz); }
@@ -7734,7 +7735,7 @@ function pzTaser(v,sx,sy,sz){ let best=null, bd=12.5; for(const o of people){ if
   Snd.tink(sx,sz); if(!best) return; puff(tx,ty,tz,0x9fe8ff,.35,false); knock(best,v.x*3,3,v.z*3,7); if(best.zombie){ best.atkCD=Math.max(best.atkCD||0,2.5); } else { civHurt(best,.3); if(!best.pz) fine(best); } }
 
 /* ===================== The Spire: a half-finished 60-storey tower north-east of the city ===================== */
-const SP={x:395,z:-360,hw:16,H:194,slabs:[194,201.2,208.4],door:{x:395,z:-339},out:false,lv:[],gust:0,bossOn:false,boss:null,winSeen:{}};
+const SP={x:395,z:-360,hw:16,aw:30,H:194,slabs:[194,201.2,208.4],door:{x:395,z:-339},out:false,lv:[],gust:0,bossOn:false,boss:null,winSeen:{}};
 function spWinTex(){ const c=document.createElement('canvas'); c.width=c.height=128; const x=c.getContext('2d'); const r=mulberry32(77);
   x.fillStyle='#2c3a4c'; x.fillRect(0,0,128,128); for(let j=0;j<4;j++) for(let i=0;i<4;i++){ const q=r(); x.fillStyle=q<.1?'#f2d59a':q<.18?'#11161c':q<.6?'#4c6a86':'#3f5a74'; x.fillRect(i*32+3,j*32+4,26,22); if(q>.6){ x.fillStyle='rgba(255,255,255,.18)'; x.fillRect(i*32+3,j*32+4,10,22); } }
   x.fillStyle='#8c96a0'; for(let k=0;k<4;k++){ x.fillRect(0,k*32,128,3); x.fillRect(k*32,0,2,128); } const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(2,13.5); t.anisotropy=4; return t; }
@@ -7757,7 +7758,7 @@ function spBuildOut(){ if(SP.out) return; SP.out=true; const G=new THREE.Group()
   // the unfinished crown: three open floors, columns, scaffolding, netting, a crane and the helipad
   const S=SP.slabs; box(hw*2+.4,.5,hw*2+.4,X,S[0]-.25,Z,'#7d7a74',true);
   box(hw*2,.5,hw*2-10,X,S[1]-.25,Z-5,'#7d7a74',true); box(hw*2-12,.5,10,X+6,S[1]-.25,Z+hw-5,'#7d7a74',true);
-  box(hw*2+.4,.6,hw*2+.4,X,S[2]-.3,Z,'#5d5a55',true);
+  box(SP.aw*2,.6,SP.aw*2,X,S[2]-.3,Z,'#5d5a55',true);
   for(let i=-2;i<=2;i++) for(let j=-2;j<=2;j++){ const cx=X+i*7.4, cz=Z+j*7.4; for(let k=0;k<2;k++){ const y0=S[k], y1=S[k+1]-.5; box(.7,y1-y0,.7,cx,(y0+y1)/2,cz,'#8d8a83',true); } }
   for(let y=S[0];y<S[2];y+=1.8){ box(.08,.08,hw*2,X+hw+.8,y+1.6,Z,'#c9a24a'); } for(let z=Z-hw;z<=Z+hw;z+=3) box(.08,S[2]-S[0],.08,X+hw+.8,(S[0]+S[2])/2,z,'#c9a24a');
   { const n=new THREE.Mesh(new THREE.PlaneGeometry(hw*2,6).rotateY(PI/2).translate(X+hw+1,S[0]+3,Z),new THREE.MeshStandardMaterial({color:0xff7a1a,transparent:true,opacity:.55,side:THREE.DoubleSide})); G.add(n); }
@@ -7765,12 +7766,13 @@ function spBuildOut(){ if(SP.out) return; SP.out=true; const G=new THREE.Group()
     box(2.2,2,2.2,cx,top+1,cz,'#f2c12e'); box(50,.9,1.4,cx+18,top+2.2,cz,'#f2c12e'); box(14,.9,1.4,cx-10,top+2.2,cz,'#f2c12e'); box(3,2,2,cx-15,top+1.4,cz,'#5b6168'); box(1.8,1.6,1.8,cx+2,top+.8,cz+1.6,'#2a2d33'); solid(cx-1,cx+1,cz-1,cz+1,S[2],top);
     const hook=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,22,4).translate(cx+34,top-9,cz),new THREE.MeshBasicMaterial({color:0x222222})); G.add(hook); }
   { const h=new THREE.Mesh(new THREE.PlaneGeometry(14,14).rotateX(-PI/2).translate(X+3,S[2]+.02,Z+3),lam('#ffffff',{map:spHTex(),roughness:.8})); G.add(h); }
-  for(const [x,z] of [[X+hw-.2,Z-hw+.2],[X-hw+.2,Z+hw-.2]]){ const l=new THREE.Mesh(new THREE.SphereGeometry(.25,8,6),new THREE.MeshBasicMaterial({color:0xff2a2a})); l.position.set(x,S[2]+.4,z); G.add(l); }
+  for(const [x,z] of [[X+SP.aw-.2,Z-SP.aw+.2],[X-SP.aw+.2,Z+SP.aw-.2]]){ const l=new THREE.Mesh(new THREE.SphereGeometry(.25,8,6),new THREE.MeshBasicMaterial({color:0xff2a2a})); l.position.set(x,S[2]+.4,z); G.add(l); }
   // ladders between the open floors (R to climb), the lift shaft core and the penthouse safe
   SP.ladders=[]; for(let k=0;k<2;k++){ const x=X+hw-4, z=Z-hw+6+k*6, y0=S[k], y1=S[k+1]; for(const sx of [-.35,.35]) box(.08,y1-y0+1,.08,x+sx,(y0+y1)/2+.5,z,'#c9a24a'); for(let y=y0+.4;y<y1;y+=.5) box(.7,.06,.06,x,y,z,'#c9a24a'); SP.ladders.push({x,z:z+.45,yaw:PI,y0,y1,top:()=>{ xpClimbEnd(); xpGo(x-1.4,y1,z+1.2,PI,''); },bottom:()=>{ xpClimbEnd(); xpGo(x,y0,z+1.5,0,''); }}); }
   box(4,3.2,4,X-2,S[0]+1.6,Z+2,'#5b6168'); box(2.6,2.4,.1,X-2,S[0]+1.2,Z+4.05,'#1d1f22'); SP.liftTop={x:X-2,z:Z+5.4};
   { const m=lam('#ffffff',{map:textTex(['HELIPAD ↑','UP THE YELLOW LADDER'],'#e8b923','#1d1f22'),roughness:.8}); for(let k=0;k<2;k++){ const pl=new THREE.Mesh(new THREE.PlaneGeometry(2.4,1),m); pl.position.set(X+hw-4,S[k]+2.2,Z-hw+6+k*6+.9); G.add(pl); } const p2=new THREE.Mesh(new THREE.PlaneGeometry(2.4,1),m); p2.position.set(X-2,S[0]+2.6,Z+4.15); G.add(p2); }
   box(.9,1,.8,X+hw-3,S[1]+.5,Z+hw-3,'#3a3d42',true); box(.1,.3,.1,X+hw-2.65,S[1]+.6,Z+hw-2.58,'#c9ccd1'); SP.safe={x:X+hw-3,z:Z+hw-1.8,y:S[1]};
+  try{ spArenaBuild(G,box,solid,V); }catch(e){ console.warn('arena',e); }
   { const m=new THREE.Mesh(mergeGeos(V,true),VC); m.castShadow=true; m.receiveShadow=true; G.add(m); }
   OUTG.n=-1; }
 // ---------- the floors inside: lobby and car park, offices, hotel, the flooded pool, the lift shaft ----------
@@ -7911,7 +7913,9 @@ function spBossParts(){ const L=(c,o)=>new THREE.MeshStandardMaterial(Object.ass
   const arm=s=>{ const up=new THREE.Group(); up.add(mesh(new THREE.CylinderGeometry(.11,.1,.3,10),M.armor,0,-.17,0)); up.add(mesh(new THREE.CylinderGeometry(.115,.115,.05,10),M.rust,0,-.08,0)); up.add(mesh(new THREE.SphereGeometry(.02,6,4),M.dark,s*.11,-.2,.03));
     const lo=new THREE.Group(); lo.add(mesh(new THREE.CylinderGeometry(.13,.1,.34,10),M.armor,0,-.17,0)); lo.add(mesh(new THREE.CylinderGeometry(.135,.135,.05,10),M.rust,0,-.05,0)); lo.add(mesh(BX(.2,.12,.14,0,0,0),M.armor,0,-.36,.02)); for(let k=0;k<3;k++){ const c=mesh(new THREE.ConeGeometry(.03,.26,5),M.bone,-.07+k*.07,-.5,.06,.35,0,0); c.rotation.x=PI-.35; lo.add(c); } lo.add(mesh(new THREE.ConeGeometry(.03,.2,5),M.bone,s*.1,-.46,-.02,PI-.2,0,s*.4)); return {up,lo}; };
   const tail=[]; let par=new THREE.Group(); const tailRoot=par; for(let k=0;k<9;k++){ const seg=new THREE.Group(); seg.position.y=k?-.13:-.05; seg.add(mesh(BX(.15-k*.01,.09,.14-k*.01,0,-.03,0),M.bone)); if(k%2===0) seg.add(mesh(new THREE.CylinderGeometry(.08-k*.005,.08-k*.005,.04,8),M.rust,0,-.09,0)); par.add(seg); tail.push(seg); par=seg; }
-  par.add(mesh(new THREE.ConeGeometry(.06,.3,6).rotateX(PI),M.bone,0,-.2,0)); return {head,jaw,body,arm,tail,tailRoot,M}; }
+  par.add(mesh(new THREE.ConeGeometry(.06,.3,6).rotateX(PI),M.bone,0,-.2,0));
+  const core=mesh(new THREE.SphereGeometry(.1,12,10),new THREE.MeshBasicMaterial({color:0xb04bff}),0,.47,.1), halo=mesh(new THREE.SphereGeometry(.16,12,10),new THREE.MeshBasicMaterial({color:0xc06bff,transparent:true,opacity:.2,depthWrite:false}),0,.47,.1); halo.castShadow=false; body.add(core,halo);
+  return {head,jaw,body,arm,tail,tailRoot,M,core,halo}; }
 function spClimberMake(x,z,y){ const q=new Person(x,z,{spawned:true,zombie:true,y,kind:'runner',colors:['#c9cfc4','#3a3f45','#2a2d33','#111111']}); q.g.scale.multiplyScalar(SPB_S);
   try{ q.rig.traverse(o=>{ if(o.isMesh) o.visible=false; }); const B=spBossParts(); (q.headIn||q.rig).add(B.head); (q.chestIn||q.rig).add(B.body); const aL=B.arm(-1), aR=B.arm(1); q.armL.add(aL.up); q.armR.add(aR.up); q.foreL.add(aL.lo); q.foreR.add(aR.lo); q.armL.scale.set(1.2,1.45,1.2); q.armR.scale.set(1.2,1.45,1.2); q.rig.add(B.tailRoot); q.spB=B; }catch(e){ console.warn('climber look',e); }
   q.climber={st:'chase',t:0,cd:3,drop:R(12,16),ph:1,slamCD:3,spinCD:4,throwCD:5}; q.hp=300; q.hp0=300; q.boss=true; q.zdmg=18; q.zspeed=4.6; q.r=2.6; q.mass=40; q.reward=0; q.aggro=99; return q; }
@@ -7975,9 +7979,126 @@ function stalkTick(z,dt){ const S=z.stalk, P=player.pos, d=Math.hypot(P.x-z.pos.
     if(k>=1||Math.hypot(P.x-z.pos.x,P.z-z.pos.z)<.9){ if(player.mode==='walk'&&!activeCar&&!(player.immune>0)&&Math.hypot(P.x-z.pos.x,P.z-z.pos.z)<2.4){ const dx=P.x-A.x, dz=P.z-A.z, l=Math.hypot(dx,dz)||1; knock(player,dx/l*5,2.5,dz/l*5,4); damagePlayer(10); flash((S.lurk?'A lurker':'A stalker')+' tackled you to the ground!'); state.shake=Math.max(state.shake,.5); S.st='pin'; S.t=0; } else { S.st='chase'; S.t=0; z.zspeed=z.zspeed0; z.aggro=9; } } return; }
   if(S.st==='pin'){ z.vel&&z.vel.set(0,0,0); z.pos.x=P.x-Math.sin(z.yaw)*.5; z.pos.z=P.z-Math.cos(z.yaw)*.5; if(z.rig){ z.rig.rotation.x=.9; z.rig.position.y=-.45; } if((S.bt=(S.bt||0)-dt)<=0){ S.bt=.45; if(!(player.immune>0)) damagePlayer(4); Snd.punch&&Snd.punch(P.x,P.z); } if(S.t>1.3){ S.st='chase'; S.t=0; z.zspeed=z.zspeed0; z.aggro=9; if(z.rig){ z.rig.rotation.x=0; z.rig.position.y=0; } knock(z,-Math.sin(z.yaw)*2,2,-Math.cos(z.yaw)*2,1); } return; }
   if(S.st==='chase'&&S.t>14&&d>18){ S.st='hide'; S.t=0; } }
+// ---------- v112: the rooftop arena. A bigger deck, railings, cover, roof tools, weak spots and the ledge grab ----------
+const _spv=new THREE.Vector3(), _spv2=new THREE.Vector3();
+function spRoofY(){ return SP.slabs[2]; }
+function spOnRoof(y){ return y-HIP>SP.slabs[2]-1.2; }
+// built at the end of spBuildOut: trusses under the overhang, railings with gaps, cover, gas cans, floodlights and supply crates
+function spArenaBuild(G,box,solid,V){ const X=SP.x, Z=SP.z, aw=SP.aw, hw=SP.hw, S2=SP.slabs[2];
+  const strut=(x0,y0,z0,x1,y1,z1,r,c)=>{ const a=new THREE.Vector3(x0,y0,z0), b=new THREE.Vector3(x1,y1,z1), d=b.clone().sub(a), L=d.length(); const g=new THREE.CylinderGeometry(r,r,L,6); const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize()); g.applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(q)); g.translate((x0+x1)/2,(y0+y1)/2,(z0+z1)/2); V.push({g,c}); };
+  // hazard-striped lip and the steel trusses holding the overhang up
+  for(const s of [-1,1]){ box(aw*2+.2,.35,.25,X,S2-.45,Z+s*aw,'#e8b923'); box(.25,.35,aw*2+.2,X+s*aw,S2-.45,Z,'#e8b923'); box(aw*2,.5,.5,X,S2-1,Z+s*(aw-1),'#3d4148'); box(.5,.5,aw*2,X+s*(aw-1),S2-1,Z,'#3d4148'); }
+  for(let k=-3;k<=3;k++){ const t=k*8.5; for(const s of [-1,1]){ strut(X+s*hw,S2-10,Z+t,X+s*(aw-1),S2-.8,Z+t,.18,'#4a525c'); strut(X+t,S2-10,Z+s*hw,X+t,S2-.8,Z+s*(aw-1),.18,'#4a525c'); box(aw-hw,.4,.4,X+s*(hw+aw)/2,S2-.85,Z+t,'#3d4148'); box(.4,.4,aw-hw,X+t,S2-.85,Z+s*(hw+aw)/2,'#3d4148'); } }
+  // the safety net hanging under the deck: falling off the edge drops you in it
+  { const n=new THREE.MeshStandardMaterial({color:0xff7a1a,transparent:true,opacity:.5,side:THREE.DoubleSide,depthWrite:false}); for(const s of [-1,1]){ G.add(new THREE.Mesh(new THREE.PlaneGeometry(aw*2+8,aw-hw+4).rotateX(-PI/2+s*.12).translate(X,S2-12,Z+s*(hw+aw+4)/2),n)); G.add(new THREE.Mesh(new THREE.PlaneGeometry(aw-hw+4,aw*2+8).rotateX(-PI/2).rotateZ(s*.12).translate(X+s*(hw+aw+4)/2,S2-12,Z),n)); }
+    for(const [sx,sz] of [[-1,-1],[1,-1],[-1,1],[1,1]]) strut(X+sx*hw,S2-14,Z+sz*hw,X+sx*(aw+4),S2-11,Z+sz*(aw+4),.08,'#9aa0a6'); }
+  // railings round most of the edge, with gaps where it likes to climb over
+  const RH=1.2, gaps=[-12,12];
+  for(const side of [0,1,2,3]){ const nx=[0,0,-1,1][side], nz=[-1,1,0,0][side]; let segs=[[-aw,gaps[0]-2],[gaps[0]+2,gaps[1]-2],[gaps[1]+2,aw]];
+    for(const [a,b] of segs){ const L=b-a, m=(a+b)/2, e=aw-.3; const cx=nx?X+nx*e:X+m, cz=nz?Z+nz*e:Z+m, w=nx?.12:L, d=nx?L:.12;
+      box(w,.1,d,cx,S2+RH,cz,'#c9a24a'); box(w,.08,d,cx,S2+RH*.55,cz,'#c9a24a'); box(nx?.06:L,.18,nx?L:.06,cx,S2+.09,cz,'#3d4148');
+      for(let t=a;t<=b+.01;t+=2.5){ const px=nx?X+nx*e:X+t, pz=nz?Z+nz*e:Z+t; box(.12,RH,.12,px,S2+RH/2,pz,'#c9a24a'); }
+      solid(cx-Math.max(w,.3)/2,cx+Math.max(w,.3)/2,cz-Math.max(d,.3)/2,cz+Math.max(d,.3)/2,S2,S2+RH); }
+    for(const g of gaps){ const px=nx?X+nx*(aw-.3):X+g, pz=nz?Z+nz*(aw-.3):Z+g; for(const o of [-2,2]){ const qx=nx?px:px+o, qz=nz?pz:pz+o; box(.2,1.6,.2,qx,S2+.8,qz,'#e8b923'); } } }
+  // cover: concrete barriers, AC units and stacked crates
+  for(const [x,z,w,h,d,c] of [[-18,10,4,1.3,1.1,'#9a968c'],[18,-12,1.1,1.3,4,'#9a968c'],[-6,-21,3.2,2.2,2.6,'#7f868c'],[21,16,2.6,2.2,3.2,'#7f868c'],[-21,-3,2.4,1.8,2.4,'#6b4a2b'],[9,21,4,1.3,1.1,'#9a968c'],[-12,18,2.2,2.4,2.2,'#6b4a2b'],[14,4,1.1,1.3,3.4,'#9a968c']]){
+    box(w,h,d,X+x,S2+h/2,Z+z,c,true); if(c==='#7f868c'){ box(w*.7,.08,d*.7,X+x,S2+h+.04,Z+z,'#2a2d33'); } if(c==='#6b4a2b') box(w*.8,h*.7,d*.8,X+x+.3,S2+h+h*.35,Z+z-.2,'#7a5733',true); }
+  const A=SP.ar={cans:[],lights:[],crates:[],hands:[],ph:0};
+  // red gas canisters: shoot one near it
+  const canM=new THREE.MeshStandardMaterial({color:0xc62828,roughness:.5,metalness:.3}), canB=new THREE.MeshStandardMaterial({color:0xf4c430,roughness:.6});
+  for(const [x,z] of [[-20,-10],[15,-20],[22,6],[-6,22],[3,-8]]){ const g=new THREE.Group(); g.add(new THREE.Mesh(new THREE.CylinderGeometry(.34,.34,1.2,12).translate(0,.6,0),canM)); g.add(new THREE.Mesh(new THREE.CylinderGeometry(.35,.35,.14,12).translate(0,.85,0),canB)); g.add(new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.2,6).translate(0,1.3,0),canB));
+    g.position.set(X+x,S2,Z+z); G.add(g); A.cans.push({x:X+x,z:Z+z,g,ok:true}); }
+  // floodlights in the corners: switch one on and it swings round and blinds the Climber
+  const lensOff=0x2a2a2a; for(const [sx,sz] of [[-1,-1],[1,-1],[-1,1],[1,1]]){ const x=X+sx*(aw-2.5), z=Z+sz*(aw-2.5); box(.3,5,.3,x,S2+2.5,z,'#3d4148',true); box(.7,1,.4,x-sx*1.2,S2+.5,z,'#e8b923',true);
+    const head=new THREE.Group(); head.position.set(x,S2+5.2,z); const body=new THREE.Mesh(BX(1.4,1,.8,0,0,0),new THREE.MeshStandardMaterial({color:0x2a2d33,roughness:.5})); const lens=new THREE.Mesh(new THREE.PlaneGeometry(1.2,.8).translate(0,0,.41),new THREE.MeshBasicMaterial({color:lensOff})); head.add(body,lens);
+    const beam=new THREE.Mesh(new THREE.ConeGeometry(4,1,20,1,true).translate(0,-.5,0).rotateX(-PI/2),new THREE.MeshBasicMaterial({color:0xfff2c0,transparent:true,opacity:.14,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending})); beam.visible=false; head.add(beam);
+    head.rotation.y=Math.atan2(X-x,Z-z); G.add(head); A.lights.push({x,z,sw:{x:x-sx*1.2,z},head,lens,beam,on:0,cd:0}); }
+  A.spot=new THREE.SpotLight(0xfff2cc,0,80,.32,.5,1); A.spot.position.set(X,S2+6,Z); A.spot.target.position.set(X,S2,Z); scene.add(A.spot); scene.add(A.spot.target);
+  // supply crates: a med kit and ammo, once per phase
+  for(const [x,z] of [[4,-26.5],[-4,26.5]]){ const g=new THREE.Group(); const m=new THREE.MeshStandardMaterial({color:0x3f5a2e,roughness:.8}); g.add(new THREE.Mesh(BX(1.6,1,1,0,.5,0),m)); const lid=new THREE.Mesh(BX(1.65,.12,1.05,0,1.04,0),new THREE.MeshStandardMaterial({color:0x34492a,roughness:.8})); g.add(lid);
+    const w=new THREE.MeshBasicMaterial({color:0xffffff}); for(const s of [-1,1]){ g.add(new THREE.Mesh(BX(.5,.14,.02,0,.55,s*.51),w)); g.add(new THREE.Mesh(BX(.14,.5,.02,0,.55,s*.51),w)); }
+    g.position.set(X+x,S2,Z+z); G.add(g); solid(X+x-.8,X+x+.8,Z+z-.5,Z+z+.5,S2,S2+1); A.crates.push({x:X+x,z:Z+z,g,m,used:false}); }
+  // the lock-on marker
+  A.mark=new THREE.Mesh(new THREE.ConeGeometry(.5,1.1,4).rotateX(PI),new THREE.MeshBasicMaterial({color:0xff3b30,depthTest:false,transparent:true,opacity:.9})); A.mark.renderOrder=9; A.mark.visible=false; scene.add(A.mark); }
+// put the tools back each phase
+function spArReset(quiet){ const A=SP.ar; if(!A) return; for(const c of A.cans){ c.ok=true; c.g.visible=true; } for(const c of A.crates){ c.used=false; c.m.color.setHex(0x3f5a2e); } for(const L of A.lights) L.cd=0; if(!quiet) flash('Fresh gas cans and supplies on the roof'); }
+// ---------- weak spots ----------
+function spVul(C){ return C.st==='stuck'||C.st==='stun'||C.st==='blind'; }
+function spHitMul(o,qp){ const C=o.climber, B=o.spB; if(!C||!B) return 1; const vul=spVul(C), gs=o.g.scale.y; let m=vul?.9:.6, crit=0;
+  try{ B.head.children[0].getWorldPosition(_spv); if(qp.distanceTo(_spv)<.42*gs){ m=2.5*(vul?1.5:1); crit=1; } else if(B.core){ B.core.getWorldPosition(_spv2); if(qp.distanceTo(_spv2)<.22*gs){ m=vul?4:1.8; crit=2; } } }catch(e){}
+  if(crit){ puff(qp.x,qp.y,qp.z,0xc06bff,crit===2&&vul?1.1:.6,false); if(perfT>(SP.critT||0)){ SP.critT=perfT+1.2; showGain&&showGain(crit===1?'EYE HIT':vul?'CORE HIT ×4':'CORE HIT',true); } }
+  return m; }
+// ---------- the hands on the ledge ----------
+function spHandMake(){ const g=new THREE.Group(), Ar=new THREE.MeshStandardMaterial({color:SPB.armor,metalness:.5,roughness:.45}), Bn=new THREE.MeshStandardMaterial({color:SPB.bone,roughness:.6}), Gl=new THREE.MeshBasicMaterial({color:0xc06bff});
+  const fore=new THREE.Mesh(new THREE.CylinderGeometry(.6,.5,3.4,8),Ar); fore.position.set(0,-1.4,-1.1); fore.rotation.x=-.55; g.add(fore); g.add(new THREE.Mesh(BX(1.3,.5,1.1,0,.2,.15),Ar));
+  for(let k=0;k<4;k++){ const c=new THREE.Mesh(new THREE.ConeGeometry(.13,1,6),Bn); c.rotation.x=PI/2+.25; c.position.set(-.48+k*.32,.12,1.05); g.add(c); }
+  const glow=new THREE.Mesh(new THREE.SphereGeometry(.3,10,8),Gl); glow.position.set(0,.55,-.05); g.add(glow); const halo=new THREE.Mesh(new THREE.SphereGeometry(.55,10,8),new THREE.MeshBasicMaterial({color:0xc06bff,transparent:true,opacity:.3,depthWrite:false})); halo.position.copy(glow.position); g.add(halo);
+  g.scale.setScalar(2.2); scene.add(g); return {g,glow,halo}; }
+function spHandsShow(e){ const A=SP.ar; if(!A) return; const X=SP.x, Z=SP.z, aw=SP.aw, S2=SP.slabs[2], dx=e[0]-X, dz=e[1]-Z; const n=Math.abs(dx)>Math.abs(dz)?[Math.sign(dx),0]:[0,Math.sign(dz)], t=[-n[1],n[0]];
+  for(let k=0;k<2;k++){ let H=A.hands[k]; if(!H){ H=A.hands[k]=spHandMake(); } const o=k?4.6:-4.6, x=X+n[0]*(aw-.25)+t[0]*o+(n[0]?0:e[0]-X), z=Z+n[1]*(aw-.25)+t[1]*o+(n[1]?0:e[1]-Z); H.g.position.set(x,S2,z); H.g.rotation.y=Math.atan2(-n[0],-n[1]); H.g.visible=true; H.hp=5; H.x=x; H.z=z; H.ok=true; }
+  Snd.thud&&Snd.thud(e[0],e[1],18); state.shake=Math.max(state.shake,.35); flash('Glowing claws grip the ledge! Shoot BOTH to knock it back down'); }
+function spHandsHide(){ const A=SP.ar; if(!A) return; for(const H of A.hands) if(H){ H.g.visible=false; H.ok=false; } }
+function spHandDmg(H,dm,x,y,z){ H.hp-=dm; puff(x,y,z,0xc06bff,.5,false); Snd.tink&&Snd.tink(x,z); if(H.hp<=0&&H.ok){ H.ok=false; H.g.visible=false; puff(H.x,SP.slabs[2]+.6,H.z,0xc06bff,1.6,true); Snd.bonk&&Snd.bonk(H.x,H.z,8); const z2=SP.boss; if(z2&&z2.climber&&z2.climber.st==='hands'&&!SP.ar.hands.some(h=>h&&h.ok)){ const C=z2.climber; SP.pm=1; hurt(z2,20); SP.pm=0; C.st='gone'; C.t=0; C.skipHands=true; C.stunNext=true; Snd.screech&&Snd.screech(H.x,H.z,1); state.shake=Math.max(state.shake,.6); banner('KNOCKED OFF THE LEDGE!','It fell back down. It will come back up dazed',false); } else flash('One claw down, hit the other!'); } }
+// projectiles: the gas cans and the claws on the ledge
+function spArProjHit(q){ const A=SP.ar, p=q.pos, S2=SP.slabs[2]; if(!A||Math.abs(p.y-S2)>6) return false; const dm=q.type==='shell'?99:q.type==='bullet'?1.5*(q.dm||1):(q.dm||1);
+  for(const H of A.hands) if(H&&H.ok&&Math.hypot(p.x-H.x,p.z-H.z)<2.3&&p.y>S2-1&&p.y<S2+2.4){ spHandDmg(H,dm,p.x,p.y,p.z); return true; }
+  for(const c of A.cans) if(c.ok&&Math.hypot(p.x-c.x,p.z-c.z)<.45&&p.y>S2&&p.y<S2+1.35){ spCanBoom(c); return true; }
+  return false; }
+function spCanBoom(c){ if(!c.ok) return; c.ok=false; c.g.visible=false; const S2=SP.slabs[2]; explode(c.x,S2+.6,c.z,.8); for(const z of people){ if(!z.climber||z.dead) continue; const d=Math.hypot(z.pos.x-c.x,z.pos.z-c.z); if(d<9&&Math.abs(z.pos.y-HIP-S2)<3){ const C=z.climber; SP.pm=1; hurt(z,30); SP.pm=0; banner('BOOM!','The gas can blew up right under it',false); if(!z.dead&&(C.st==='chase'||C.st==='swipe'||C.st==='leap'||C.st==='throw')){ C.st='stun'; C.t=0; C.stunT=1.6; z.zspeed=0; } } }
+  for(const o of SP.ar.cans) if(o.ok&&Math.hypot(o.x-c.x,o.z-c.z)<3.5) setTimeout(()=>spCanBoom(o),180); }
+function spArMelee(W,px,pz,hr){ const A=SP.ar; if(!A||Math.abs(player.pos.y-HIP-SP.slabs[2])>2.5) return false; let any=false; for(const H of A.hands) if(H&&H.ok&&Math.hypot(px-H.x,pz-H.z)<hr+2){ spHandDmg(H,(W.dmg||8)*.25,H.x,SP.slabs[2]+.6,H.z); any=true; } return any; }
+// ---------- prompts: floodlight switches and the supply crates ----------
+function spArNear(){ const A=SP.ar, P=player.pos; if(!A||!spOnRoof(P.y)) return null; for(const L of A.lights) if(Math.hypot(P.x-L.sw.x,P.z-L.sw.z)<1.8) return {L}; for(const c of A.crates) if(Math.hypot(P.x-c.x,P.z-c.z)<2) return {c}; return null; }
+function spArPrompt(){ const n=spArNear(); if(!n) return ''; if(n.L) return n.L.cd>perfT?'Floodlight recharging · '+Math.ceil(n.L.cd-perfT)+' s':'<kbd>R</kbd> Switch on the floodlight'; return n.c.used?'Supply crate · empty until the next phase':'<kbd>R</kbd> Open the supply crate · heal + ammo'; }
+function spArUse(){ const n=spArNear(); if(!n) return false; if(n.L){ const L=n.L; if(L.cd>perfT){ flash('Still recharging'); return true; } L.cd=perfT+20; L.on=4; L.lens.material.color.setHex(0xfff6d8); L.beam.visible=true; Snd.door&&Snd.door(L.x,L.z,true); flash('Floodlight on! It swings towards the Climber'); return true; }
+  const c=n.c; if(c.used){ flash('Empty. More supplies come up each phase'); return true; } c.used=true; c.m.color.setHex(0x22301a); state.hp=Math.min(100,state.hp+40); for(const id in AMMO) if(state.owned[id]){ const A2=AMMO[id], a=ammoOf(id); a.mag=A2.mag; a.res=A2.tot-A2.mag; } save(); Snd.rack&&Snd.rack(c.x,c.z); showGain('+40 health · ammo full',true); return true; }
+// ---------- the ledge grab ----------
+function spHangStart(nx,nz){ const X=SP.x, Z=SP.z, aw=SP.aw, S2=SP.slabs[2], P=player.pos; const x=nx?X+nx*(aw+.45):clamp(P.x,X-aw+.5,X+aw-.5), z=nz?Z+nz*(aw+.45):clamp(P.z,Z-aw+.5,Z+aw-.5), yaw=Math.atan2(-nx,-nz);
+  if(player.mode==='ragdoll'){ rdEnd(player); for(const k of ['armL','armR','legL','legR']) if(player[k]) player[k].rotation.set(0,0,0); if(player.rig) player.rig.rotation.set(0,0,0); }
+  player.mode='lift'; player.vel.set(0,0,0); player.yaw=yaw; player.g.quaternion.setFromAxisAngle(UP,yaw); player.crouch=false; try{ cancelReload(); }catch(e){}
+  SP.hang={x,z,nx,nz,yaw,t:0,up:-1,sp:true,y:S2-1.75+HIP}; player.pos.set(x,SP.hang.y,z); player.g.position.copy(player.pos); state.shake=Math.max(state.shake,.3); Snd.thud&&Snd.thud(x,z,6); flash('You grabbed the ledge! SPACE to climb up, quick'); }
+function spHangDrop(msg){ const H=SP.hang; if(!H) return; SP.hang=null; SP.hangCD=perfT+3; if(player.mode==='lift') player.mode='walk'; player.vel.set(H.nx*3,-1,H.nz*3); player.pos.x+=H.nx*.6; player.pos.z+=H.nz*.6; flash(msg||'You lost your grip!'); }
+function spHangTick(dt){ const H=SP.hang; if(!H) return; if(player.mode!=='lift'||activeCar||state.over||state.downT>0){ SP.hang=null; return; } H.t+=dt; const S2=SP.slabs[2];
+  const sp=!!K('Space'); if(sp&&!H.sp&&H.up<0){ H.up=0; Snd.swing&&Snd.swing(); } H.sp=sp;
+  if(H.up>=0){ H.up+=dt/.6; const k=Math.min(1,H.up), e=k*k*(3-2*k); player.pos.set(H.x-H.nx*1.4*Math.max(0,(k-.5)*2),H.y+(S2+HIP+.05-H.y)*e,H.z-H.nz*1.4*Math.max(0,(k-.5)*2)); player.g.position.copy(player.pos); player.vel.set(0,0,0);
+    if(k>=1){ SP.hang=null; SP.hangCD=perfT+1; player.mode='walk'; player.vel.set(0,0,0); player.immune=Math.max(player.immune||0,.8); flash('Back on the roof'); } return; }
+  player.pos.set(H.x,H.y+Math.sin(H.t*3)*.03,H.z); player.g.position.copy(player.pos); player.vel.set(0,0,0);
+  const left=6-H.t; if(left<2.2&&Math.floor(left*2)!==H.warn){ H.warn=Math.floor(left*2); flash('Your grip is slipping! SPACE!'); } if(left<=0) spHangDrop(); }
+// ---------- the per-frame arena logic ----------
+function spArenaTick(dt){ const A=SP.ar; if(!A) return; const P=player.pos, X=SP.x, Z=SP.z, aw=SP.aw, S2=SP.slabs[2], dx=P.x-X, dz=P.z-Z, m=Math.max(Math.abs(dx),Math.abs(dz));
+  spHangTick(dt);
+  // catching the ledge as you go over
+  if(!SP.hang&&!activeCar&&!player.chute&&state.downT<=0&&!state.over&&(player.mode==='walk'||player.mode==='ragdoll')&&perfT>(SP.hangCD||0)&&m>aw-.1&&m<aw+2.4&&P.y<S2+.4&&P.y>S2-2.6&&player.vel.y<.5){ const ax=Math.abs(dx)>=Math.abs(dz); spHangStart(ax?Math.sign(dx):0,ax?0:Math.sign(dz)); }
+  // the safety net: fall off the deck and you bounce back up onto the roof, hurt
+  if(!activeCar&&!player.chute&&!state.over&&player.mode!=='lift'&&m>SP.hw-.5&&m<aw+6&&P.y<S2-9&&P.y>S2-16&&player.vel.y<0){ if(player.mode==='ragdoll'){ rdEnd(player); player.g.quaternion.setFromAxisAngle(UP,player.yaw||0); } const a=Math.atan2(dx,dz); xpGo(X+Math.sin(a)*8,S2,Z+Math.cos(a)*8,a+PI); xpFade&&xpFade(); damagePlayer(20); flash('You fell into the safety net and scrambled back up. -20'); }
+  // tools: reset each phase, floodlights blind it
+  const B=SP.boss&&!SP.boss.dead?SP.boss:null; if(B){ const ph=B.climber.ph; if(ph!==A.ph){ spArReset(A.ph===0); A.ph=ph; } } else if(A.ph&&!SP.bossOn) A.ph=0;
+  let lit=null; for(const L of A.lights){ if(L.on>0){ L.on-=dt; lit=L; if(B&&B.g.visible){ const ty=Math.atan2(B.pos.x-L.x,B.pos.z-L.z); L.head.rotation.y=lerpAng(L.head.rotation.y,ty,Math.min(1,dt*5)); const hd=Math.hypot(B.pos.x-L.x,B.pos.z-L.z); L.head.rotation.x=lerpAng(L.head.rotation.x,Math.atan2(5.2-6,hd)*-1,Math.min(1,dt*5)); L.beam.scale.set(1,1,Math.max(4,hd)); const C=B.climber; let dd=L.head.rotation.y-ty; dd=Math.atan2(Math.sin(dd),Math.cos(dd)); if(Math.abs(dd)<.2&&hd<60&&(C.st==='chase'||C.st==='swipe'||C.st==='leap'||C.st==='throw'||C.st==='spin'||C.st==='stamp')){ C.st='blind'; C.t=0; B.zspeed=0; Snd.screech&&Snd.screech(B.pos.x,B.pos.z,1); banner('BLINDED!','It can\'t see you. Shoot the eyes and the core',false); L.on=Math.min(L.on,1.2); } } else L.beam.scale.set(1,1,30); if(L.on<=0){ L.lens.material.color.setHex(0x2a2a2a); L.beam.visible=false; } } }
+  if(lit){ A.spot.intensity=3.2; A.spot.position.set(lit.x,S2+5.2,lit.z); if(B) A.spot.target.position.set(B.pos.x,B.pos.y,B.pos.z); } else A.spot.intensity=0;
+  // T lock-on
+  if(SP.lock&&(!B||activeCar)) { SP.lock=false; } if(SP.lock&&B){ if(B.g.visible){ const ty=Math.atan2(B.pos.x-P.x,B.pos.z-P.z); camYaw=lerpAng(camYaw,ty,Math.min(1,dt*7)); } const sc=B.g.scale.y/.82; A.mark.visible=B.g.visible; A.mark.position.set(B.pos.x,B.pos.y-HIP+1.95*sc+1.4+Math.sin(perfT*5)*.25,B.pos.z); A.mark.rotation.y+=dt*3; } else A.mark.visible=false;
+  // the core glows when it is open to attack
+  if(B&&B.spB&&B.spB.core){ const v=spVul(B.climber), k=v?1+Math.sin(perfT*14)*.3:.55; B.spB.core.material.color.setRGB(.75*k,.3*k,1*k); B.spB.halo.scale.setScalar(v?1.6+Math.sin(perfT*10)*.3:1); B.spB.halo.material.opacity=v?.55:.2; }
+  for(const H of A.hands) if(H&&H.ok){ const s=1+Math.sin(perfT*9)*.15; H.halo.scale.setScalar(s); } }
+// the Climber's new states; returns true when it handled this frame
+function spArState(z,C,dt,d,top){ const X=SP.x, Z=SP.z, aw=SP.aw, P=player.pos;
+  if(!C.toy&&C.st!=='gone'&&C.st!=='hands'&&C.st!=='rise'){ const lim=aw-2.4; z.pos.x=clamp(z.pos.x,X-lim,X+lim); z.pos.z=clamp(z.pos.z,Z-lim,Z+lim); }
+  if(C.st==='stuck'){ z.vel.set(0,z.vel.y,0); z.zspeed=0; z.atkCD=Math.max(z.atkCD||0,.4); const R2=z.rig; z.armL.rotation.x=z.armR.rotation.x=.45+Math.sin(C.t*30)*.08; if(R2){ R2.position.y=SPB_RY-.32+Math.sin(C.t*24)*.04; R2.rotation.x=.9; R2.rotation.z=Math.sin(C.t*9)*.1; } if(Math.random()<dt*6) puff(z.pos.x+Math.sin(z.yaw)*4+R(-1,1),top+.3,z.pos.z+Math.cos(z.yaw)*4+R(-1,1),0x8d8a83,.8,false);
+    if(C.t>(C.ph>=3?2.4:3)){ C.st='drill'; C.t=2.9; Snd.screech&&Snd.screech(z.pos.x,z.pos.z,1); } return true; }
+  if(C.st==='stun'){ z.vel.set(0,z.vel.y,0); z.zspeed=0; z.atkCD=Math.max(z.atkCD||0,.4); if(z.rig){ z.rig.position.y=SPB_RY-.25; z.rig.rotation.x=.7; z.rig.rotation.z=Math.sin(C.t*3)*.18; } z.armL.rotation.x=z.armR.rotation.x=.3; if(Math.random()<dt*4) puff(z.pos.x+R(-1,1),z.pos.y+6,z.pos.z+R(-1,1),0xffe066,.4,false);
+    if(C.t>(C.stunT||3)){ C.st='chase'; C.cd=1; if(z.rig) z.rig.rotation.z=0; } return true; }
+  if(C.st==='blind'){ z.atkCD=Math.max(z.atkCD||0,.4); z.zspeed=0; z.armL.rotation.set(-2.5,0,.5); z.armR.rotation.set(-2.5,0,-.5); if(z.rig){ z.rig.rotation.x=.25; z.rig.rotation.z=Math.sin(C.t*2.4)*.12; } C.wa=(C.wa===undefined?Math.random()*TAU:C.wa)+R(-1,1)*dt*2; const st=1.6*dt; z.pos.x+=Math.sin(C.wa)*st; z.pos.z+=Math.cos(C.wa)*st; z.yaw=lerpAng(z.yaw,C.wa,Math.min(1,dt*3)); z.g.quaternion.setFromAxisAngle(UP,z.yaw); z.vel.set(0,z.vel.y,0);
+    if(C.t>4){ C.st='chase'; C.cd=1; z.armL.rotation.set(0,0,0); z.armR.rotation.set(0,0,0); if(z.rig) z.rig.rotation.z=0; } return true; }
+  if(C.st==='hands'){ z.mode='lift'; z.g.visible=false; z.vel.set(0,0,0); z.zspeed=0; z.immune=1; if(C.t>3.2){ spHandsHide(); z.g.visible=true; C.st='rise'; C.t=0; Snd.screech&&Snd.screech(z.pos.x,z.pos.z,1); } return true; }
+  if(C.st==='stamp'){ const H=SP.hang; z.vel.set(0,z.vel.y,0); z.zspeed=0; if(H){ z.yaw=Math.atan2(H.x-z.pos.x,H.z-z.pos.z); z.g.quaternion.setFromAxisAngle(UP,z.yaw); } const k=Math.min(1,C.t/.55); z.armR.rotation.x=z.armL.rotation.x=-2.6*(k<1?k:Math.max(0,1-(C.t-.55)*5)); if(z.rig) z.rig.rotation.x=.45+.4*k;
+    if(C.t>.75&&!C.hit){ C.hit=true; state.shake=Math.max(state.shake,.6); Snd.thud&&Snd.thud(z.pos.x,z.pos.z,22); xpRing(z.pos.x+Math.sin(z.yaw)*4,top,z.pos.z+Math.cos(z.yaw)*4,0xc06bff,4); if(SP.hang&&Math.hypot(SP.hang.x-z.pos.x,SP.hang.z-z.pos.z)<10){ spHangDrop('It stamped on your hands!'); damagePlayer(10); } }
+    if(C.t>1.2){ C.st='chase'; C.hit=false; C.cd=1.4; } return true; }
+  return false; }
+// T: lock the camera onto the boss while it is up
+function spLockKey(){ if(!(SP.bossOn&&SP.boss&&!SP.boss.dead)) return false; SP.lock=!SP.lock; flash(SP.lock?'Locked on to the Climber · T to let go':'Lock-on off'); return true; }
 // ---------- the boss fight: three phases on the open top floors ----------
 function spSlabY(y){ let b=SP.slabs[0]; for(const s of SP.slabs) if(y-HIP>s-1.2) b=s; return b; }
-function spEdgePoint(){ const a=Math.floor(Math.random()*4), t=R(-.7,.7)*SP.hw, X=SP.x, Z=SP.z, e=SP.hw-2.6; return [[X+t,Z-e],[X+t,Z+e],[X-e,Z+t],[X+e,Z+t]][a]; }
+function spEdgePoint(){ const a=Math.floor(Math.random()*4), t=R(-.7,.7)*SP.aw, X=SP.x, Z=SP.z, e=SP.aw-2.6; return [[X+t,Z-e],[X+t,Z+e],[X-e,Z+t],[X+e,Z+t]][a]; }
 function spClimberTick(z,dt){ const C=z.climber, P=player.pos, d=Math.hypot(P.x-z.pos.x,P.z-z.pos.z); C.t+=dt; const top=C.toy?groundHeight(z.pos.x,z.pos.z,z.pos.y):(C.lvl||SP.slabs[2]);
   if(z.mode!=='walk'&&z.mode!=='lift') return;
   if(z.rig&&C.st!=='rise'&&C.st!=='drill') z.rig.position.y=SPB_RY;
@@ -7986,15 +8107,17 @@ function spClimberTick(z,dt){ const C=z.climber, P=player.pos, d=Math.hypot(P.x-
   const f=z.hp/(z.hp0||1);
   if(!C.toy&&C.ph===1&&f<=.66){ C.ph=2; z.zspeed=5.4; banner('THE CLIMBER · PHASE II','It screams, and things start crawling up the walls',true); Snd.screech&&Snd.screech(z.pos.x,z.pos.z,1); state.shake=.6; for(let k=0;k<2;k++){ const e=spEdgePoint(); const q=spZombie(k?'stalker':'luggage',e[0],e[1],top); if(q.stalk){ q.stalk.st='chase'; q.zspeed=q.zspeed0; q.aggro=9; } q.xpZ=true; } }
   if(!C.toy&&C.ph===2&&f<=.33){ C.ph=3; z.zspeed=6; banner('THE CLIMBER · PHASE III','Enraged. It whips its tail and tears the building apart',true); Snd.screech&&Snd.screech(z.pos.x,z.pos.z,1); state.shake=.8; }
+  if(spArState(z,C,dt,d,top)) return;
   if(C.st==='chase'){ z.zspeed=C.ph>=2?5.4:4.6; if(z.rig){ z.rig.rotation.x=.45; } for(const k of ['cd','drop','slamCD','spinCD','throwCD']) C[k]-=dt;
+    if(!C.toy&&SP.hang&&SP.hang.t>1.2&&Math.hypot(SP.hang.x-z.pos.x,SP.hang.z-z.pos.z)<9){ C.st='stamp'; C.t=0; C.hit=false; z.zspeed=0; return; }
     if(C.ph>=3&&C.spinCD<=0&&d<7){ C.st='spin'; C.t=0; C.spinCD=R(5,7); z.zspeed=0; return; }
-    if((C.ph>=2||C.toy)&&C.slamCD<=0&&d<14){ C.st='drill'; C.t=0; C.slamCD=R(7,10); z.zspeed=0; C.waves=0; Snd.screech&&Snd.screech(z.pos.x,z.pos.z,1); return; }
+    if((C.ph>=2||C.toy)&&C.slamCD<=0&&d<14){ C.st='drill'; C.t=0; C.slamCD=R(7,10); z.zspeed=0; C.waves=0; C.stuckDone=false; Snd.screech&&Snd.screech(z.pos.x,z.pos.z,1); return; }
     if(d<6&&C.cd<=0){ C.st='swipe'; C.t=0; z.zspeed=0; Snd.screech&&Snd.screech(z.pos.x,z.pos.z,1); return; }
     if(C.ph>=3&&C.throwCD<=0&&d>12&&d<34){ C.st='throw'; C.t=0; C.throwCD=R(5,7); z.zspeed=0; return; }
     if(d>11&&d<24&&C.cd<=0){ C.st='leap'; C.t=0; C.a={x:z.pos.x,z:z.pos.z,tx:P.x,tz:P.z}; z.zspeed=0; return; }
     if(C.drop<=0&&!C.toy){ C.st='toEdge'; C.t=0; C.e=spEdgePoint(); } return; }
   if(C.st==='swipe'){ z.vel.set(0,z.vel.y,0); z.armR.rotation.x=-2.6+Math.min(1,C.t/.5)*2.4; if(C.t>.5&&!C.hit){ C.hit=true; if(d<7&&!activeCar&&player.mode==='walk'&&!(player.immune>0)){ const dx=P.x-z.pos.x, dz=P.z-z.pos.z, l=Math.hypot(dx,dz)||1; knock(player,dx/l*15,6,dz/l*15,6); damagePlayer(16); flash('The Climber swats you towards the edge!'); } } if(C.t>.9){ C.st='chase'; C.hit=false; C.cd=R(1.2,2.2)/(C.ph>=2?1.3:1); } return; }
-  if(C.st==='drill'){ z.vel.set(0,z.vel.y,0); const t=C.t, R2=z.rig;
+  if(C.st==='drill'){ if(C.t>=2.9&&!C.stuckDone&&!C.toy){ C.stuckDone=true; C.st='stuck'; C.t=0; banner('ITS CLAWS ARE STUCK!','Shoot the glowing purple core in its chest',false); return; } z.vel.set(0,z.vel.y,0); const t=C.t, R2=z.rig;
     if(t<.75){ z.armL.rotation.x=z.armR.rotation.x=-3.0*Math.min(1,t/.4); if(R2){ R2.position.y=SPB_RY+.18*Math.min(1,t/.5); R2.rotation.x=-.25; } }
     else if(t<.95){ const k=(t-.75)/.2; z.armL.rotation.x=z.armR.rotation.x=-3+3.4*k; if(R2){ R2.position.y=SPB_RY+.18-.5*k; R2.rotation.x=-.25+1.15*k; } if(!C.hit){ C.hit=true; state.shake=Math.max(state.shake,.9); Snd.blast&&Snd.blast(); Snd.thud(z.pos.x,z.pos.z,24); for(let n=0;n<8;n++){ const a=n/8*TAU; puff(z.pos.x+Math.sin(z.yaw)*4+Math.cos(a)*2,top+.4,z.pos.z+Math.cos(z.yaw)*4+Math.sin(a)*2,0x8d8a83,2.2,n%2===0); } spCrack(z.pos.x+Math.sin(z.yaw)*4,top,z.pos.z+Math.cos(z.yaw)*4); } }
     else if(t<2.9){ z.armL.rotation.x=z.armR.rotation.x=.4+Math.sin(t*40)*.05; if(R2){ R2.position.y=SPB_RY-.32+Math.sin(t*50)*.03; R2.rotation.x=.9; R2.rotation.z=Math.sin(t*37)*.06; } if(Math.random()<dt*14) puff(z.pos.x+Math.sin(z.yaw)*4+R(-1.5,1.5),top+.3,z.pos.z+Math.cos(z.yaw)*4+R(-1.5,1.5),Math.random()<.3?0xffb36a:0x8d8a83,R(.6,1.4),false); state.shake=Math.max(state.shake,.25);
@@ -8005,8 +8128,8 @@ function spClimberTick(z,dt){ const C=z.climber, P=player.pos, d=Math.hypot(P.x-
   if(C.st==='throw'){ z.vel.set(0,z.vel.y,0); z.yaw=Math.atan2(P.x-z.pos.x,P.z-z.pos.z); z.g.quaternion.setFromAxisAngle(UP,z.yaw); z.armR.rotation.x=-2.8; if(C.t>.7&&!C.hit){ C.hit=true; const m=new THREE.Mesh(new THREE.DodecahedronGeometry(.5,0),new THREE.MeshStandardMaterial({color:0x8d8a83,roughness:.9})); const sx=z.pos.x, sy=z.pos.y+6, sz=z.pos.z, T=1.2, tx=P.x+(player.vel?player.vel.x*.5:0), tz=P.z+(player.vel?player.vel.z*.5:0), ty=P.y-HIP; m.position.set(sx,sy,sz); scene.add(m); ZERO.rocks.push({m,vx:(tx-sx)/T,vz:(tz-sz)/T,vy:(ty-sy)/T+.5*22*T,t:0}); Snd.whoosh&&Snd.whoosh(); } if(C.t>1){ C.st='chase'; C.hit=false; } return; }
   if(C.st==='leap'){ const k=Math.min(1,C.t/.7), A=C.a; z.pos.x=A.x+(A.tx-A.x)*k; z.pos.z=A.z+(A.tz-A.z)*k; z.pos.y=top+HIP+Math.sin(k*PI)*6; z.vel.set(0,0,0); if(k>=1){ C.st='chase'; C.cd=R(1.5,2.5); xpRing(z.pos.x,top,z.pos.z,0xb9c4c9,7); state.shake=Math.max(state.shake,.5); if(Math.hypot(P.x-z.pos.x,P.z-z.pos.z)<5.5&&!activeCar){ damagePlayer(14); knock(player,(P.x-z.pos.x)*3,6,(P.z-z.pos.z)*3,5); } } return; }
   if(C.st==='toEdge'){ const e=C.e, dx=e[0]-z.pos.x, dz=e[1]-z.pos.z, l=Math.hypot(dx,dz); z.zspeed=0; z.vel.set(0,z.vel.y,0); if(l>.6){ const st=Math.min(l,7*dt); z.pos.x+=dx/l*st; z.pos.z+=dz/l*st; z.yaw=Math.atan2(dx,dz); z.g.quaternion.setFromAxisAngle(UP,z.yaw); } else { C.st='gone'; C.t=0; z.g.visible=false; flash('It went over the edge... where is it?'); } if(C.t>5){ C.st='gone'; C.t=0; z.g.visible=false; } return; }
-  if(C.st==='gone'){ z.mode='lift'; z.g.visible=false; z.vel.set(0,0,0); z.zspeed=0; z.immune=1; if(C.t>(C.ph>=3?2:3.2)){ C.lvl=spSlabY(P.y); const e=spEdgePoint(); z.pos.set(e[0],C.lvl+HIP,e[1]); z.g.position.copy(z.pos); z.yaw=Math.atan2(SP.x-e[0],SP.z-e[1]); z.g.quaternion.setFromAxisAngle(UP,z.yaw); z.g.visible=true; C.st='rise'; C.t=0; Snd.screech&&Snd.screech(e[0],e[1],1); } return; }
-  if(C.st==='rise'){ z.mode='lift'; z.vel.set(0,0,0); z.zspeed=0; z.g.visible=true; if(z.rig) z.rig.position.y=SPB_RY-2.4*(1-Math.min(1,C.t/1)); if(C.t>1){ if(z.rig) z.rig.position.y=SPB_RY; z.mode='walk'; C.st='chase'; C.cd=1; C.drop=R(12,18)/(C.ph>=3?1.6:1); z.immune=0; } return; } }
+  if(C.st==='gone'){ z.mode='lift'; z.g.visible=false; z.vel.set(0,0,0); z.zspeed=0; z.immune=1; if(C.t>(C.ph>=3?2:3.2)){ C.lvl=SP.slabs[2]; const e=spEdgePoint(); z.pos.set(e[0],C.lvl+HIP,e[1]); z.g.position.copy(z.pos); z.yaw=Math.atan2(SP.x-e[0],SP.z-e[1]); z.g.quaternion.setFromAxisAngle(UP,z.yaw); C.t=0; if(!C.skipHands){ C.st='hands'; spHandsShow(e); } else { C.skipHands=false; z.g.visible=true; C.st='rise'; Snd.screech&&Snd.screech(e[0],e[1],1); } } return; }
+  if(C.st==='rise'){ z.mode='lift'; z.vel.set(0,0,0); z.zspeed=0; z.g.visible=true; if(z.rig) z.rig.position.y=SPB_RY-2.4*(1-Math.min(1,C.t/1)); if(C.t>1){ if(z.rig) z.rig.position.y=SPB_RY; z.mode='walk'; C.st='chase'; C.cd=1; C.drop=R(12,18)/(C.ph>=3?1.6:1); z.immune=0; if(C.stunNext){ C.stunNext=false; C.st='stun'; C.t=0; C.stunT=3; flash('It climbed back up dazed! Hit the glowing core'); } } return; } }
 SP.waves=[];
 function spWave(x,y,z,spd){ const g=new THREE.Group(); const ring=new THREE.Mesh(new THREE.TorusGeometry(1,.16,6,48).rotateX(PI/2),new THREE.MeshBasicMaterial({color:0xc06bff,transparent:true,opacity:.9})); const band=new THREE.Mesh(new THREE.CylinderGeometry(1,1,1,48,1,true).translate(0,.5,0),new THREE.MeshBasicMaterial({color:0x8d7a9a,transparent:true,opacity:.45,side:THREE.DoubleSide,depthWrite:false}));
   g.add(ring,band); g.position.set(x,y+.15,z); scene.add(g); SP.waves.push({g,ring,band,x,y,z,r:2,spd,max:30,hit:false}); Snd.thud(x,z,16); }
@@ -8015,18 +8138,19 @@ function spWaveTick(dt){ const P=player.pos; for(let i=SP.waves.length-1;i>=0;i-
     const d=Math.hypot(P.x-w.x,P.z-w.z); if(!w.hit&&Math.abs(d-w.r)<1&&P.y-HIP-w.y<.6&&P.y-HIP-w.y>-2&&!activeCar&&player.mode==='walk'&&!(player.immune>0)){ w.hit=true; const l=d||1; knock(player,(P.x-w.x)/l*8,7,(P.z-w.z)/l*8,5); damagePlayer(12); flash('Hit by the shockwave! Jump over them'); }
     if(w.r>=w.max){ scene.remove(w.g); SP.waves.splice(i,1); } } }
 function spCrack(x,y,z){ const m=new THREE.Mesh(new THREE.CircleGeometry(3.2,9).rotateX(-PI/2),new THREE.MeshBasicMaterial({color:0x111111,transparent:true,opacity:.7,depthWrite:false})); m.position.set(x,y+.03,z); scene.add(m); const g2=[]; for(let k=0;k<8;k++){ const a=k/8*TAU+Math.random()*.4, L=3+Math.random()*4; g2.push(new THREE.PlaneGeometry(.18,L).rotateX(-PI/2).translate(0,0,L/2).rotateY(a)); } const cr=new THREE.Mesh(mergeGeosUV(g2),new THREE.MeshBasicMaterial({color:0x151515,transparent:true,opacity:.8,depthWrite:false})); cr.position.set(x,y+.035,z); scene.add(cr); setTimeout(()=>{ scene.remove(m); scene.remove(cr); },20000); }
-function spBossBar(){ const z=SP.boss; if(!z) return; if(!people.includes(z)||z.dead){ SP.bossOn=false; SP.boss=null; xpBossBar(''); if(z.dead){ brespSet('climber'); const first=!XP.boss.spire; XP.boss.spire=1; xpSave(); earn(first?4000:1000); banner('THE CLIMBER IS DOWN','+'+money(first?4000:1000)+(first?' · the Architect\'s Key is yours':' · it will be back in 10 minutes')); Snd.fanfare&&Snd.fanfare(); achStat&&achStat('xpboss'); if(first) setTimeout(()=>xpRelic('akey','The Architect\'s Key · +15% speed, wear it from your Expedition Journal'),1500); } return; }
+function spBossBar(){ const z=SP.boss; if(!z) return; if(!people.includes(z)||z.dead){ SP.bossOn=false; SP.boss=null; SP.lock=false; try{ spHandsHide(); }catch(e){} xpBossBar(''); if(z.dead){ brespSet('climber'); const first=!XP.boss.spire; XP.boss.spire=1; xpSave(); earn(first?4000:1000); banner('THE CLIMBER IS DOWN','+'+money(first?4000:1000)+(first?' · the Architect\'s Key is yours':' · it will be back in 10 minutes')); Snd.fanfare&&Snd.fanfare(); achStat&&achStat('xpboss'); if(first) setTimeout(()=>xpRelic('akey','The Architect\'s Key · +15% speed, wear it from your Expedition Journal'),1500); } return; }
   xpBossBar('💀 The Climber · '+['','I','II','III'][z.climber.ph||1],Math.max(0,z.hp/z.hp0)); }
-function spOnTop(){ const P=player.pos; return Math.abs(P.x-SP.x)<SP.hw+1.5&&Math.abs(P.z-SP.z)<SP.hw+1.5&&P.y-HIP>SP.slabs[0]-1; }
+function spOnTop(){ const P=player.pos, w=(P.y-HIP>SP.slabs[2]-1.5?SP.aw:SP.hw)+1.5; return Math.abs(P.x-SP.x)<w&&Math.abs(P.z-SP.z)<w&&P.y-HIP>SP.slabs[0]-1; }
 function spTick(dt){ const P=player.pos; if(!SP.out&&Math.hypot(P.x-SP.x,P.z-SP.z)<1400) spBuildOut(); if(!SP.out) return;
   const D=XP.in; if(D&&D.sp!==undefined){ if(!D.built) spBuildLv(D); spLevelTick(D,dt); }
   if(!activeCar&&player.mode==='walk'&&!XP.in&&Math.hypot(P.x-SP.door.x,P.z-SP.door.z)<2.2&&!(SP.doorT>perfT)){ SP.doorT=perfT+3; spBuildLv(SP.lv[0]); xpFade(); const f=SP.lv[0].feats.find(q=>q.c==='A'); xpGo(f.x,0,f.z-2,PI,'The Spire'); xpFind('spire','The Spire','Eight abandoned floors. The helipad is at the very top',250); }
   if(spOnTop()&&player.mode==='walk'){ SP.gust-=dt; if(SP.gust<=0){ SP.gust=R(6,11); const a=Math.random()*TAU; SP.gv={x:Math.cos(a)*5.5,z:Math.sin(a)*5.5,t:.6}; flash('A gust of wind!'); Snd.blow&&Snd.blow(); }
     if(SP.gv&&SP.gv.t>0){ SP.gv.t-=dt; player.vel.x+=SP.gv.x*dt*4; player.vel.z+=SP.gv.z*dt*4; }
-    if(!SP.bossOn&&brespReady('climber')&&!mpClient()){ SP.bossT=(SP.bossT||0)+dt; if(SP.bossT>2.5){ SP.bossT=0; SP.bossOn=true; const lvl=spSlabY(P.y), e=spEdgePoint(); SP.boss=spClimberMake(e[0],e[1],lvl); SP.boss.climber.lvl=lvl; SP.boss.climber.st='rise'; SP.boss.climber.t=0; SP.boss.mode='lift'; banner('💀 THE CLIMBER','It followed you up the outside of the building',true); Snd.sting&&Snd.sting(); } } }
+    if(!SP.bossOn&&brespReady('climber')&&!mpClient()&&spOnRoof(P.y)){ SP.bossT=(SP.bossT||0)+dt; if(SP.bossT>2.5){ SP.bossT=0; SP.bossOn=true; const lvl=SP.slabs[2], e=spEdgePoint(); SP.boss=spClimberMake(e[0],e[1],lvl); SP.boss.climber.lvl=lvl; SP.boss.climber.st='hands'; SP.boss.climber.t=0; SP.boss.mode='lift'; SP.boss.g.visible=false; spHandsShow(e); banner('💀 THE CLIMBER','It followed you up the outside. Weak spots: the eyes and the purple core · T to lock on',true); Snd.sting&&Snd.sting(); } } }
+  try{ spArenaTick(dt); }catch(e){ console.warn('arena',e); }
   SP.barZ=null; for(const z of people) if(z.climber&&!z.dead){ spClimberTick(z,dt); if(Math.hypot(z.pos.x-P.x,z.pos.z-P.z)<80&&(!SP.barZ||z===SP.boss)) SP.barZ=z; } if(SP.waves.length) spWaveTick(dt);
   if(SP.barZ&&SP.barZ!==SP.boss){ const z=SP.barZ; xpBossBar('💀 The Climber · '+['','I','II','III'][z.climber.ph||1],Math.max(0,z.hp/z.hp0)); } else if(!SP.barZ&&SP.hadBar&&!SP.bossOn) xpBossBar(''); SP.hadBar=!!SP.barZ;
-  if(SP.bossOn) spBossBar(); if(SP.boss&&!SP.boss.dead&&Math.hypot(P.x-SP.x,P.z-SP.z)>120){ removePerson(SP.boss); SP.boss=null; SP.bossOn=false; xpBossBar(''); } }
+  if(SP.bossOn) spBossBar(); if(SP.boss&&!SP.boss.dead&&Math.hypot(P.x-SP.x,P.z-SP.z)>120){ removePerson(SP.boss); SP.boss=null; SP.bossOn=false; SP.lock=false; try{ spHandsHide(); }catch(e){} xpBossBar(''); } }
 function spLevelTick(D,dt){ const P=player.pos;
   if(!activeCar&&player.mode==='walk'&&!(XP.stairT>perfT)) for(const f of D.feats){ if(f.stair&&f.use&&Math.abs(P.x-f.x)<1.05&&Math.abs(P.z-f.z)<1.05){ XP.stairT=perfT+2; xpFade(); f.use(); return; } }
   for(const f of D.feats){ if(!'ZGKQ'.includes(f.c)) continue; const k=f.i+','+f.j; if(D.spawned[k]&&perfT-D.spawned[k]<300) continue; if(Math.hypot(P.x-f.x,P.z-f.z)<24){ D.spawned[k]=perfT;
@@ -8039,10 +8163,10 @@ function spLevelTick(D,dt){ const P=player.pos;
   D.creepT=(D.creepT===undefined?R(8,14):D.creepT)-dt; if(D.creepT<=0){ D.creepT=R(12,26); const r=Math.random(), a=Math.random()*TAU, x=P.x+Math.cos(a)*18, z=P.z+Math.sin(a)*18;
     if(r<.3) Snd.thud(x,z,14); else if(r<.55) Snd.groan(x,z); else if(r<.7){ D.blackT=perfT+1.2; Snd.tink&&Snd.tink(P.x,P.z); } else if(r<.85) Snd.bonk&&Snd.bonk(x,z,6); else Snd.screech&&Snd.screech(x,z,.4); }
   spCrawlTick(D,dt); }
-function spPrompt(){ if(activeCar||player.mode!=='walk'||!SP.out) return ''; const L=spNearLadder(); if(L) return '<kbd>R</kbd> Climb the ladder'; if(spNearSafe()) return '<kbd>R</kbd> Crack the penthouse safe'; return ''; }
+function spPrompt(){ if(SP.hang) return '<kbd>Space</kbd> Climb up!'; if(activeCar||player.mode!=='walk'||!SP.out) return ''; const ap=spArPrompt(); if(ap) return ap; const L=spNearLadder(); if(L) return '<kbd>R</kbd> Climb the ladder'; if(spNearSafe()) return '<kbd>R</kbd> Crack the penthouse safe'; return ''; }
 function spNearLadder(){ const P=player.pos; if(!SP.ladders) return null; for(const L of SP.ladders) if(Math.hypot(P.x-L.x,P.z-L.z)<1.6&&Math.abs(P.y-HIP-L.y0)<1) return L; return null; }
 function spNearSafe(){ const P=player.pos, S=SP.safe; return S&&!XP.loot['spire:safe']&&Math.hypot(P.x-S.x,P.z-S.z)<1.8&&Math.abs(P.y-HIP-S.y)<1; }
-function spUse(){ const L=spNearLadder(); if(L){ xpClimbStart(L,false); return true; } if(spNearSafe()){ XP.loot['spire:safe']=1; xpSave(); earn(2500); banner('PENTHOUSE SAFE','+$2,500 · the developer\'s emergency cash'); Snd.coins&&Snd.coins(); return true; } return false; }
+function spUse(){ if(SP.hang) return true; if(spArUse()) return true; const L=spNearLadder(); if(L){ xpClimbStart(L,false); return true; } if(spNearSafe()){ XP.loot['spire:safe']=1; xpSave(); earn(2500); banner('PENTHOUSE SAFE','+$2,500 · the developer\'s emergency cash'); Snd.coins&&Snd.coins(); return true; } return false; }
 
 /* Subject Zero */
 function zeroTick(D,dt){ const bf=D.feats.find(f=>f.c==='B'); if(!bf) return; const px=player.pos.x, pz=player.pos.z;
@@ -8568,6 +8692,7 @@ function humPick(p,A){ const sp=A.sp, now=perfT, mv=sp>.35; A.tw=0; A.up=null;
     return {n:b[0],ts:(back?-1:1)*clamp(b[1],b[2],b[3]),up:gun?'U_Pistol_Aim_Neutral':null}; };
   if(now-(p.hitAt||-9)<.45) return {n:p.hitN%2?'U_Hit_Head':'U_Hit_Chest',once:1,key:'h'+p.hitN,fade:.06};
   if(p.isPlayer){ if(XP.climb&&player.mode==='lift'&&!activeCar) return {n:'U_Swim_Fwd_Loop',ts:(K('KeyW')||K('KeyS')||K('ArrowUp')||K('ArrowDown'))?1.15:0,climb:1,fade:.15};
+    if(SP.hang&&player.mode==='lift'&&!activeCar) return {n:'U_Swim_Fwd_Loop',ts:SP.hang.up>=0?1.6:.15,climb:1,fade:.12};
     if(activeCar||player.mode!=='walk'||(typeof HIDE!=='undefined'&&HIDE.on)||state.downT>0) return null;
     if(p.pos.y-HIP<WATER_Y-.2) return mv?{n:'U_Swim_Fwd_Loop',ts:clamp(sp/2.5,.6,1.5)}:{n:'U_Swim_Idle_Loop'};
     const air=!player.ground; if(air){ if(!A.airAt) A.airAt=now; A.landAt=0; } else if(A.airAt){ if(now-A.airAt>.35) A.landAt=now; A.airAt=0; }
@@ -10242,15 +10367,16 @@ function updateProjs(dt){
     const ns=q.type==='bullet'?8:3;
     for(let s=0;s<ns&&!dead;s++){ q.pos.addScaledVector(q.vel,dt/ns);
       if(XP.in&&XP.in.tanks&&zeroProjHit(q)){ dead=true; if(q.type==='shell') boom=true; break; }
+      if(SP.ar&&spArProjHit(q)){ dead=true; if(q.type==='shell') boom=true; break; }
       if(q.pos.y<=groundHeight(q.pos.x,q.pos.z,q.pos.y)+.02||solidAt(q.pos.x,q.pos.y,q.pos.z)){ dead=true; boom=q.type==='shell'; try{ machHit(q.pos.x,q.pos.y,q.pos.z); }catch(e){} if(!boom) Snd.tink(q.pos.x,q.pos.z); break; }
       if(PQ.built&&pqProjHit(q)){ dead=true; if(q.type==='shell') boom=true; break; }
       if(CQ.on&&cqProjHit(q)){ dead=true; if(q.type==='shell') boom=true; break; }
       if(BULL.on&&bullProjHit(q)){ dead=true; if(q.type==='shell') boom=true; break; }
-      for(const o of dyn){ if(o.isPlayer) continue; let hit=false;
+      for(const o of dyn){ if(o.isPlayer||(o.climber&&!o.g.visible)) continue; let hit=false;
         if(o.isPerson){ const sc=o.mode==='ragdoll'?1:Math.max(1,o.g.scale.y/.82), foot=o.mode==='ragdoll'?o.pos.y-.5:o.pos.y-HIP; hit=Math.hypot(o.pos.x-q.pos.x,o.pos.z-q.pos.z)<(sc>1.3?Math.max(.5,(o.r||.42)*.85):.5)&&q.pos.y>foot&&q.pos.y<foot+1.95*sc; }
         else hit=q.pos.distanceTo(o.pos)<o.r+.12;
         if(!hit) continue; dead=true; if(o.isPerson&&o.zombie&&!o.boss&&!o.named&&!o.legShot&&q.type!=='shell'&&o.mode!=='ragdoll'&&q.pos.y<o.pos.y-HIP+.75&&o.zspeed){ o.legShot=true; o.zspeed*=.35; }
-        if(q.type==='shell') boom=true; else if(q.bean&&o.isPerson){ knock(o,q.vel.x*.14,5,q.vel.z*.14,6); if(!o.zombie) civHurt(o,.3); else o.atkCD=Math.max(o.atkCD||0,1.5); } else nailHit(o,q.vel,(q.type==='bullet'?1.5:1)*(q.dm||1),q.type==='bullet'?'shot':q.type==='pellet'?'shot':'nail'); break; }
+        if(q.type==='shell') boom=true; else if(q.bean&&o.isPerson){ knock(o,q.vel.x*.14,5,q.vel.z*.14,6); if(!o.zombie) civHurt(o,.3); else o.atkCD=Math.max(o.atkCD||0,1.5); } else { let dm=(q.type==='bullet'?1.5:1)*(q.dm||1); if(o.climber){ dm*=spHitMul(o,q.pos); SP.pm=1; } nailHit(o,q.vel,dm,q.type==='bullet'?'shot':q.type==='pellet'?'shot':'nail'); SP.pm=0; } break; }
       if(dead) break;
       for(const H of helis){ if(H===activeHeli&&q.rocket) continue; const ox=q.pos.x-H.pos.x, oz=q.pos.z-H.pos.z; if(ox*ox+oz*oz>49) continue; const fx=Math.sin(H.yaw), fz=Math.cos(H.yaw);
         for(const [off,r,y0,y1] of HC){ if(q.pos.y<H.pos.y+y0||q.pos.y>H.pos.y+y1) continue; if(Math.hypot(q.pos.x-H.pos.x-fx*off,q.pos.z-H.pos.z-fz*off)<r){ dead=true; if(q.type==='shell') boom=true; else { Snd.tink(q.pos.x,q.pos.z); vehDmg(H,q.type==='bullet'?2.5:q.type==='pellet'?1.2:1.6); } H.vel.x+=q.vel.x*.01; H.vel.z+=q.vel.z*.01; break; } } if(dead) break; }
@@ -10334,7 +10460,7 @@ addEventListener('keydown',e=>{
   if(c==='KeyE'){ player.useAt=perfT; if(!pzUse()&&!spUse()&&!hideUse()&&!liveUse()&&!craneE()&&!jetE()&&!storyE()&&!storeE()&&!sewerE()) enterExit(); }
   else if(c==='KeyF'){ if(activeHeli) heliRocket(); else if(activeCar&&padUse()){} else if((activeCar&&(activeCar.emerg||activeCar.tur||activeCar.arm))||MPG.id!==null){} else spawnSelected(); }
   else if(c==='KeyY') toggle('slow');
-  else if(c==='KeyT') openRestart();
+  else if(c==='KeyT'){ if(!spLockKey()) openRestart(); }
   else if(c==='KeyG') toggle('low');
   else if(c==='Period'){ bottleThrow(); }
   else if(c==='Comma'){ phoneToggle(); }
