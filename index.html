@@ -3291,7 +3291,13 @@ function lugRace(place){ LUG.note=''; if(LUG.unlocked) return ''; if(place===1){
   const had=LUG.streak; LUG.streak=0; lugSave(); LUG.note=had?' · Lugatti win streak back to 0/3':''; if(had&&place===null) setTimeout(()=>flash('Your Lugatti win streak is back to 0/3'),2500); return LUG.note; }
 // Vehicles R Us: the Lugatti card, with a finish picker
 function lugShop(add){ menuHead('Hypercar'); const used=GAR.cars.length, cap=garCap();
-  if(!LUG.unlocked){ add('🔒 Lugatti · '+money(LUG_PRICE),'Win 3 races in a row (Racing League or the Raceway) to unlock it · streak '+LUG.streak+'/3',null,'',true); return; }
+  if(!LUG.unlocked){ add('🔒 Lugatti · '+money(LUG_PRICE),'Win 3 races in a row (Racing League or the Raceway) to unlock it · streak '+LUG.streak+'/3',null,'',true);
+    // an unlock code box (the creator's code unlocks it straight away)
+    const row=document.createElement('div'); row.className='pick-ms'; row.style.display='flex'; row.style.gap='8px'; const inp=document.createElement('input'); inp.type='text'; inp.placeholder='Got an unlock code?'; inp.maxLength=20; inp.autocomplete='off';
+    Object.assign(inp.style,{flex:'1',minWidth:'0',padding:'10px 12px',borderRadius:'10px',border:'1px solid rgba(255,255,255,.25)',background:'rgba(255,255,255,.08)',color:'#fff',font:'inherit'});
+    const go=document.createElement('button'); go.type='button'; go.className='pick-m'; go.textContent='Unlock'; go.style.flex='0 0 auto';
+    const tryIt=()=>{ const v=inp.value.trim().toLowerCase(); if(v==='bangas'){ LUG.unlocked=true; LUG.streak=3; lugSave(); menuDone('Lugatti unlocked!'); banner('LUGATTI UNLOCKED!','The $125,000 Lugatti is now for sale here at Vehicles R Us',true); Snd.fanfare&&Snd.fanfare(); } else { inp.value=''; inp.placeholder=v?'That code doesn\'t work':'Got an unlock code?'; } };
+    inp.addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') tryIt(); }); inp.addEventListener('keyup',e=>e.stopPropagation()); go.addEventListener('click',tryIt); row.append(inp,go); cfOpts.appendChild(row); return; }
   state.lugFin=LUG_FIN_IDS.includes(state.lugFin)?state.lugFin:'two'; const row=document.createElement('div'); row.className='pick-ms'; cfOpts.appendChild(row); const bs=[];
   for(const [k,n,d] of LUG_FINS){ const b=document.createElement('button'); b.type='button'; b.className='pick-m'; b.textContent=n; b.title=d; if(k===state.lugFin) b.style.outline='3px solid #fff'; b.addEventListener('click',()=>{ state.lugFin=k; bs.forEach(o=>o.style.outline=''); b.style.outline='3px solid #fff'; }); bs.push(b); row.appendChild(b); }
   const can=ownsHouse()&&used<cap&&state.money>=LUG_PRICE;
