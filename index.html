@@ -6957,7 +6957,9 @@ const VEHM={dir:'models/veh/',near:72,far:84,tpl:{},state:{},cars:[]};
 // which game vehicle uses which model file (bicycle and quad bike keep their built-in shapes)
 const VEHM_MAP={sedan:'sedan',pickup:'pickup',van:'van',bus:'bus',icecream:'icecream',monster:'monster',firetruck:'firetruck',ambulance:'ambulance',towtruck:'towtruck',tank:'tank',armedute:'armedute',bulldozer:'bulldozer',digger:'digger',motorbike:'motorbike',dirtbike:'dirtbike',scooter:'scooter',gokart:'gokart'};
 function vmLoad(id){ if(VEHM.state[id]) return; if(!THREE.GLTFLoader||typeof VEHM_META==='undefined'||!VEHM_META[id]){ VEHM.state[id]='fail'; return; } VEHM.state[id]='loading';
-  try{ new THREE.GLTFLoader().load(VEHM.dir+id+'.glb',g=>{ try{ VEHM.tpl[id]=vmTemplate(id,g.scene); VEHM.state[id]='ok'; }catch(e){ console.warn('vehicle model',id,e); VEHM.state[id]='fail'; } },undefined,e=>{ console.warn('vehicle model',id,e); VEHM.state[id]='fail'; }); }catch(e){ VEHM.state[id]='fail'; } }
+  // .glb first; hosts that don't serve .glb get the same model as a self-contained .json
+  const tryLoad=(ext,next)=>new THREE.GLTFLoader().load(VEHM.dir+id+ext,g=>{ try{ VEHM.tpl[id]=vmTemplate(id,g.scene); VEHM.state[id]='ok'; VEHM.ext=ext; }catch(e){ console.warn('vehicle model',id,e); VEHM.state[id]='fail'; } },undefined,e=>{ if(next) next(); else { console.warn('vehicle model',id,e); VEHM.state[id]='fail'; } });
+  try{ if(VEHM.ext==='.json') tryLoad('.json'); else tryLoad('.glb',()=>tryLoad('.json')); }catch(e){ VEHM.state[id]='fail'; } }
 // one shared set of geometry and materials per model; every car of that kind reuses it
 function vmTemplate(id,root){ root.updateMatrixWorld(true); const M=VEHM_META[id], T={id,L:M.L,W:M.W,H:M.H,body:[],wheels:M.wheels.map(w=>({c:w.c,r:w.r,front:w.front,parts:[]}))};
   root.traverse(o=>{ if(!o.isMesh) return; let n=o, wi=-1; while(n){ const k=/^W(\d+)$/.exec(n.name||''); if(k){ wi=+k[1]; break; } n=n.parent; }
