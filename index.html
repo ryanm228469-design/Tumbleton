@@ -2373,7 +2373,7 @@ body.touch .dlg .nx kbd{display:none}
 			this.nodeNamesUsed = {}; // Use an THREE.ImageBitmapLoader if imageBitmaps are supported. Moves much of the
 			// expensive work of uploading a texture to the GPU off the main thread.
 
-			if ( typeof createImageBitmap !== 'undefined' && /Firefox/.test( navigator.userAgent ) === false ) {
+			if ( false ) { // Tumbleton: ImageBitmapLoader breaks textures on Safari/iPad, so always use the plain TextureLoader
 
 				this.textureLoader = new THREE.ImageBitmapLoader( this.options.manager );
 
@@ -3005,7 +3005,9 @@ body.touch .dlg .nx kbd{display:none}
 		assignTexture( materialParams, mapName, mapDef ) {
 
 			const parser = this;
-			return this.getDependency( 'texture', mapDef.index ).then( function ( texture ) {
+			return this.getDependency( 'texture', mapDef.index ).catch( function ( e ) { console.warn( 'Tumbleton: a model texture could not load, so it is left off', e ); return null; } ).then( function ( texture ) {
+
+				if ( ! texture ) return; // Tumbleton: keep the model even if one picture fails
 
 				// Materials sample aoMap from UV set 1 and other maps from UV set 0 - this can't be configured
 				// However, we will copy UV set 0 to UV set 1 on demand for aoMap
