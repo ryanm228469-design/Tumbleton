@@ -6974,7 +6974,7 @@ function vmTemplate(id,root){ root.updateMatrixWorld(true); const M=VEHM_META[vm
   root.traverse(o=>{ if(!o.isMesh) return; let n=o, wi=-1; while(n){ const k=/^W(\d+)$/.exec(n.name||''); if(k){ wi=+k[1]; break; } n=n.parent; }
     const mats=Array.isArray(o.material)?o.material:[o.material]; for(const m of mats){ if(!m.userData.vmSeen){ m.userData.vmSeen=1; m.userData.baseEnv=m.envMapIntensity=1; if(m.map) m.map.anisotropy=4; if(m.transparent) m.depthWrite=false; ALLMATS.push(m); } }
     const geo=o.geometry.clone(); geo.applyMatrix4(o.matrixWorld);
-    let pn=null; n=o; while(n){ if(/^(TUR|ARM)$/.test(n.name||'')){ pn=n.name; break; } n=n.parent; }
+    let pn=null; n=o; while(n){ if(n.name&&M.parts&&M.parts[n.name]){ pn=n.name; break; } n=n.parent; } // any named part (TUR, ARM, the gunship's FANL/FANR, the bomber's GEAR)
     if(wi>=0&&T.wheels[wi]){ const c=T.wheels[wi].c; geo.translate(-c[0],-c[1],-c[2]); T.wheels[wi].parts.push({geo,mat:o.material}); } else if(pn&&M.parts&&M.parts[pn]){ (T.parts=T.parts||{})[pn]=T.parts[pn]||[]; T.parts[pn].push({geo,mat:o.material}); } else T.body.push({geo,mat:o.material}); });
   return T; }
 // a moving part of the model (in car space) hung from a pivot, so it can turn like the built-in one did
@@ -7185,6 +7185,12 @@ const Snd=(function(){
         const lfo=ctx.createOscillator(); lfo.type='sawtooth'; lfo.frequency.value=12; const lg=ctx.createGain(); lg.gain.value=.38; lfo.type='sine'; lfo.connect(lg); lg.connect(am.gain); const g=ctx.createGain(); g.gain.value=0;
         src.connect(f); f.connect(am); am.connect(g); g.connect(out); src.start(); lfo.start(); this._h={g,lfo}; }
       const t=ctx.currentTime, H=lastHeli, vol=H?v*att(H.pos.x,H.pos.z)*(H===activeHeli?.42:.5):0; this._h.g.gain.setTargetAtTime(on?Math.min(.45,vol):0,t,.25); this._h.lfo.frequency.setTargetAtTime(4+v*13,t,.2); },
+    // v119: the gunship's low engine hum while you fly it (two soft low tones that rise a little with the fans)
+    hum(v){ if(!ctx) return; if(!this._hm){ const g=ctx.createGain(); g.gain.value=0; const f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=260; f.Q.value=.7;
+        const o1=ctx.createOscillator(); o1.type='sine'; o1.frequency.value=52; const o2=ctx.createOscillator(); o2.type='triangle'; o2.frequency.value=104.6; const g2=ctx.createGain(); g2.gain.value=.35;
+        const w=ctx.createOscillator(); w.frequency.value=.5; const wg=ctx.createGain(); wg.gain.value=.12; w.connect(wg); wg.connect(g.gain);
+        o1.connect(f); o2.connect(g2); g2.connect(f); f.connect(g); g.connect(out); o1.start(); o2.start(); w.start(); this._hm={g,o1,o2,on:false}; }
+      const t=ctx.currentTime, H=this._hm, vol=Math.max(0,Math.min(1,v)); H.g.gain.setTargetAtTime(on&&vol>.02?.2*vol:0,t,.4); H.o1.frequency.setTargetAtTime(48+vol*10,t,.5); H.o2.frequency.setTargetAtTime(97+vol*20,t,.5); },
     wind(v,fl){ if(!ctx) return; if(!this._w){ const len=ctx.sampleRate*4, bn=ctx.createBuffer(1,len,ctx.sampleRate), d=bn.getChannelData(0); let l=0;
         for(let i=0;i<len;i++){ l=(l+.02*(Math.random()*2-1))/1.02; d[i]=l*3.2; } const fade=2048; for(let i=0;i<fade;i++){ const k=i/fade; d[len-fade+i]=d[len-fade+i]*(1-k)+d[i]*k; }
         const src=ctx.createBufferSource(); src.buffer=bn; src.loop=true; const f=ctx.createBiquadFilter(); f.type='lowpass'; f.Q.value=.2; f.frequency.value=300; const f2=ctx.createBiquadFilter(); f2.type='lowpass'; f2.Q.value=.1; f2.frequency.value=900;
@@ -13807,13 +13813,24 @@ function airBuild(key,s){ const T=VEHM.tpl[key], M=VEHM_META[key], g=new THREE.G
   for(const b of T.body){ const m=new THREE.Mesh(b.geo,b.mat); m.castShadow=true; m.receiveShadow=true; g.add(m); }
   const parts={}; if(T.parts) for(const pn in T.parts){ const B=M.parts[pn], piv=[(B.mn[0]+B.mx[0])/2,(B.mn[1]+B.mx[1])/2,(B.mn[2]+B.mx[2])/2], pg=vmPart(T,pn,piv,1); pg.position.set(...piv); g.add(pg); parts[pn]=pg; }
   return {g,parts}; }
-function airModelTick(){
+// v119: soft blue rings drift down from the gunship's fans and fade away while they spin
+const FANR={list:[],pool:[],geo:null,t:0};
+function fanRing(x,y,z,q){ if(!FANR.geo) FANR.geo=new THREE.RingGeometry(.44,.68,40).rotateX(-PI/2);
+  let r=FANR.pool.pop(); if(!r){ r=new THREE.Mesh(FANR.geo,new THREE.MeshBasicMaterial({color:0x38b6ff,transparent:true,opacity:.85,depthWrite:false,side:THREE.DoubleSide,fog:true})); r.renderOrder=3; }
+  r.position.set(x,y,z); r.quaternion.copy(q); r.scale.setScalar(1); r.userData.t=0; scene.add(r); FANR.list.push(r); }
+function fanRingTick(dt){ for(let i=FANR.list.length-1;i>=0;i--){ const r=FANR.list[i]; r.userData.t+=dt; const k=r.userData.t/2; if(k>=1){ scene.remove(r); FANR.list.splice(i,1); if(FANR.pool.length<80) FANR.pool.push(r); continue; }
+    r.position.y-=dt*1.0; r.scale.setScalar(1+k*.4); r.material.opacity=.85*(1-k); } }
+const _fanP=new THREE.Vector3(), _fanQ=new THREE.Quaternion();
+function airModelTick(dt){ dt=dt||.016; fanRingTick(dt);
   if(helis.length){ if(!VEHM.state.heli) vmLoad('heli');
     if(VEHM.state.heli==='ok') for(const H of helis){ if(!(H instanceof Heli)||!H.body||!H.body.isMesh) continue; if(!H.amdl){ H.amdl=airBuild('heli',.9); H.g.add(H.amdl.g); if(H.wreck) H.amdl.g.traverse(o=>{ if(o.isMesh) o.material=burntMat; }); }
       // the built-in shape stays for its collision and aiming, but isn't drawn (the turret ball and guns are part of the model's nose)
       H.body.visible=false; H.glass.visible=false; H.rotor.visible=false; H.blur.visible=false; H.tail.visible=false; for(const k of H.tur.children) k.visible=false;
       H.amdl.g.visible=!(heliCock.visible&&heliCock.userData.H===H);
-      const r=H.rotor.rotation.y; if(H.amdl.parts.FANL) H.amdl.parts.FANL.rotation.y=r; if(H.amdl.parts.FANR) H.amdl.parts.FANR.rotation.y=-r; } }
+      const r=H.rotor.rotation.y; if(H.amdl.parts.FANL) H.amdl.parts.FANL.rotation.y=r; if(H.amdl.parts.FANR) H.amdl.parts.FANR.rotation.y=-r;
+      // rings: only while the fans are really going, the ship is shown and it's near enough to see
+      if(H.rot>.35&&!H.wreck&&H.amdl.g.visible&&H.g.visible&&!state.paused&&Math.hypot(H.pos.x-camera.position.x,H.pos.z-camera.position.z)<150){ H.ringT=(H.ringT||0)-dt; if(H.ringT<=0){ H.ringT=.26/H.rot; H.g.getWorldQuaternion(_fanQ);
+          for(const k of ['FANL','FANR']){ const f=H.amdl.parts[k]; if(!f) continue; f.getWorldPosition(_fanP); fanRing(_fanP.x,_fanP.y-.25,_fanP.z,_fanQ); } } } } }
   if(jets.length){ if(!VEHM.state.b2) vmLoad('b2');
     if(VEHM.state.b2==='ok') for(const J of jets){ if(J.small||!J.bm||!J.glow) continue; if(!J.amdl){ J.amdl=airBuild('b2',1); J.amdl.g.position.y=-.88; J.g.add(J.amdl.g); J.g.children[0].visible=false; }
       // landing gear only shows near the ground
@@ -15087,7 +15104,7 @@ function updateCamera(dt){
   { const sp=activeCar?Math.hypot(activeCar.vel.x,activeCar.vel.z):Math.hypot(player.vel.x,player.vel.z), sprint=!activeCar&&sp>7;
     let fovT=SET.fov+(activeCar?Math.min(12,sp*.28):sprint&&aimK<.1?5:0)-aimK*(fp?24:16); { const zm=gunZoom(); if(zm>1) fovT+=(SET.fov/zm-fovT)*aimK; } fovNow+=(fovT-fovNow)*Math.min(1,dt*3); if(Math.abs(camera.fov-fovNow)>.01){ camera.fov=fovNow; camera.near=clamp(.3*Math.tan(31*PI/180)/Math.tan(fovNow*PI/360),.06,.3); camera.updateProjectionMatrix(); } }
   const fpOn=fp&&state.started&&!state.over&&(activeCar||activeHeli||player.mode!=='drive');
-  player.g.visible=(!activeCar||!!activeCar.ride)&&!fpOn; if(activeCar&&activeCar.ride) riderPose(activeCar,dt); if(MPG.id!==null) gunnerTick(dt);
+  player.g.visible=(!activeCar||!!activeCar.ride)&&!fpOn&&!activeHeli; if(activeCar&&activeCar.ride) riderPose(activeCar,dt); // v119: the gunship's cabin is closed, so the pilot isn't drawn if(MPG.id!==null) gunnerTick(dt);
   if(activeJet&&!state.cine){ player.g.visible=false; detachCockpits(null); showShell(null); jetCamera(dt); return; }
   if(activeCrane&&!state.cine){ player.g.visible=false; detachCockpits(null); showShell(null); craneCamera(dt); return; }
   if(fpOn){
@@ -16067,7 +16084,7 @@ function frameBody(now){
   if(!state.paused){ simStep(sdt/2); simStep(sdt/2); updateEffects(sdt); updateWorld(dt); storyTick(sdt); policeTick(sdt); warehouseTick(sdt); lifeTick(sdt); sewerTick(sdt); crawlerFx(sdt); airTick(sdt); }
   if(state.mouseHeld&&activeHeli) heliFire(); else if(state.mouseHeld&&(locked||state.touchFire)&&WEAPONS[state.weapon].auto) punch();
   if(state.hitT>0) state.hitT-=dt; if(state.resetArm>0) state.resetArm-=dt;
-  fpsTick(dt); updateChute(dt); updateTracers(dt); Snd.heli(lastHeli?lastHeli.rot:0);
+  fpsTick(dt); updateChute(dt); updateTracers(dt); Snd.heli(lastHeli?lastHeli.rot:0); Snd.hum(activeHeli&&!state.over&&!state.paused?activeHeli.rot:0);
   { const pm=player.mode, air=state.started&&((pm==='walk'&&!player.ground)||pm==='ragdoll'||pm==='held'), sp=air?Math.hypot(player.vel.x,player.vel.y*1.2,player.vel.z):0;
     Snd.wind(player.chute?Math.min(.2,.08+sp*.02):clamp((sp-7)/34,0,1)*.6,!!player.chute); }
   mpTick(dt); updateCamera(dt); if(state.cine) cineUpdate(dt); mhTick(dt); updateBubbles(dt); storyHUD(); policeHUD(); updateGhost(); try{ screenFx(dt); }catch(e){} try{ hudLayout(dt); }catch(e){} if(state.msgT>0) state.msgT-=dt; updateHUD();
@@ -16078,7 +16095,7 @@ function frameBody(now){
   if(vmOn) updateViewModel(dt);
   try{ gauntTick(Math.min(.1,dt)); }catch(e){ if(!GAUNT.err){ GAUNT.err=1; console.warn('gauntlet',e); } }
   try{ laserTick(); if(BRV.ck!==(player.cos?player.cos.key:'-')){ BRV.ck=player.cos?player.cos.key:'-'; braceLooks(); } braceFP(); }catch(e){}
-  chunkTick(); try{ airModelTick(); }catch(e){ if(!AIRM.err){ AIRM.err=1; console.warn('air models',e); } } fogFar(); cullBegin(); renderer.clear(); renderer.render(scene,camera); cullEnd();
+  chunkTick(); try{ airModelTick(dt); }catch(e){ if(!AIRM.err){ AIRM.err=1; console.warn('air models',e); } } fogFar(); cullBegin(); renderer.clear(); renderer.render(scene,camera); cullEnd();
   if(vmOn){ renderer.clearDepth(); renderer.render(vmScene,vmCam); }
 }
 
