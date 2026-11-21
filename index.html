@@ -13601,7 +13601,7 @@ function simStep(h){
   collisions();
   if(activeCar){ player.pos.set(activeCar.pos.x,activeCar.pos.y+1,activeCar.pos.z); }
   if(activeJet){ player.pos.set(activeJet.pos.x,activeJet.pos.y,activeJet.pos.z); player.vel.copy(activeJet.vel); }
-  if(activeHeli){ player.pos.set(activeHeli.pos.x,activeHeli.pos.y+1.2,activeHeli.pos.z); player.vel.copy(activeHeli.vel); }
+  if(activeHeli){ if(activeHeli.amdl) heliSeatPos(activeHeli); else player.pos.set(activeHeli.pos.x,activeHeli.pos.y+1.2,activeHeli.pos.z); player.vel.copy(activeHeli.vel); }
   launchPads(h); fuses(h); updateProjs(h);
 }
 
@@ -13714,7 +13714,7 @@ class Heli{
 function nearestHeli(){ let best=null,bd=4.6; for(const H of helis){ if(H.wreck) continue; const d=Math.hypot(H.pos.x-player.pos.x,H.pos.z-player.pos.z); if(d<bd&&Math.abs(player.pos.y-HIP-H.pos.y)<2.6){ bd=d; best=H; } } return best; }
 function enterHeli(H){ player.crouch=false; activeHeli=H; lastHeli=H; player.mode='drive'; player.g.visible=false; player.punchT=0; closeChute(false); lastLook=-9; camYaw=H.yaw; flash('Space to lift off, Shift to go down. Click to shoot, right-click for rockets'); }
 function exitHeli(){ const H=activeHeli; activeHeli=null; const lx=Math.cos(H.yaw)*2.4, lz=-Math.sin(H.yaw)*2.4, ex=H.pos.x+lx, ez=H.pos.z+lz;
-  player.mode='walk'; player.g.visible=true; const gh=groundHeight(ex,ez,H.pos.y+.5); player.pos.set(ex,Math.max(gh,H.pos.y)+HIP,ez); player.vel.set(H.vel.x,H.vel.y,H.vel.z); player.yaw=H.yaw;
+  player.mode='walk'; player.g.visible=true; try{ riderReset(); }catch(e){} const gh=groundHeight(ex,ez,H.pos.y+.5); player.pos.set(ex,Math.max(gh,H.pos.y)+HIP,ez); player.vel.set(H.vel.x,H.vel.y,H.vel.z); player.yaw=H.yaw;
   if(H.pos.y-gh>4) flash('Jumping out! Press Space to open your parachute'); }
 function updateHeli(H,dt){
   if(H.wreck){ heliWreck(H,dt); return; }
@@ -13809,6 +13809,10 @@ function heliCockpitOn(H,dt){ if(heliCock.parent!==H.g) H.g.add(heliCock); heliC
 
 /* ---------- v118: the helicopter (a gunship with two ducted fans) and the stealth bomber (B-2) use the creator's models ---------- */
 const AIRM={err:0};
+// where the pilot sits in the gunship model (model metres; the model is scaled .9 inside the helicopter)
+const HELI_SEAT=[0,.66,3.5];
+function heliSeatPos(H){ H.g.updateMatrixWorld(); _rdv.set(HELI_SEAT[0]*.9,HELI_SEAT[1]*.9,HELI_SEAT[2]*.9); H.g.localToWorld(_rdv); player.pos.copy(_rdv); }
+function heliPilotPose(H){ const p=player; heliSeatPos(H); p.g.position.copy(p.pos); p.g.quaternion.copy(H.g.quaternion); poseRider(p,{sit:true}); }
 function airBuild(key,s){ const T=VEHM.tpl[key], M=VEHM_META[key], g=new THREE.Group(); g.scale.setScalar(s); g.name='am';
   for(const b of T.body){ const m=new THREE.Mesh(b.geo,b.mat); m.castShadow=true; m.receiveShadow=true; g.add(m); }
   const parts={}; if(T.parts) for(const pn in T.parts){ const B=M.parts[pn], piv=[(B.mn[0]+B.mx[0])/2,(B.mn[1]+B.mx[1])/2,(B.mn[2]+B.mx[2])/2], pg=vmPart(T,pn,piv,1); pg.position.set(...piv); g.add(pg); parts[pn]=pg; }
@@ -13837,12 +13841,15 @@ function airModelTick(dt){ dt=dt||.016; fanRingTick(dt);
       if(J.amdl.parts.GEAR) J.amdl.parts.GEAR.visible=J.ground||J.pos.y<14; } } }
 /* helicopters are solid: body + tail boom as a chain of circles */
 const HC=[[.35,1.2,0,2.35],[-1.9,.45,1.35,2.15],[-3.3,.45,1.35,2.15],[-4.7,.45,1.35,2.15],[-5.5,.5,1.35,3.1]];
+// v120: the gunship model is bigger and has wings with fans, so it gets its own circles: [forward, sideways, radius, bottom, top] (sideways circles are the wings and fan rings)
+const HCM=[[3.3,0,.95,.1,2.1,0],[1.9,0,1.25,0,2.6,0],[.4,0,1.3,0,2.6,0],[-1.1,0,1.1,.2,2.5,0],[-2.5,0,.85,.5,2.4,0],[-3.7,0,.75,.7,2.6,0],
+  [1.45,1.95,1.4,.35,2.2,1],[1.45,-1.95,1.4,.35,2.2,1],[1.4,3.05,.45,.6,2.1,1],[1.4,-3.05,.45,.6,2.1,1]].map(a=>[a[0],a[2],a[3],a[4],a[1]]);
 function heliCollide(){
   for(const H of helis){ const fx=Math.sin(H.yaw), fz=Math.cos(H.yaw), hy=H.pos.y;
     for(const o of dyn){ if(o.isPlayer&&activeHeli===H) continue; const ax=o.pos.x-H.pos.x, az=o.pos.z-H.pos.z; if(ax>7.5||ax<-7.5||az>7.5||az<-7.5) continue;
       const foot=isWalker(o)?o.pos.y-HIP:o.pos.y-(o.isPerson?.5:o.r), top=foot+(isWalker(o)?1.8:o.isPerson?1:o.r*2);
-      for(const [off,r,y0,y1] of HC){ if(top<hy+y0+.05||foot>hy+y1-.05) continue;
-        const cx=H.pos.x+fx*off, cz=H.pos.z+fz*off, dx=o.pos.x-cx, dz=o.pos.z-cz, rs=r+o.r, d2=dx*dx+dz*dz; if(d2>=rs*rs) continue;
+      for(const [off,r,y0,y1,sd] of (H.amdl?HCM:HC)){ if(top<hy+y0+.05||foot>hy+y1-.05) continue;
+        const cx=H.pos.x+fx*off+(sd?fz*sd:0), cz=H.pos.z+fz*off-(sd?fx*sd:0), dx=o.pos.x-cx, dz=o.pos.z-cz, rs=r+o.r, d2=dx*dx+dz*dz; if(d2>=rs*rs) continue;
         const d=Math.sqrt(d2)||.001, nx=dx/d, nz=dz/d, pen=rs-d;
         if(foot>hy+y1-.6&&o.vel.y<=0){ o.pos.y=hy+y1+(isWalker(o)?HIP:(o.isPerson?.5:o.r)); o.vel.y=0; if(isWalker(o)) o.ground=true; continue; }
         if(o.sleep) wake(o); const hm=o.isPerson?.0:Math.min(.4,(o.mass||1)/((o.mass||1)+40));
@@ -15104,7 +15111,7 @@ function updateCamera(dt){
   { const sp=activeCar?Math.hypot(activeCar.vel.x,activeCar.vel.z):Math.hypot(player.vel.x,player.vel.z), sprint=!activeCar&&sp>7;
     let fovT=SET.fov+(activeCar?Math.min(12,sp*.28):sprint&&aimK<.1?5:0)-aimK*(fp?24:16); { const zm=gunZoom(); if(zm>1) fovT+=(SET.fov/zm-fovT)*aimK; } fovNow+=(fovT-fovNow)*Math.min(1,dt*3); if(Math.abs(camera.fov-fovNow)>.01){ camera.fov=fovNow; camera.near=clamp(.3*Math.tan(31*PI/180)/Math.tan(fovNow*PI/360),.06,.3); camera.updateProjectionMatrix(); } }
   const fpOn=fp&&state.started&&!state.over&&(activeCar||activeHeli||player.mode!=='drive');
-  player.g.visible=(!activeCar||!!activeCar.ride)&&!fpOn&&!activeHeli; if(activeCar&&activeCar.ride) riderPose(activeCar,dt); // v119: the gunship's cabin is closed, so the pilot isn't drawn if(MPG.id!==null) gunnerTick(dt);
+  player.g.visible=(!activeCar||!!activeCar.ride)&&!fpOn&&!(activeHeli&&!activeHeli.amdl); if(activeCar&&activeCar.ride) riderPose(activeCar,dt); if(activeHeli&&activeHeli.amdl&&!fpOn) heliPilotPose(activeHeli); // v120: you sit in the gunship's front seat if(MPG.id!==null) gunnerTick(dt);
   if(activeJet&&!state.cine){ player.g.visible=false; detachCockpits(null); showShell(null); jetCamera(dt); return; }
   if(activeCrane&&!state.cine){ player.g.visible=false; detachCockpits(null); showShell(null); craneCamera(dt); return; }
   if(fpOn){
