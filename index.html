@@ -7995,8 +7995,8 @@ function modMenu(c){ const add=menuOpen('Tumbleton Motors · Mods · '+money(sta
   menuHead({car:'Car mods',kart:'Mods for your '+(VNAME[c.variant]||'ride'),bike:'Bike mods',heavy:'Heavy machine mods'}[vClass(c)]);
   for(const [k,n0,p,d] of MODS){ if(!modFits(c,k)) continue; if(k==='gun'&&c.tur&&!c.roofGun) continue; const n=modName(c,k,n0), have=!!c.mods[k]; add((have?'✓ ':'')+n+(have?'':' · '+money(p)),k==='gun'&&vClass(c)==='kart'?'A machine gun up front. Aim with the mouse, click or F to shoot':k==='armor'&&vClass(c)!=='car'?'Takes half damage from bullets, blasts and bites':d,()=>{ if(state.money<p){ menuDone('Not enough cash'); return; } state.money-=p; save(); const m={}; m[k]=true; applyMods(c,m); if(c.gid){ const e=GAR.cars.find(e=>e.id===c.gid); if(e){ e.mods=Object.assign(e.mods||{},m); garSave(); } } Snd.rack&&Snd.rack(); menuDone(n+' fitted!'+(c.gid?'':' Tip: drive it onto your garage ring and press F to keep it')); },'',have||state.money<p); }
   add('Close','',()=>menuDone()); }
-function repairMenu(c){ const hp=c.hp===undefined?100:c.hp, cost=Math.max(0,Math.round((100-hp)*14/10)*10+(hp<100?100:0)), add=menuOpen('Tumbleton Motors · Repairs');
-  if(hp>=100&&!burning.includes(c)) add('Nothing to fix','This '+(VNAME[c.variant]||'vehicle')+' is in perfect shape',null,'',true);
+function repairMenu(c){ const hp=c.hp===undefined?100:c.hp, marked=!!(c.dented||c.dentSum>0||c.cracked), cost=Math.max(0,Math.round((100-hp)*14/10)*10+(hp<100||marked?100:0)), add=menuOpen('Tumbleton Motors · Repairs');
+  if(hp>=100&&!marked&&!burning.includes(c)) add('Nothing to fix','This '+(VNAME[c.variant]||'vehicle')+' is in perfect shape',null,'',true);
   else add('Repair everything · '+money(cost),'Panel beating, new paint, out with the smoke. Good as new',()=>{ if(state.money<cost){ menuDone('Not enough cash'); return; } state.money-=cost; save(); repairCar(c); Snd.rack&&Snd.rack(); menuDone('Good as new!'); },'pick-go',state.money<cost);
   add('Close','',()=>menuDone()); }
 function padHere(){ const c=activeCar; if(!c||state.over) return null; const sp=Math.hypot(c.vel.x,c.vel.z); if(sp>2) return null;
@@ -10179,7 +10179,7 @@ function cbTick(dt){ if(!CB.T) return; CB.chk=(CB.chk||0)-dt; if(CB.chk<=0){ CB.
   if(!CB.own) return;
   if(SEAS.day!==CB.payDay&&CB.res>0){ const days=Math.min(3,Math.max(1,SEAS.day-CB.payDay)); CB.payDay=SEAS.day; const cash=days*CB.res*(150+(CB.mast?50:0)); earn(cash); let note='+'+money(cash); if(CB.farm){ const v=Math.min(6,CB.res)*days; GARD.veg+=v; gardSave(); note+=' · '+v+' veges'; } if(CB.mast){ for(const id in AMMO) if(state.owned[id]){ const a=ammoOf(id); a.res=Math.min(AMMO[id].tot,a.res+AMMO[id].mag); } note+=' · ammo'; } cbSave(); banner('CREW BASE REPORT',CB.res+' survivors pulled their weight: '+note); }
   else if(SEAS.day!==CB.payDay) { CB.payDay=SEAS.day; cbSave(); }
-  if(CB.shop&&activeCar&&Math.hypot(activeCar.pos.x-(CB.x-12),activeCar.pos.z-(CB.z+10))<2.4&&Math.hypot(activeCar.vel.x,activeCar.vel.z)<.8&&(activeCar.hp||100)<100&&(CB.fixT||0)<perfT){ CB.fixT=perfT+3; activeCar.hp=100; activeCar.fuel=100; const b=burning.indexOf(activeCar); if(b>=0) burning.splice(b,1); flash('The crew patched up your ride. Free of charge'); Snd.rack&&Snd.rack(); }
+  if(CB.shop&&activeCar&&Math.hypot(activeCar.pos.x-(CB.x-12),activeCar.pos.z-(CB.z+10))<2.4&&Math.hypot(activeCar.vel.x,activeCar.vel.z)<.8&&((activeCar.hp||100)<100||activeCar.dented||activeCar.dentSum>0||activeCar.cracked)&&(CB.fixT||0)<perfT){ CB.fixT=perfT+3; const fc=repairCar(activeCar); fc.hp=100; fc.fuel=100; flash('The crew patched up your ride. Free of charge'); Snd.rack&&Snd.rack(); }
   if(CB.shop&&!activeCar&&Math.hypot(player.pos.x-(CB.x-15.8),player.pos.z-(CB.z+12.8))<1.6&&(CB.ammoT||0)<perfT){ CB.ammoT=perfT+20; for(const id in AMMO) if(state.owned[id]) state.ammo[id]={mag:AMMO[id].mag,res:AMMO[id].tot-AMMO[id].mag}; save(); flash('Ammo topped up from the crew\'s stash'); }
   if(CB.towers){ CB.towerCD-=dt; if(CB.towerCD<=0){ CB.towerCD=.7; for(const [ti,[tx,tz]] of [[CB.x-18,CB.z-15],[CB.x+18,CB.z-15]].entries()){ if(TWG.on&&TWG.i===ti) continue; let best=null,bd=45*45; for(const z of people){ if(!z.zombie||z.dead||z.boss||z.named) continue; const e=(z.pos.x-tx)**2+(z.pos.z-tz)**2; if(e<bd){ bd=e; best=z; } } if(best){ const G=CB.guns&&CB.guns[ti]; if(G){ G.pv.rotation.order='YXZ'; G.pv.rotation.y=Math.atan2(best.pos.x-G.gx,best.pos.z-G.gz); G.pv.rotation.x=-Math.atan2(best.pos.y-6.7,Math.hypot(best.pos.x-G.gx,best.pos.z-G.gz)); } const tr=new THREE.Mesh(beamGeo(tx,6.7,tz,best.pos.x,best.pos.y+.3,best.pos.z,.05),copTracerMat); scene.add(tr); tracers.push({m:tr,t:.06}); Snd.pistol(tx,tz); hurt(best,2); } } } } }
 
@@ -13427,7 +13427,8 @@ function updateCar(c,dt){
   c.wheelRot=(c.wheelRot||0)+vfw*dt; const wst=clamp(yr/Math.max(3,Math.abs(vfw))*2.6*Math.sign(vfw||1),-.5,.5);
   c.wSteer=(c.wSteer||0)+(wst-(c.wSteer||0))*Math.min(1,dt*8);
   const wl=c.g.userData.wheels; if(wl) for(const w of wl){ w.spin.rotation.x=c.wheelRot/w.rad; if(w.front) w.grp.rotation.y=c.wSteer; }
-  c.g.rotation.set(c.pitch+(c.air?0:c.accP),c.yaw,c.roll+(c.tip||0));
+  // v123: in first person the car doesn't rear up when you speed off (or dip when braking), so the road stays in view
+  c.g.rotation.set(c.pitch+(c.air||(c===activeCar&&fp)?0:c.accP),c.yaw,c.roll+(c.tip||0));
   if(c.whl>.002&&!c.flipAng){ if(c.whlZ===undefined){ let z=0; for(const w of (c.g.userData.wheels||[])) z=Math.min(z,w.grp.position.z); c.whlZ=z||-.6; } _cfq.copy(c.g.quaternion); _cfv.set(0,0,c.whlZ).applyQuaternion(_cfq); c.g.quaternion.multiply(_cfq2.setFromAxisAngle(_whX,-c.whl)); _cfv2.set(0,0,c.whlZ).applyQuaternion(c.g.quaternion); c.visO=c.visO||new V3(); c.visO.subVectors(_cfv,_cfv2); c.pos.add(c.visO); }
   // flips and barrel rolls turn around the middle of the car, not its wheels
   if(c.flipLeft>0){ const sp=c.air?c.flipRate:Math.max(c.flipRate,9); const a=Math.min(c.flipLeft,sp*dt); c.flipLeft-=a; c.flipAng=(c.flipAng||0)+a; if(c.flipLeft<=1e-3){ c.flipLeft=0; c.flipAng=0; } }
@@ -13811,6 +13812,11 @@ function heliCockpitOn(H,dt){ if(heliCock.parent!==H.g) H.g.add(heliCock); heliC
 const AIRM={err:0};
 // where the pilot sits in the gunship model (model metres; the model is scaled .9 inside the helicopter)
 const HELI_SEAT=[0,.66,3.5];
+// v123: from the driver's seat the car's own tinted windows are hidden, so you see out clearly (they come back when you leave first person or the car)
+const FPG={car:null,list:new Set()};
+function fpGlass(c){ if(FPG.car!==c){ for(const m of FPG.list) m.visible=true; FPG.list.clear(); FPG.car=c; } if(!c) return;
+  c.g.traverse(o=>{ if(!o.isMesh||!o.visible||!o.material) return; const m=o.material; if(m===carGlassMat||(typeof CRACK!=='undefined'&&m===CRACK)||(m.transparent&&m.opacity<.95&&m.blending!==THREE.AdditiveBlending&&!m.isMeshBasicMaterial&&!cockpitsHas(o))){ o.visible=false; FPG.list.add(o); } }); }
+function cockpitsHas(o){ let q=o; while(q){ if(q.userData&&q.userData.P) return true; q=q.parent; } return false; }
 function heliSeatPos(H){ H.g.updateMatrixWorld(); _rdv.set(HELI_SEAT[0]*.9,HELI_SEAT[1]*.9,HELI_SEAT[2]*.9); H.g.localToWorld(_rdv); player.pos.copy(_rdv); }
 function heliPilotPose(H){ const p=player; heliSeatPos(H); p.g.position.copy(p.pos); p.g.quaternion.copy(H.g.quaternion); poseRider(p,{sit:true}); }
 function airBuild(key,s){ const T=VEHM.tpl[key], M=VEHM_META[key], g=new THREE.Group(); g.scale.setScalar(s); g.name='am';
@@ -14765,7 +14771,7 @@ function modelCockpit(P){ const g=new THREE.Group(), sp=new THREE.Group(); g.add
   return g; }
 function makeCockpit(P){
   const E=(c,i)=>({emissive:new THREE.Color(c),emissiveIntensity:i}), g=new THREE.Group(), frameM=lam('#3a3d44',E('#2a2c31',.5)), dashM=lam('#4a4e56',E('#383b42',.55)), panelM=lam('#6a6f78',E('#4a4e56',.5)), headM=lam('#b9bcc2',Object.assign({side:THREE.DoubleSide},E('#8c8f94',.6)));
-  const glassM=lam('#bfe4f6',{transparent:true,opacity:.16,depthWrite:false,side:THREE.DoubleSide,roughness:.05,metalness:.3});
+  const glassM=lam('#eef8ff',{transparent:true,opacity:.05,depthWrite:false,side:THREE.DoubleSide,roughness:.05,metalness:.1}); // v123: almost clear, so the view from the seat isn't tinted
   const box=(w,h,d,x,y,z,m)=>{ const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m); b.position.set(x,y,z); g.add(b); return b; };
   const pane=(w,h,x,y,z,ry)=>{ const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),glassM); m.position.set(x,y,z); m.rotation.y=ry; m.renderOrder=3; g.add(m); };
   const gh=P.yt-P.yb, gy=(P.yt+P.yb)/2, len=P.zf-P.zb, zc=(P.zf+P.zb)/2, t=.07;
@@ -15111,6 +15117,7 @@ function updateCamera(dt){
   { const sp=activeCar?Math.hypot(activeCar.vel.x,activeCar.vel.z):Math.hypot(player.vel.x,player.vel.z), sprint=!activeCar&&sp>7;
     let fovT=SET.fov+(activeCar?Math.min(12,sp*.28):sprint&&aimK<.1?5:0)-aimK*(fp?24:16); { const zm=gunZoom(); if(zm>1) fovT+=(SET.fov/zm-fovT)*aimK; } fovNow+=(fovT-fovNow)*Math.min(1,dt*3); if(Math.abs(camera.fov-fovNow)>.01){ camera.fov=fovNow; camera.near=clamp(.3*Math.tan(31*PI/180)/Math.tan(fovNow*PI/360),.06,.3); camera.updateProjectionMatrix(); } }
   const fpOn=fp&&state.started&&!state.over&&(activeCar||activeHeli||player.mode!=='drive');
+  try{ fpGlass(fpOn&&activeCar&&!activeCar.ride?activeCar:null); }catch(e){}
   player.g.visible=(!activeCar||!!activeCar.ride)&&!fpOn&&!activeHeli; if(activeCar&&activeCar.ride) riderPose(activeCar,dt); // v121: the pilot is hidden while flying (the creator's choice) if(MPG.id!==null) gunnerTick(dt);
   if(activeJet&&!state.cine){ player.g.visible=false; detachCockpits(null); showShell(null); jetCamera(dt); return; }
   if(activeCrane&&!state.cine){ player.g.visible=false; detachCockpits(null); showShell(null); craneCamera(dt); return; }
@@ -16792,7 +16799,9 @@ function vehDmg(v,amt){ try{ if(amt>=4&&v&&!v.net&&!v.wreck) carDent(v,amt); }ca
   if(was>70&&v.hp<=70) vehDent(v); if(was>45&&v.hp<=45){ vehDent(v); if(!burning.includes(v)) burning.push(v); if(v===activeCar||v===activeHeli) flash('Your vehicle is smoking!'); }
   if(was>20&&v.hp<=20){ if(v===activeCar||v===activeHeli) flash('It\'s on fire! Get out before it blows!'); Snd.thud(v.pos.x,v.pos.z,4); }
   if(v.hp<=0){ if(v===policeHeli&&!v.wreck){ PMIS.downT=perfT; banner('HELICOPTER DOWN','You shot down the police helicopter!'); if(state.wanted) startWanted(); } vehBoom(v); } }
-function vehDent(v){ const root=v.isHeli?v.body:v.g; if(!root) return; root.traverse(o=>{ if(!o.isMesh||!o.geometry||!o.geometry.attributes.position||o.material!==VC&&!(o.material&&o.material.vertexColors)) return;
+function vehDent(v){ const root=v.isHeli?v.body:v.g; if(!root) return; v.dented=true; root.traverse(o=>{ if(!o.isMesh||!o.geometry||!o.geometry.attributes.position||o.material!==VC&&!(o.material&&o.material.vertexColors)) return;
+    // v123: dent this car's own copy (model shapes are shared by every car of that kind, so denting them in place marked every car, even new or repaired ones)
+    if(!o.userData.dentOwn){ o.geometry=o.geometry.clone(); o.userData.dentOwn=true; }
     const P=o.geometry.attributes.position, C=o.geometry.attributes.color, sx=R(-1,1), sz=R(-1,1);
     for(let i=0;i<P.count;i++){ const x=P.getX(i), y=P.getY(i), z=P.getZ(i), k=Math.max(0,1-Math.hypot(x-sx,z-sz*1.5)/1.6)*.07+.012; P.setXYZ(i,x+R(-k,k),y-Math.random()*k,z+R(-k,k)); if(C) C.setXYZ(i,C.getX(i)*.93,C.getY(i)*.93,C.getZ(i)*.93); }
     P.needsUpdate=true; if(C) C.needsUpdate=true; o.geometry.computeVertexNormals(); }); }
