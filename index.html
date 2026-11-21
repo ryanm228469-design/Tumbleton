@@ -13601,7 +13601,7 @@ function simStep(h){
   collisions();
   if(activeCar){ player.pos.set(activeCar.pos.x,activeCar.pos.y+1,activeCar.pos.z); }
   if(activeJet){ player.pos.set(activeJet.pos.x,activeJet.pos.y,activeJet.pos.z); player.vel.copy(activeJet.vel); }
-  if(activeHeli){ if(activeHeli.amdl) heliSeatPos(activeHeli); else player.pos.set(activeHeli.pos.x,activeHeli.pos.y+1.2,activeHeli.pos.z); player.vel.copy(activeHeli.vel); }
+  if(activeHeli){ player.pos.set(activeHeli.pos.x,activeHeli.pos.y+1.2,activeHeli.pos.z); player.vel.copy(activeHeli.vel); }
   launchPads(h); fuses(h); updateProjs(h);
 }
 
@@ -13831,7 +13831,7 @@ function airModelTick(dt){ dt=dt||.016; fanRingTick(dt);
       // the built-in shape stays for its collision and aiming, but isn't drawn (the turret ball and guns are part of the model's nose)
       H.body.visible=false; H.glass.visible=false; H.rotor.visible=false; H.blur.visible=false; H.tail.visible=false; for(const k of H.tur.children) k.visible=false;
       H.amdl.g.visible=!(heliCock.visible&&heliCock.userData.H===H);
-      const r=H.rotor.rotation.y; if(H.amdl.parts.FANL) H.amdl.parts.FANL.rotation.y=r; if(H.amdl.parts.FANR) H.amdl.parts.FANR.rotation.y=-r;
+      // v121: the fans stay still (the creator's choice); the hum and blue rings show it's running
       // rings: only while the fans are really going, the ship is shown and it's near enough to see
       if(H.rot>.35&&!H.wreck&&H.amdl.g.visible&&H.g.visible&&!state.paused&&Math.hypot(H.pos.x-camera.position.x,H.pos.z-camera.position.z)<150){ H.ringT=(H.ringT||0)-dt; if(H.ringT<=0){ H.ringT=.26/H.rot; H.g.getWorldQuaternion(_fanQ);
           for(const k of ['FANL','FANR']){ const f=H.amdl.parts[k]; if(!f) continue; f.getWorldPosition(_fanP); fanRing(_fanP.x,_fanP.y-.25,_fanP.z,_fanQ); } } } } }
@@ -15111,7 +15111,7 @@ function updateCamera(dt){
   { const sp=activeCar?Math.hypot(activeCar.vel.x,activeCar.vel.z):Math.hypot(player.vel.x,player.vel.z), sprint=!activeCar&&sp>7;
     let fovT=SET.fov+(activeCar?Math.min(12,sp*.28):sprint&&aimK<.1?5:0)-aimK*(fp?24:16); { const zm=gunZoom(); if(zm>1) fovT+=(SET.fov/zm-fovT)*aimK; } fovNow+=(fovT-fovNow)*Math.min(1,dt*3); if(Math.abs(camera.fov-fovNow)>.01){ camera.fov=fovNow; camera.near=clamp(.3*Math.tan(31*PI/180)/Math.tan(fovNow*PI/360),.06,.3); camera.updateProjectionMatrix(); } }
   const fpOn=fp&&state.started&&!state.over&&(activeCar||activeHeli||player.mode!=='drive');
-  player.g.visible=(!activeCar||!!activeCar.ride)&&!fpOn&&!(activeHeli&&!activeHeli.amdl); if(activeCar&&activeCar.ride) riderPose(activeCar,dt); if(activeHeli&&activeHeli.amdl&&!fpOn) heliPilotPose(activeHeli); // v120: you sit in the gunship's front seat if(MPG.id!==null) gunnerTick(dt);
+  player.g.visible=(!activeCar||!!activeCar.ride)&&!fpOn&&!activeHeli; if(activeCar&&activeCar.ride) riderPose(activeCar,dt); // v121: the pilot is hidden while flying (the creator's choice) if(MPG.id!==null) gunnerTick(dt);
   if(activeJet&&!state.cine){ player.g.visible=false; detachCockpits(null); showShell(null); jetCamera(dt); return; }
   if(activeCrane&&!state.cine){ player.g.visible=false; detachCockpits(null); showShell(null); craneCamera(dt); return; }
   if(fpOn){
@@ -16091,7 +16091,7 @@ function frameBody(now){
   if(!state.paused){ simStep(sdt/2); simStep(sdt/2); updateEffects(sdt); updateWorld(dt); storyTick(sdt); policeTick(sdt); warehouseTick(sdt); lifeTick(sdt); sewerTick(sdt); crawlerFx(sdt); airTick(sdt); }
   if(state.mouseHeld&&activeHeli) heliFire(); else if(state.mouseHeld&&(locked||state.touchFire)&&WEAPONS[state.weapon].auto) punch();
   if(state.hitT>0) state.hitT-=dt; if(state.resetArm>0) state.resetArm-=dt;
-  fpsTick(dt); updateChute(dt); updateTracers(dt); Snd.heli(lastHeli?lastHeli.rot:0); Snd.hum(activeHeli&&!state.over&&!state.paused?activeHeli.rot:0);
+  fpsTick(dt); updateChute(dt); updateTracers(dt); Snd.heli(lastHeli&&!lastHeli.amdl?lastHeli.rot:0); // the gunship model has no chopping blades, so only its hum plays Snd.hum(activeHeli&&!state.over&&!state.paused?activeHeli.rot:0);
   { const pm=player.mode, air=state.started&&((pm==='walk'&&!player.ground)||pm==='ragdoll'||pm==='held'), sp=air?Math.hypot(player.vel.x,player.vel.y*1.2,player.vel.z):0;
     Snd.wind(player.chute?Math.min(.2,.08+sp*.02):clamp((sp-7)/34,0,1)*.6,!!player.chute); }
   mpTick(dt); updateCamera(dt); if(state.cine) cineUpdate(dt); mhTick(dt); updateBubbles(dt); storyHUD(); policeHUD(); updateGhost(); try{ screenFx(dt); }catch(e){} try{ hudLayout(dt); }catch(e){} if(state.msgT>0) state.msgT-=dt; updateHUD();
