@@ -14715,7 +14715,13 @@ addEventListener('keydown',e=>{ if(!$('guide').hidden&&(e.code==='Escape'||e.cod
 
 setTimeout(applySettings,0);
 // the FPS counter
-let fpsN=0, fpsT=0; function fpsTick(dt){ if(!SET.fps) return; fpsN++; fpsT+=dt; if(fpsT>=.5){ $('fps').textContent=Math.round(fpsN/fpsT)+' FPS'; fpsN=0; fpsT=0; } }
+// v125: performance log. Any frame that takes over 1 s (tab visible) is a 'freeze'; the last 20 are kept in localStorage 'tumbleton-perf' with what the game was drawing at the time. Settings > FPS shows the worst frame of the last 10 s, memory (Chrome only) and the freeze count.
+const PERF={worst:0,wT:0,n:0,last:null,log:[]};
+function perfGap(ms){ try{ if(document.visibilityState!=='visible'||!state.started) return; if(ms>PERF.worst) PERF.worst=ms;
+  if(ms>1000&&ms<60000){ PERF.n++; const i=renderer.info, m=performance.memory; let bl=false; try{ bl=!!BLOOD.on; }catch(e){}
+    const e={t:Math.round(performance.now()/1000),ms:Math.round(ms),heap:m?Math.round(m.usedJSHeapSize/1048576):null,calls:i.render.calls,tris:i.render.triangles,geo:i.memory.geometries,tex:i.memory.textures,ppl:people.length,cars:cars.length,blood:bl,hi:state.gfxHi};
+    PERF.last=e; PERF.log.push(e); if(PERF.log.length>20) PERF.log.shift(); try{ localStorage.setItem('tumbleton-perf',JSON.stringify(PERF.log)); }catch(err){} console.warn('[perf] long frame',e); } }catch(err){} }
+let fpsN=0, fpsT=0; function fpsTick(dt){ PERF.wT+=dt; if(PERF.wT>10){ PERF.wT=0; PERF.worst=0; } if(!SET.fps) return; fpsN++; fpsT+=dt; if(fpsT>=.5){ const m=performance.memory; $('fps').textContent=Math.round(fpsN/fpsT)+' FPS · worst '+Math.round(PERF.worst)+' ms'+(m?' · '+Math.round(m.usedJSHeapSize/1048576)+' MB':'')+(PERF.n?' · freezes '+PERF.n+' (last '+PERF.last.ms+' ms)':''); fpsN=0; fpsT=0; } }
 
 $('go').addEventListener('click',start);
 $('goonline').addEventListener('click',()=>{ start(); mpOpen(); });
@@ -16095,7 +16101,7 @@ function frame(now){
     try{ screenGuard(0); renderer.render(scene,camera); }catch(e){} } }
 function frameBody(now){
   screenGuard(0);
-  let dt=Math.min(.05,(now-last)/1000); last=now; if(!(dt>0)) dt=.001;
+  perfGap(now-last); let dt=Math.min(.05,(now-last)/1000); last=now; if(!(dt>0)) dt=.001;
   if(state.started&&!state.paused&&document.visibilityState==='visible'){ frEma+=(Math.min(dt*1000,60)-frEma)*.05; frT+=dt;
     if(frT>1.5){ frT=0; const base=state.gfxHi?PR_MAX():SET.res/100;
       if(frEma>20.5&&prScale>.55){ prScale=Math.max(.55,prScale*.85); renderer.setPixelRatio(base*prScale); resize(); frGood=0; }
