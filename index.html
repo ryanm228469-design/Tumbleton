@@ -7756,7 +7756,7 @@ function vehWpnTick(dt){ const c=activeCar; for(const v of cars) if(v.cd>0) v.cd
   const m=c.barrel.localToWorld(_tv.set(c.muz[0],c.muz[1],c.muz[2])).clone(), f=c.barrel.localToWorld(_tv2.set(c.muz[0],c.muz[1],c.muz[2]+1)), d=new V3(f.x-m.x,f.y-m.y,f.z-m.z).normalize();
   if(c.tank){ c.cd=1.5; addProj('shell',m.x,m.y,m.z,d.clone().multiplyScalar(85).add(c.vel),3); projs[projs.length-1].rocket=true; c.vel.x-=d.x*2; c.vel.z-=d.z*2;
     for(let k=0;k<4;k++) puff(m.x+d.x*k*.4,m.y+d.y*k*.4,m.z+d.z*k*.4,k?0xbdbdbd:0xffc46b,.7+k*.15,false); Snd.launch(m.x,m.z); Snd.thud(m.x,m.z,8); state.shake=Math.max(state.shake,.3); return; }
-  c.cd=.09; const Am=heliAim(c), ex=Am.x+R(-.25,.25), ey=Am.y+R(-.2,.2), ez=Am.z+R(-.25,.25); const tr=new THREE.Mesh(beamGeo(m.x,m.y,m.z,ex,ey,ez,.06),heliTracerMat); scene.add(tr); tracers.push({m:tr,t:.05}); mpShot(m.x,m.y,m.z,ex,ey,ez,1);
+  c.cd=.09; const Am=heliAim(c); let ex=Am.x+R(-.25,.25), ey=Am.y+R(-.2,.2), ez=Am.z+R(-.25,.25); try{ const sh=sgShotLine(m,ex,ey,ez,1.2); if(sh){ ex=sh.x; ey=sh.y; ez=sh.z; Am.hitO=null; } }catch(e){} const tr=new THREE.Mesh(beamGeo(m.x,m.y,m.z,ex,ey,ez,.06),heliTracerMat); scene.add(tr); tracers.push({m:tr,t:.05}); mpShot(m.x,m.y,m.z,ex,ey,ez,1);
   puff(m.x,m.y,m.z,0xffd27a,.22,false); Snd.mg(); const dir=new V3(ex-m.x,ey-m.y,ez-m.z).normalize();
   if(Am.hitO){ const o=Am.hitO; if(o.isHeli){ vehDmg(o,o.police?1.6:2.5); Snd.tink(o.pos.x,o.pos.z); if(o.police&&state.wanted&&!o.hitMsg){ o.hitMsg=true; flash('Direct hits on the police helicopter! Keep shooting'); } } else if(o instanceof Car){ vehDmg(o,2.5); o.vel.x+=dir.x*.5; o.vel.z+=dir.z*.5; Snd.tink(o.pos.x,o.pos.z); } else { nailHit(o,dir.clone().multiplyScalar(30),2.2,'shot'); if(o.isPerson&&o.zombie&&o.mode==='walk'&&o.hp<=1) knock(o,dir.x*10,4,dir.z*10,6,1); } }
   else puff(ex,ey,ez,0xb8b0a0,.3,false); }
@@ -13548,7 +13548,7 @@ function fuses(dt){
 const flashGeo=new THREE.SphereGeometry(1,16,12), debrisGeo=new THREE.BoxGeometry(.35,.35,.35);
 const debrisMats=[lam('#2b2b2b'),lam('#ff8c1a',{emissive:new THREE.Color('#ff7a00'),emissiveIntensity:.8}),lam('#c62828')];
 var mpInBoom=false;
-function explode(x,y,z,S,remote){ try{ pqBlast(x,y,z); }catch(e){} try{ sgBlast(x,y,z,S); }catch(e){} try{ cqBlast(x,y,z); }catch(e){} try{ bullBlast(x,y,z); }catch(e){} mpInBoom=true; try{ explode0(x,y,z,S,remote); } finally{ mpInBoom=false; } }
+function explode(x,y,z,S,remote){ try{ pqBlast(x,y,z); }catch(e){} try{ sgBlast(x,y,z,S,remote); }catch(e){} try{ sgBlast(x,y,z,S,remote); }catch(e){} try{ cqBlast(x,y,z); }catch(e){} try{ bullBlast(x,y,z); }catch(e){} mpInBoom=true; try{ explode0(x,y,z,S,remote); } finally{ mpInBoom=false; } }
 // how hard a blast hits something: falls off with distance, walls in the way soak most of it up
 const _bd=new V3();
 function blastHit(x,y,z,tx,ty,tz,RAD){ _bd.set(tx-x,ty-y+.9,tz-z); const d=Math.hypot(tx-x,ty-y,tz-z); if(d>RAD) return 0; const l=_bd.length()||1; _bd.multiplyScalar(1/l);
@@ -13895,6 +13895,7 @@ function heliReload(){ const H=activeHeli; if(!H) return; const a=heliAm(H); let
 function heliFire(){ const H=activeHeli; if(!H||H.rot<.8||H.gunCD>0) return; const am=heliAm(H); if(am.gT>0) return;
   if(am.g<=0){ H.gunCD=.4; if(am.gr<=0){ Snd.dry(); flash('Out of bullets. Land the helicopter to re-arm'); } return; } am.g--; H.gunCD=.085; H.gunSide=-H.gunSide;
   const A=heliAim(); aimTurret(H,A.x,A.y,A.z,1); H.g.updateMatrixWorld(true); const m=H.gp.localToWorld(_v2.set(.08*H.gunSide,0,1.06)), dx=A.x-m.x, dy=A.y-m.y, dz=A.z-m.z, L=Math.hypot(dx,dy,dz)||1;
+  try{ const sh=sgShotLine(m.clone(),A.x,A.y,A.z,1.2); if(sh){ A.x=sh.x; A.y=sh.y; A.z=sh.z; A.hitO=null; } }catch(e){}
   const tr=new THREE.Mesh(beamGeo(m.x,m.y,m.z,A.x,A.y,A.z,.07),heliTracerMat); scene.add(tr); tracers.push({m:tr,t:.05}); mpShot(m.x,m.y,m.z,A.x,A.y,A.z,1);
   puff(m.x,m.y,m.z,0xffd27a,.25,false); Snd.mg();
   const dir=new V3(dx/L,dy/L,dz/L);
@@ -16926,6 +16927,7 @@ function mpHostData(conn,d){ if(!d||typeof d!=='object') return; const P=conn.mp
   else if(d.t==='b'){ const b=mpSanBoom(d); if(b){ mpRemoteBoom(b,P.id); mpBroadcast(Object.assign({t:'b'},b),conn); } }
   else if(d.t==='zh') mpHostZHit(P,d);
   else if(d.t==='qh') pqHostHit(P,d);
+  else if(d.t==='sgh'){ try{ if(SGF.api) SGF.api.netHit(String(d.n||''),d.p,d.d); }catch(e){} }
   else if(d.t==='zs') mpHostZSpawn(P,d);
   else if(d.t==='tr'){ const m=mpShotSan(d); if(m){ mpShotShow(m); mpBroadcast(m,conn); } }
   else if(d.t==='hs'){ MPS.houses.set(P.id,mpHouseSan(d.l)); mpHouseBroadcast(); }
@@ -16941,6 +16943,7 @@ function mpClientData(d){ if(!d||typeof d!=='object') return; MP.sinceHost=0;
   else if(d.t==='c'&&typeof d.m==='string'){ const id=+d.id, o=MP.pl.get(id); if(id===-1) mpSys(d.m.slice(0,140)); else if(o) mpChatShow(o.name,o.col,d.m.slice(0,120)); }
   else if(d.t==='b'){ const b=mpSanBoom(d); if(b) mpRemoteBoom(b); }
   else if(d.t==='qb'||d.t==='qe'){ try{ pqNetIn(d); }catch(e){} }
+  else if(d.t==='sgs'||d.t==='sge'){ try{ sgNetIn(d); }catch(e){} }
   else if(d.t==='z'&&Array.isArray(d.l)) mpZApply(d.l);
   else if(d.t==='zx'){ const z=MP.nz.get(+d.id); if(z){ MP.nz.delete(+d.id); if(z.g.parent){ Snd.pop(z.pos.x,z.pos.z,true); puff(z.pos.x,z.pos.y,z.pos.z,0x9be07a,.6,true); removePerson(z); } } }
   else if(d.t==='zk'){ const r=clamp(Math.round(mpNum(d.r)),0,100); if(r){ state.defeated++; earn(r); } }
@@ -17443,7 +17446,7 @@ function sgBoot(){ if(SGF.loading) return; SGF.loading=true;
   const box=document.createElement('div'); box.innerHTML=SG_MARKUP;
   const at=new THREE.Vector3(SGF.x,0,SGF.z);
   try{ SGF.api=SG_BOOT({root, box, at, path:'models/shogun/', restYaw:Math.atan2(395-SGF.x,-360-SGF.z),
-    hud:F=>sgHud(F), num:(p,n,c)=>sgNum(p,n,c), weather:ph=>sgWeather(ph), flash:f=>{ WX.flash=Math.max(WX.flash||0,f); Snd.thunder&&Snd.thunder(); }, win:F=>sgWin(F),
+    hud:F=>sgHud(F), num:(p,n,c)=>sgNum(p,n,c), weather:ph=>sgWeather(ph), flash:f=>{ WX.flash=Math.max(WX.flash||0,f); Snd.thunder&&Snd.thunder(); }, win:F=>sgWin(F), netHit:(n,p,dm)=>mpSendHost({t:'sgh',n,p,d:dm}),
     snd:(k,p)=>sgSnd(k,p) }); }
   catch(e){ console.warn('shogun',e); SGF.api=null; return; }
   SGF.on=true; sgBuildSite(); }
@@ -17507,8 +17510,12 @@ function sgNum(p,n,crit){ const v=new THREE.Vector3(p.x+SGF.x,p.y,p.z+SGF.z).pro
   d.animate([{opacity:1,transform:'translate(-50%,-50%)'},{opacity:0,transform:'translate(-50%,-160%)'}],{duration:650,easing:'ease-out'}).onfinish=()=>d.remove(); }
 function sgWeather(ph){ if(ph===0){ if(SGF.wx){ SGF.wx=null; if(SGF.wx0) WX.kind=SGF.wx0; } return; } if(ph===1){ SGF.wx0=WX.kind; return; } SGF.wx=ph===2?'fog':'storm'; }
 function sgSnd(k,p){ if(perfT<SGF.sndT) return; SGF.sndT=perfT+.07; const x=p.x+SGF.x, z=p.z+SGF.z; if(k==='boom') Snd.boom(x,z); else if(k==='shot') Snd.bang&&Snd.bang(x,z); else if(k==='launch') Snd.launch&&Snd.launch(x,z); }
-function sgWin(F){ SGF.dead=true; brespSet('shogun'); achStat('shogun'); const first=!XP.boss.shogun; XP.boss.shogun=1; xpSave(); const cash=first?6000:1500; earn(cash);
+function sgWin(F){ if(MP.on&&MP.host) mpBroadcast({t:'sge',l:[['win']]}); SGF.dead=true; brespSet('shogun'); achStat('shogun'); const first=!XP.boss.shogun; XP.boss.shogun=1; xpSave(); const cash=first?6000:1500; earn(cash);
   banner('THE SHOGUN IS DOWN','+'+money(cash)+(first?' · the war machine from the sky is beaten. It reboots in 10 minutes':' · it reboots in 10 minutes')); Snd.fanfare&&Snd.fanfare(); SGF.bar=false; xpBossBar(''); sgWeather(0); }
+// everyone who could be fighting it: you, and (when you host an online game) your friends
+function sgPlayers(){ const veh=activeCar||activeHeli, me=veh||player, L=[{id:0,me:true,x:me.pos.x,y:veh?veh.pos.y:player.pos.y-HIP,z:me.pos.z,down:state.downT>0||!!state.over}];
+  if(MP.on&&MP.host) for(const [id,Q] of MP.pl){ if(!id||!Q.st) continue; const st=Q.st, inV=st[6]===4; L.push({id,x:st[0],y:inV?st[1]:st[1]-HIP,z:st[2],down:false}); }
+  for(const q of L){ q.lx=q.x-SGF.x; q.lz=q.z-SGF.z; q.d=Math.hypot(q.lx,q.lz); } return L; }
 // every frame
 function sgTick(dt){ const P=player.pos, dx=P.x-SGF.x, dz=P.z-SGF.z, d=Math.hypot(dx,dz);
   // the crash site is built a few seconds into every game (so it's on the map and you can see its smoke from anywhere)
@@ -17516,24 +17523,42 @@ function sgTick(dt){ const P=player.pos, dx=P.x-SGF.x, dz=P.z-SGF.z, d=Math.hypo
   if(!SGF.api&&!SGF.loading&&state.started&&(d<520||perfT-SGF.t0>8)) sgBoot();
   const A=SGF.api; if(!A) return; sgSmoke(dt);
   if(!A.ready()){ if(A.boss()&&!SGF.prep){ SGF.prep=true; A.prepare(); } return; }
-  if(SGF.dead&&!A.on()&&!SGF.hid){ SGF.hid=true; A.hide(true); }
+  // online: the host's game runs the Shogun for everyone; friends see a copy and send their hits to the host
+  const role=MP.on?(MP.host?'host':'client'):'solo'; if(A.role()!==role){ A.setRole(role); SGF.bar=false; if(role!=='client'&&SGF.dead&&brespReady('shogun')) SGF.dead=false; SGF.hid=false; A.hide(false); }
   if(d<170&&!SGF.found){ SGF.found=true; try{ xpFind('shogun','Robot crash site','A war machine fell out of the sky. Step onto the slabs to wake it',300); }catch(e){} }
-  if(d>700&&!A.on()) return;
-  const car=activeCar, me=car||player, foot=car?car.pos.y:P.y-HIP, lx=me.pos.x-SGF.x, lz=me.pos.z-SGF.z, inArena=Math.abs(lx)<80&&Math.abs(lz)<80;
+  const PLS=sgPlayers(); for(const q of PLS){ const g=A.ground(q.lx,q.lz); q.floor=Math.abs(q.lx)<80&&Math.abs(q.lz)<80&&g>0&&q.y>-2&&q.d<70; }
+  const dN=Math.min(...PLS.map(q=>q.d));
+  if(role!=='client'){
+    if(SGF.dead&&!A.on()&&!SGF.hid){ SGF.hid=true; A.hide(true); }
+    // waking it: anyone steps onto the slabs
+    if(!A.on()&&!SGF.dead&&brespReady('shogun')&&PLS.some(q=>q.floor&&!q.down)){ if(SGF.hid){ SGF.hid=false; A.hide(false); } A.start(); sgWeather(1); SGF.tgt=-1; if(d<220) sgBanner(); }
+    // back to sleep when everyone has left (or is knocked out)
+    if(A.on()&&!A.dead()){ const gone=PLS.every(q=>q.d>100||q.down); SGF.away=gone?SGF.away+dt:0; if(SGF.away>2.5){ A.stop(); SGF.bar=false; xpBossBar(''); if(d<260) flash(state.downT>0||state.over?'The Shogun goes back to sleep':'Everyone left the crash site. The Shogun powers down'); } }
+    if(SGF.dead&&brespReady('shogun')&&PLS.every(q=>q.d>140)){ SGF.dead=false; if(A.on()) A.stop(); SGF.hid=false; A.hide(false); }
+    // who it goes after: the nearest player on the slabs, re-picked every few seconds
+    if(A.on()){ SGF.tT=(SGF.tT||0)-dt; let T=PLS.find(q=>q.id===SGF.tgt); if(!T||T.down||!T.floor||SGF.tT<=0){ const b=A.at, c=PLS.filter(q=>q.floor&&!q.down); const pool=c.length?c:PLS.filter(q=>!q.down); pool.sort((u,v)=>Math.hypot(u.lx-b.x,u.lz-b.z)-Math.hypot(v.lx-b.x,v.lz-b.z)); T=pool[0]||PLS[0]; SGF.tgt=T.id; SGF.tT=3; } SGF.T=T; } else SGF.T=null;
+  } else { const S=A.snapState(); const on=!!(S&&S.o); if(on&&!SGF.wasOn&&d<220) sgBanner(); SGF.wasOn=on; SGF.T=null; }
   // falling into the pit: back up onto the floor, hurt
-  if(inArena&&foot<-6){ const t=A.safeTile(lx,lz); me.pos.x=SGF.x+t.x; me.pos.z=SGF.z+t.z; me.pos.y=car?1:HIP+.3; if(me.vel) me.vel.set(0,0,0); if(!car) damagePlayer(A.on()?20:8); else vehDmg(car,10); flash('You climbed out of the pit'); }
-  // waking it, and putting it back to sleep when you leave or get knocked out
-  const onFloor=inArena&&A.ground(lx,lz)>0&&foot>-2&&Math.hypot(lx,lz)<70;
-  if(!A.on()&&!SGF.dead&&onFloor&&state.downT<=0&&!state.over&&brespReady('shogun')){ if(SGF.hid){ SGF.hid=false; A.hide(false); } A.start(); sgWeather(1); banner('THE SHOGUN','Raid boss · weak spots: its head, the shoulder cannon and the green light on its chest'); Snd.sting&&Snd.sting(); }
-  if(A.on()&&!A.dead()){ SGF.away=d>100?SGF.away+dt:0; if(SGF.away>2.5||state.downT>0||state.over){ A.stop(); SGF.bar=false; xpBossBar(''); flash(state.downT>0||state.over?'The Shogun goes back to sleep':'You left the crash site. The Shogun powers down'); } }
-  if(SGF.dead&&brespReady('shogun')&&d>140){ SGF.dead=false; if(A.on()) A.stop(); SGF.hid=false; A.hide(false); }
-  if(d>700) return;
-  const r=A.tick(dt,{x:lx,y:foot,z:lz,hp:car?100:state.hp});
+  const car=activeCar, veh=activeCar||activeHeli, me=veh||player, foot=veh?veh.pos.y:P.y-HIP, lx=me.pos.x-SGF.x, lz=me.pos.z-SGF.z, inArena=Math.abs(lx)<80&&Math.abs(lz)<80;
+  if(inArena&&foot<-6&&!activeHeli){ const t=A.safeTile(lx,lz); me.pos.x=SGF.x+t.x; me.pos.z=SGF.z+t.z; me.pos.y=car?1:HIP+.3; if(me.vel) me.vel.set(0,0,0); if(!car) damagePlayer(A.on()?20:8); else vehDmg(car,10); flash('You climbed out of the pit'); }
+  if(role==='host') sgSend(dt,dN);
+  if(dN>700||(role==='client'&&d>700)) return;
+  const T=SGF.T&&!SGF.T.me?{x:SGF.T.lx,y:SGF.T.y,z:SGF.T.lz}:null;
+  const r=A.tick(dt,{x:lx,y:foot,z:lz,hp:veh?100:state.hp},T);
+  if(role==='host') sgSend(0,dN);
   // pushes (its legs, cover blocks, wind) and hits come back to you
-  if(r.push.lengthSq()>1e-8&&!car){ P.x+=r.push.x; P.z+=r.push.z; }
-  if(r.dmg>0){ if(car) vehDmg(car,r.dmg*.6); else damagePlayer(r.dmg); }
-  for(const k of r.knocks){ if(car){ car.vel.x+=k.dx*k.n*.4; car.vel.z+=k.dz*k.n*.4; } else if(k.n>=15&&player.mode==='walk'&&state.downT<=0){ knock(player,k.dx*(8+k.n*.25),5+k.n*.12,k.dz*(8+k.n*.25),5); } else if(player.vel){ player.vel.x+=k.dx*6; player.vel.z+=k.dz*6; } }
+  if(r.push.lengthSq()>1e-8&&!veh){ P.x+=r.push.x; P.z+=r.push.z; }
+  if(r.dmg>0){ if(veh) vehDmg(veh,r.dmg*.6); else damagePlayer(r.dmg); }
+  for(const k of r.knocks){ if(veh){ if(veh.vel){ veh.vel.x+=k.dx*k.n*.4; veh.vel.z+=k.dz*k.n*.4; } } else if(k.n>=15&&player.mode==='walk'&&state.downT<=0){ knock(player,k.dx*(8+k.n*.25),5+k.n*.12,k.dz*(8+k.n*.25),5); } else if(player.vel){ player.vel.x+=k.dx*6; player.vel.z+=k.dz*6; } }
   if(r.shake>0&&!reduceMotion) state.shake=Math.max(state.shake,Math.min(.6,r.shake*.45*Math.max(0,1-d/160))); }
+function sgBanner(){ banner('THE SHOGUN','Raid boss · weak spots: its head, the shoulder cannon and the green light on its chest'); Snd.sting&&Snd.sting(); }
+// the host sends what the Shogun does (events every frame, its pose 12 times a second, the whole floor every 2 s)
+function sgSend(dt,dN){ const A=SGF.api, ev=A.events(); if(ev.length) mpBroadcast({t:'sge',l:ev}); if(!dt) return;
+  SGF.sT=(SGF.sT||0)-dt; SGF.fT=(SGF.fT||0)-dt; const near=dN<900||A.on(); if(SGF.sT>0) return; SGF.sT=near?1/12:1;
+  const full=SGF.fT<=0; if(full) SGF.fT=2; try{ mpBroadcast(A.snap(full)); }catch(e){ console.warn('shogun send',e); } }
+// a friend's game: what the host sends
+function sgNetIn(d){ const A=SGF.api; if(!A||!A.ready()) return; if(d.t==='sge'&&Array.isArray(d.l)&&d.l.some(e=>Array.isArray(e)&&e[0]==='win')){ if(Math.hypot(player.pos.x-SGF.x,player.pos.z-SGF.z)<320) sgWin(); }
+  A.netIn(d); }
 // your weapons against it (points in the world; shells blow up on it)
 function sgLocal(x,y,z){ return new THREE.Vector3(x-SGF.x,y,z-SGF.z); }
 function sgLive(){ const A=SGF.api; return !!(A&&A.ready()&&A.boss()&&A.boss().visible); }
@@ -17545,13 +17570,17 @@ function sgProjHit(q){ if(!sgLive()) return false; const A=SGF.api, p=sgLocal(q.
   const n=(q.type==='bullet'?1.5:1)*(q.dm||1); if(!A.hitAt(p,n)) return false; Snd.tink&&Snd.tink(q.pos.x,q.pos.z); return true; }
 function sgMelee(W,px,pz,hr){ if(!sgLive()||activeCar) return false; const A=SGF.api, foot=player.pos.y-HIP, b=A.at; if(Math.hypot(px-SGF.x-b.x,pz-SGF.z-b.z)>14) return false;
   for(const y of [foot+1,foot+.4,foot+1.6]){ const p=sgLocal(px,y,pz); if(A.hitAt(p,(W.dmg||1)*2,hr*.6)) return true; } return false; }
-function sgBlast(x,y,z,S){ if(!sgLive()) return; const p=sgLocal(x,y,z), b=SGF.api.at; if(Math.hypot(p.x-b.x,p.z-b.z)>26) return; SGF.api.blast(p,30*(S||1),9*(S||1)); }
+function sgBlast(x,y,z,S,remote){ if(!sgLive()||(remote&&remote!=='chaos')) return; const p=sgLocal(x,y,z), b=SGF.api.at; if(Math.hypot(p.x-b.x,p.z-b.z)>26) return; SGF.api.blast(p,30*(S||1),9*(S||1)); }
 // the gauntlet's beam: stops on the robot (or its cover) and burns it
 function sgRay(o,d,maxT){ if(!sgLive()) return null; const A=SGF.api, ol=sgLocal(o.x,o.y,o.z), b=A.at; const cx=b.x-ol.x, cz=b.z-ol.z, t=cx*d.x+cz*d.z; if(Math.hypot(cx-d.x*t,cz-d.z*t)>18&&Math.hypot(cx,cz)>18) return null;
   return A.rayHit(ol,d.clone(),maxT); }
+// vehicle guns (helicopter, armed ute, tank and roof guns): an instant line from the muzzle; stops on the Shogun (or its cover) and hurts it
+function sgShotLine(m,x,y,z,n){ if(!sgLive()) return null; const d=new THREE.Vector3(x-m.x,y-m.y,z-m.z), L=d.length(); if(L<.01) return null; d.divideScalar(L);
+  const h=sgRay(m,d,L+2); if(!h) return null; const p=new THREE.Vector3(m.x+d.x*h.t,m.y+d.y*h.t,m.z+d.z*h.t);
+  if(h.name){ SGF.api.hurtAt(h.name,sgLocal(p.x,p.y,p.z),n); Snd.tink&&Snd.tink(p.x,p.z); } else puff(p.x,p.y,p.z,0x9a9a9a,.3,false); return p; }
 
 const SG_MARKUP="<div id=\"stage\"></div>\n<header>\n  <div><h1>Raid Boss <span>Shogun</span></h1><div class=\"sub\">Drag to turn \u00b7 right-drag, Shift-drag or two fingers to slide \u00b7 scroll or pinch to zoom \u00b7 double-tap a spot to fly to it \u00b7 WASD/arrows to slide, Q/E down/up</div></div>\n  <div class=\"scale\">Boss <b>17 m</b> tall<br>Person <b>1.8 m</b></div>\n</header>\n<div id=\"edpanel\" hidden>\n  <div class=\"row\" style=\"margin-bottom:8px\"><button type=\"button\" id=\"edmode\">Picking: body parts</button><select id=\"edpart\" aria-label=\"Body part\"><option value=\"\">Choose a body part\u2026</option><option value=\"HEAD\">Head</option><option value=\"NECK\">Neck</option><option value=\"TORSO\">Torso</option><option value=\"WINGS\">Wings (back)</option><option value=\"HIPS\">Hips</option><option value=\"HANG\">Front hanging piece</option><option value=\"COIL\">Disk</option><option value=\"UARM_L\">Upper arm (robot\u2019s right)</option><option value=\"FARM_L\">Forearm (robot\u2019s right)</option><option value=\"HAND_L\">Hand (robot\u2019s right)</option><option value=\"UARM_R\">Upper arm (robot\u2019s left)</option><option value=\"FARM_R\">Forearm (robot\u2019s left)</option><option value=\"HAND_R\">Hand (robot\u2019s left)</option><option value=\"THIGH_L\">Thigh (robot\u2019s right)</option><option value=\"SHIN_L\">Shin (robot\u2019s right)</option><option value=\"FOOT_L\">Foot (robot\u2019s right)</option><option value=\"THIGH_R\">Thigh (robot\u2019s left)</option><option value=\"SHIN_R\">Shin (robot\u2019s left)</option><option value=\"FOOT_R\">Foot (robot\u2019s left)</option><option value=\"W_SWORD\">Sword</option><option value=\"W_CANNON\">Arm cannon</option><option value=\"W_BACK\">Back gun</option></select></div>\n  <p id=\"edinfo\">Tap a body part, or choose one from the list.</p>\n  <div class=\"lab\">Turn (as you see it)</div>\n  <div class=\"g\"><button type=\"button\" data-a=\"ccw\">\u21ba Anticlockwise</button><button type=\"button\" data-a=\"cw\">\u21bb Clockwise</button><button type=\"button\" data-a=\"reset\">Put back</button>\n  <button type=\"button\" data-a=\"tu\">Tip top away</button><button type=\"button\" data-a=\"td\">Tip top to me</button><button type=\"button\" data-a=\"sl\">Swing left</button></div>\n  <div class=\"g\" style=\"grid-template-columns:1fr 2fr\"><button type=\"button\" data-a=\"sr\">Swing right</button><span></span></div>\n  <div class=\"lab\">Move</div>\n  <div class=\"g\"><button type=\"button\" data-a=\"mu\">Up</button><button type=\"button\" data-a=\"ml\">Left</button><button type=\"button\" data-a=\"mi\">Away</button>\n  <button type=\"button\" data-a=\"md\">Down</button><button type=\"button\" data-a=\"mr\">Right</button><button type=\"button\" data-a=\"mo\">Closer</button></div>\n  <div class=\"row\"><button type=\"button\" id=\"edstep\">Small steps</button><button type=\"button\" id=\"edcopy\">Copy my changes</button><button type=\"button\" id=\"edclear\">Undo all</button></div>\n  <p style=\"margin:8px 0 0\"><span id=\"edcount\">Nothing changed yet</span>. Your changes are saved in this browser. Tap Copy my changes and paste it to Claude to keep them for the game.</p>\n</div>\n<div id=\"atkpanel\" hidden><div class=\"lab\">Attacks \u00b7 tap one to watch it</div><div class=\"ag\">\n  <button type=\"button\" data-k=\"combo1\">Sword combo 1</button><button type=\"button\" data-k=\"combo2\">Sword combo 2</button><button type=\"button\" data-k=\"lunge\">Lunge stab</button><button type=\"button\" data-k=\"smash\">Overhead smash</button>\n  <button type=\"button\" data-k=\"laser\">Charged laser</button><button type=\"button\" data-k=\"rapid\">Rapid fire</button><button type=\"button\" data-k=\"missiles\">Missile barrage</button><button type=\"button\" data-k=\"shell\">Shoulder cannon</button>\n  <button type=\"button\" data-k=\"stomp\">Stomp</button><button type=\"button\" data-k=\"leap\">Thruster leap</button><button type=\"button\" data-k=\"roar\">Battle roar</button><button type=\"button\" data-k=\"sheathe\">Sword on back and out</button></div></div>\n<div id=\"pkpanel\" hidden><div class=\"top\"><span>Playing: <b id=\"pkNow\">nothing yet</b> <span id=\"pkTime\"></span></span><button type=\"button\" id=\"pkRep\" aria-pressed=\"true\">Repeat: on</button></div><div id=\"pkList\">Loading the animations\u2026</div>\n  <p class=\"note\">Animations from the Universal Animation Library 2 by Quaternius (CC0), copied onto the robot exactly as they are in the pack.</p></div>\n<div id=\"szpanel\" hidden><div class=\"lab\"><span>Robot size</span><b id=\"szval\">17 m</b></div>\n  <input type=\"range\" id=\"szr\" min=\"4\" max=\"60\" step=\"0.5\" value=\"17\" aria-label=\"Robot height in metres\">\n  <div class=\"row\"><button type=\"button\" data-sz=\"6\">6 m</button><button type=\"button\" data-sz=\"12\">12 m</button><button type=\"button\" data-sz=\"17\">17 m (normal)</button><button type=\"button\" data-sz=\"30\">30 m</button><button type=\"button\" data-sz=\"50\">50 m</button></div></div>\n<div id=\"anpanel\" hidden>\n  <div class=\"row\"><select id=\"anSel\" aria-label=\"Animation\"></select><button type=\"button\" id=\"anPlay\">\u25b6 Play</button><span id=\"anTime\">0.00 / 0.00 s</span></div>\n  <div id=\"anTrack\" aria-label=\"Timeline: tap to move through time, tap a diamond to pick a key, drag it to change its time\"><div id=\"anHead\"></div></div>\n  <div class=\"row\"><button type=\"button\" id=\"anPrev\">\u25c0 Key</button><button type=\"button\" id=\"anNext\">Key \u25b6</button><button type=\"button\" id=\"anAdd\">+ Key here</button><button type=\"button\" id=\"anDel\" data-need>Delete key</button>\n    <button type=\"button\" id=\"anHit\" data-need>Hit speed: off</button><button type=\"button\" id=\"anSw\" data-need>Sword: in hand</button><button type=\"button\" id=\"anRollL\" data-need>Roll blade \u21ba</button><button type=\"button\" id=\"anRollR\" data-need>Roll blade \u21bb</button></div>\n  <p id=\"anInfo\"></p>\n  <div class=\"sl\"><label>Chest turn <span>0</span><input type=\"range\" id=\"anTurn\" min=\"-1.5\" max=\"1.5\" step=\"0.01\" data-need></label>\n    <label>Chest lean <span>0</span><input type=\"range\" id=\"anLean\" min=\"-1\" max=\"1.5\" step=\"0.01\" data-need></label>\n    <label>Chest tilt <span>0</span><input type=\"range\" id=\"anTilt\" min=\"-1\" max=\"1\" step=\"0.01\" data-need></label>\n    <label>Hips turn <span>0</span><input type=\"range\" id=\"anHips\" min=\"-1.2\" max=\"1.2\" step=\"0.01\" data-need></label>\n    <label>Body height <span>0</span><input type=\"range\" id=\"anHeight\" min=\"1.2\" max=\"5\" step=\"0.01\" data-need></label></div>\n  <div class=\"sl\"><label>Blade length (all moves) <span>1.00</span><input type=\"range\" id=\"anBladeL\" min=\"0.3\" max=\"2\" step=\"0.01\" value=\"1\"></label>\n    <label>Blade thickness (all moves) <span>1.00</span><input type=\"range\" id=\"anBladeT\" min=\"0.3\" max=\"3\" step=\"0.01\" value=\"1\"></label></div>\n  <p id=\"anRed\"></p>\n  <div class=\"row\"><button type=\"button\" id=\"anSlow\">Slower</button><button type=\"button\" id=\"anFast\">Faster</button><button type=\"button\" id=\"anCopy\">Copy my animation</button><button type=\"button\" id=\"anReset\">Put this one back</button></div>\n  <p><span id=\"anCount\">Nothing changed yet</span>. Changes are saved in this browser. Tap Copy my animation and paste it to Claude to keep them for the game.</p>\n</div>\n<div id=\"fgHud\" hidden><div id=\"fgHurt\"></div><div id=\"fgCross\"></div>\n  <div id=\"fgBoss\"><div class=\"nm\"><div>Raid Boss <span>Shogun</span></div><div id=\"fgPhase\">Phase 1</div></div><div class=\"fgbar\" id=\"fgBossBar\"><b></b><i></i><u style=\"left:66.6%\"></u><u style=\"left:33.3%\"></u></div></div>\n  <div id=\"fgMe\"><div class=\"nm\">You</div><div class=\"fgbar\" id=\"fgMeBar\"><b></b><i></i></div></div>\n  <div id=\"fgTip\"></div><div id=\"fgWind\"><i>\u2191</i> Wind</div></div>\n<div id=\"fgTouch\" hidden><div id=\"fgStick\"><div id=\"fgKnob\"></div></div><button type=\"button\" id=\"fgDodge\">Dodge</button></div>\n<div id=\"fgEnd\" hidden><h2 id=\"fgEndT\"></h2><p id=\"fgEndS\"></p><div class=\"row\"><button type=\"button\" id=\"fgAgain\">Fight again</button><button type=\"button\" id=\"fgQuit\">Stop</button></div></div>\n<div id=\"load\">Loading the Shogun\u2026</div>\n<nav id=\"moves\">\n  <button type=\"button\" id=\"m-tpose\" data-m=\"tpose\" aria-pressed=\"true\">T-pose</button>\n  <button type=\"button\" id=\"m-idle\" data-m=\"idle\" aria-pressed=\"false\">Idle</button>\n  <button type=\"button\" id=\"m-walk\" data-m=\"walk\" aria-pressed=\"false\">Walk</button>\n  <button type=\"button\" id=\"m-jog\" data-m=\"jog\" aria-pressed=\"false\">Jog</button>\n  <button type=\"button\" id=\"m-edit\" aria-pressed=\"false\">Edit pieces</button>\n  <button type=\"button\" id=\"m-atk\" aria-pressed=\"false\">Attacks</button>\n  <button type=\"button\" id=\"m-anim\" aria-pressed=\"false\">Animate</button>\n  <button type=\"button\" id=\"m-pack\" aria-pressed=\"false\">Pack moves</button>\n  <button type=\"button\" id=\"m-fight\" aria-pressed=\"false\">Fight</button>\n  <button type=\"button\" id=\"m-size\" aria-pressed=\"false\">Size</button>\n  <button type=\"button\" id=\"m-view\">Reset view</button>\n</nav>";
-function SG_BOOT(GAME){ const addEventListener=()=>{}; const SGBOX=GAME.box, SGD=id=>SGBOX.querySelector('#'+id);
+function SG_BOOT(GAME){ const addEventListener=()=>{}; const SGBOX=GAME.box, SGD=id=>SGBOX.querySelector('#'+id); const NET={role:'solo',q:[],quiet:0,snap:null,inQ:[],n:0}, ME=new THREE.Vector3();
 const stage=SGD('stage');
 const R={domElement:document.createElement('canvas'),setPixelRatio(){},setSize(){},render(){},getPixelRatio:()=>1,shadowMap:{}};
 const S=GAME.root; S.background=new THREE.Color(0x1a2230); S.fog=new THREE.Fog(0x1a2230,60,170);
@@ -18196,7 +18225,7 @@ function glowBall(p,col,size,life,core){ size*=SZ; const m=new THREE.Mesh(new TH
   fxAdd({m,life,tick:(o,k)=>{ m.scale.setScalar(size*(.3+.7*Math.sqrt(k))); m.material.opacity=(1-k)*(core?1:.85); }}); return m; }
 function boom0(p,size,opt){ opt=opt||{}; glowBall(p,0xc83a08,size,.75); glowBall(p,0xff9a30,size*.6,.45,true); glowBall(p,0xffe0a0,size*.3,.25,true); shock(p.x,p.z,size*2.4,0xffb070); dust(p,opt.dust||6,size*.6);
   if(opt.crack) decal(crackTex,p,size*2.2,6); decal(scorchTex,p,size*1.6,7,.8); shake=Math.max(shake,opt.shake||.4); knockAt(p,opt.knock||size*1.4); }
-function marker(p,life){ const g=new THREE.Group(); const ring=new THREE.Mesh(new THREE.RingGeometry(1.6,2,40),new THREE.MeshBasicMaterial(Object.assign({color:0xff2030,opacity:.9,side:THREE.DoubleSide},ADD)));
+function marker0(p,life){ const g=new THREE.Group(); const ring=new THREE.Mesh(new THREE.RingGeometry(1.6,2,40),new THREE.MeshBasicMaterial(Object.assign({color:0xff2030,opacity:.9,side:THREE.DoubleSide},ADD)));
   const disc=new THREE.Mesh(new THREE.CircleGeometry(1.6,32),new THREE.MeshBasicMaterial(Object.assign({color:0xff2030,opacity:.25,side:THREE.DoubleSide},ADD)));
   g.add(ring,disc); g.rotation.x=-Math.PI/2; g.position.set(p.x,.06,p.z); g.scale.setScalar(SZ); fx.add(g);
   return fxAdd({m:g,life,tick:(o,k)=>{ const s=1+.12*Math.sin(o.t*14); ring.scale.setScalar(s); disc.material.opacity=.15+.25*k; }}); }
@@ -18215,9 +18244,9 @@ function missile0(from,to,flight){ const g=new THREE.Group(); g.add(new THREE.Me
   g.position.copy(from); fx.add(g); const mk=marker(to,flight+.05); const top=from.clone().add(V((Math.random()-.5)*10*SZ,(22+Math.random()*8)*SZ,(Math.random()-.5)*10*SZ)); let puffT=0; const prev=from.clone();
   fxAdd({m:g,life:flight,tick:(o,k,dt)=>{ const u=k, a=from.clone().lerp(top,u), b=top.clone().lerp(to,u); prev.copy(g.position); g.position.copy(a.lerp(b,u)); const dir=g.position.clone().sub(prev); if(dir.lengthSq()>1e-6) g.lookAt(g.position.clone().add(dir));
     puffT-=dt; if(puffT<=0){ puffT=.03; puff(g.position.clone(),1.6,0xb8b8b8,1.2,.3); } fl.scale.set(1+Math.random()*.4,1+Math.random()*.4,2+Math.random()); }, end:()=>boom(to,3.2,{shake:.45,knock:5,dust:4})}); }
-function bolt(from,to,spd){ const m=new THREE.Mesh(new THREE.SphereGeometry(.35,10,8),new THREE.MeshBasicMaterial(Object.assign({color:0x7fe8ff},ADD))); m.scale.set(SZ,SZ,5*SZ); m.position.copy(from); m.lookAt(to); fx.add(m);
+function bolt0(from,to,spd){ const m=new THREE.Mesh(new THREE.SphereGeometry(.35,10,8),new THREE.MeshBasicMaterial(Object.assign({color:0x7fe8ff},ADD))); m.scale.set(SZ,SZ,5*SZ); m.position.copy(from); m.lookAt(to); fx.add(m);
   const L=from.distanceTo(to); fxAdd({m,life:Math.max(.08,L/(spd||90)),tick:(o,k)=>{ m.position.lerpVectors(from,to,k); }, end:()=>{ glowBall(to,0x7fe8ff,1.6,.3); shock(to.x,to.z,3,0x7fe8ff); puff(to.clone().setY(.5),2,0x707070,.8,.6); decal(scorchTex,to,2.2,4,.6); knockAt(to,2.5); }}); }
-function shell(from,to,flight){ const m=new THREE.Mesh(new THREE.SphereGeometry(.9,16,12),new THREE.MeshBasicMaterial(Object.assign({color:0xffb050},ADD))); m.position.copy(from); fx.add(m); let pt=0;
+function shell0(from,to,flight){ const m=new THREE.Mesh(new THREE.SphereGeometry(.9,16,12),new THREE.MeshBasicMaterial(Object.assign({color:0xffb050},ADD))); m.position.copy(from); fx.add(m); let pt=0;
   const top=from.clone().lerp(to,.5); top.y+=Math.max(6*SZ,from.distanceTo(to)*.3);
   fxAdd({m,life:flight,tick:(o,k,dt)=>{ const a=from.clone().lerp(top,k), b=top.clone().lerp(to,k); m.position.copy(a.lerp(b,k)); m.scale.setScalar(SZ*(1+Math.random()*.25)); pt-=dt; if(pt<=0){ pt=.02; puff(m.position.clone(),2.2,0x9a9a9a,1,.2); } },
     end:()=>{ boom(to,7,{shake:1.1,crack:true,knock:14,dust:12}); sgLater(()=>shock(to.x,to.z,26,0xffd9a0),120); }}); }
@@ -18424,7 +18453,7 @@ function animsLoad(){ for(const k in ANIM_BASE) ANIMS[k]=clone(ANIM_BASE[k]); le
   if(window.SHOGUN_ANIM) Object.assign(saved,window.SHOGUN_ANIM); for(const k in saved) if(ANIMS[k]&&saved[k]&&(saved[k].keys||k==='_blade')) ANIMS[k]=clone(saved[k]); }
 animsLoad();
 // a ground hit at the sword tip (or wherever): cracks, dust, rings, shake
-function groundHit(p,big){ p=p.clone(); p.y=0; decal(crackTex,p,big?13:8,7); dust(p,big?14:7,big?5:3); shock(p.x,p.z,big?16:10,0xffd9a0); sgLater(()=>shock(p.x,p.z,big?9:6,0xff6070),90); shake=Math.max(shake,big?1.0:.6); knockAt(p,big?12:8); }
+function groundHit0(p,big){ p=p.clone(); p.y=0; decal(crackTex,p,big?13:8,7); dust(p,big?14:7,big?5:3); shock(p.x,p.z,big?16:10,0xffd9a0); sgLater(()=>shock(p.x,p.z,big?9:6,0xff6070),90); shake=Math.max(shake,big?1.0:.6); knockAt(p,big?12:8); }
 const tipGround=()=>{ const p=wpos('W_SWORD','swTip'); return p||B.position.clone(); };
 const hitFx=()=>{ shake=Math.max(shake,.3); };
 // attacks: anim = its own key poses (ANIMS); pre/post = shared animations played before and after (sword on the back and back to the hand).
@@ -18748,7 +18777,7 @@ function moveBoss(m){ const nx=BOSS.x+Math.sin(BOSS.yaw)*m, nz=BOSS.z+Math.cos(B
 function landSpot(x,z){ if(!ENV.on||groundAt(x,z)) return {x,z}; const t=nearestTile(x,z,0); return t?{x:t.x,z:t.z}:{x:BOSS.x,z:BOSS.z}; }
 
 // guns: every shot goes at the spot where you are when it is fired
-const youAt=()=>V(ppl.position.x,.6,ppl.position.z);
+const youAt=()=>V(ppl.position.x,Math.max(0,ppl.position.y)+.6,ppl.position.z);
 function gunShot0(spd){ const mz=wpos('W_CANNON','cnMz'); if(!mz) return; let to=youAt(); to=blockedEnd(mz,to); glowBall(mz,0xbff4ff,1.2,.12,true); bolt(mz,to,spd||60); shake=Math.max(shake,.08); }
 function gunTick(gap,t0){ return (t,dt,st)=>{ if(t<t0) return; st.g=(st.g||0)-dt; if(st.g>0) return; st.g=gap; gunShot(62); }; }
 function missileTick(gap){ return (t,dt,st)=>{ if(t<.3||t>1.6) return; st.g=(st.g||0)-dt; if(st.g>0) return; st.g=gap; const mz=wpos('W_BACK','bkMz'); if(!mz) return;
@@ -18763,7 +18792,7 @@ function beamTick(t,dt,st){ const mz=wpos('W_CANNON','cnMz'); if(!mz) return; co
 // the shoulder cannon slides out beside the head and swings to point at you. It eases in and out around each shooting move.
 function gunAim(dt){ const st=ACT.on&&ACT.seq[ACT.i], g=st&&!FIGHT.over&&FIGHT.deadT==null?st.gun:null;
   FIGHT.aimC=Math.max(0,Math.min(1,(FIGHT.aimC||0)+(g==='cannon'?1:-1)*dt*7)); FIGHT.aimB=Math.max(0,Math.min(1,(FIGHT.aimB||0)+(g==='back'?1:-1)*dt*5));
-  const T=V(ppl.position.x,1,ppl.position.z); aimCannon(T,ez(FIGHT.aimC)); aimBack(T,ez(FIGHT.aimB)); }
+  const T=V(ppl.position.x,Math.max(0,ppl.position.y)+1,ppl.position.z); aimCannon(T,ez(FIGHT.aimC)); aimBack(T,ez(FIGHT.aimB)); }
 const _aq=new THREE.Quaternion(), _bq=new THREE.Quaternion();
 function turnWorld(o,q){ const W=q.clone().multiply(o.getWorldQuaternion(_aq)); o.quaternion.copy(o.parent.getWorldQuaternion(_bq).invert().multiply(W)); o.updateMatrixWorld(true); }
 let CN_SPLIT=.5;
@@ -18786,11 +18815,11 @@ function aimBack(T,w){ const pv=P.WB_PIVOT; if(!pv) return; if(ATK.on) return;
   const id=new THREE.Quaternion(); for(let i=0;i<3;i++){ const mz=wpos('W_BACK','bkMz'), bd=barrelDir('W_BACK','bkMz','bkRear2'); turnWorld(pv,id.clone().slerp(new THREE.Quaternion().setFromUnitVectors(bd,T.clone().sub(mz).normalize()),w)); } }
 function beamOff(){ beam.visible=false; beamMat.opacity=0; charge.visible=false; }
 function throwBomb(){ B.updateMatrixWorld(true); const from=P.HAND_L.getWorldPosition(V(0,0,0)), y=youAt().setY(0); lob(from,y,1.05); }
-function lob(from,to,flight){ const m=new THREE.Mesh(new THREE.SphereGeometry(.7,14,10),new THREE.MeshBasicMaterial(Object.assign({color:0xff7a40},ADD))); m.position.copy(from); fx.add(m); let pt=0;
+function lob0(from,to,flight){ const m=new THREE.Mesh(new THREE.SphereGeometry(.7,14,10),new THREE.MeshBasicMaterial(Object.assign({color:0xff7a40},ADD))); m.position.copy(from); fx.add(m); let pt=0;
   const top=from.clone().lerp(to,.5); top.y+=Math.max(8*SZ,from.distanceTo(to)*.35); marker(to,flight);
   fxAdd({m,life:flight,tick:(o,k,dt)=>{ const a=from.clone().lerp(top,k), b=top.clone().lerp(to,k); m.position.copy(a.lerp(b,k)); m.scale.setScalar(SZ*(1+Math.random()*.3)); pt-=dt; if(pt<=0){ pt=.03; puff(m.position.clone(),1.6,0x777777,.8,.2); } },
     end:()=>{ boom(to,3.6,{shake:.6,crack:true,knock:6,dust:6}); }}); }
-function landSlam(){ const p=V(BOSS.x,0,BOSS.z); shock(p.x,p.z,26,0xffd9a0); sgLater(()=>shock(p.x,p.z,14,0xff6070),110); decal(crackTex,p,16,8); dust(p,22,8); shake=Math.max(shake,1.3); knockAt(p,15,30); }
+function landSlam0(){ const p=V(BOSS.x,0,BOSS.z); shock(p.x,p.z,26,0xffd9a0); sgLater(()=>shock(p.x,p.z,14,0xff6070),110); decal(crackTex,p,16,8); dust(p,22,8); shake=Math.max(shake,1.3); knockAt(p,15,30); }
 
 // ---------- the arena: a floor of tiles that can crack and fall, cover that rises and sinks, hazards from above, weather ----------
 // A plain test arena for now (the real setting is still to be decided). It changes at each phase, with smaller changes in between.
@@ -18820,7 +18849,7 @@ const tileIdx=(x,z)=>{ const k=ENV.map.get(Math.round(x/ENV.ts)+','+Math.round(z
 function groundAt(x,z){ if(!ENV.on) return true; const k=tileIdx(x,z); return k>=0&&ENV.tiles[k].st<2; }
 function nearestTile(x,z,avoidBoss){ let best=null, bd=1e18; for(const t of ENV.tiles){ if(t.st!==0) continue; if(avoidBoss&&Math.hypot(t.x-BOSS.x,t.z-BOSS.z)<avoidBoss) continue; const d=(t.x-x)**2+(t.z-z)**2; if(d<bd){ bd=d; best=t; } } return best; }
 // a tile cracks (flashing orange for a moment) and then drops into the pit; tiles near the boss hold
-function crackTile(k,delay){ const t=ENV.tiles[k]; if(!t||t.st!==0) return; t.st=1; t.t=delay||2; }
+function crackTile0(k,delay){ const t=ENV.tiles[k]; if(!t||t.st!==0) return; t.st=1; t.t=delay||2; }
 function envTiles(dt){ const im=ENV.im, M=new THREE.Matrix4(), c=new THREE.Color(); let colDirty=false, matDirty=false;
   ENV.tiles.forEach((t,k)=>{ if(t.st!==1) return; t.t-=dt; const f=.5+.5*Math.sin(T0*14+k); c.setRGB(1,1-.55*f,1-.8*f); im.setColorAt(k,c); colDirty=true;
     if(t.t<=0){ if(Math.hypot(t.x-BOSS.x,t.z-BOSS.z)<13*SZ){ t.st=0; im.setColorAt(k,c.setRGB(1,1,1)); return; }   // the boss is standing there: it holds
@@ -18851,7 +18880,7 @@ function envPillars(dt){ const want=ENV_PILLARS[ENV.ph-1];
   const cs=capsNow(); for(const p of ENV.pillars){ if(p.st==='smash'||p.st==='fall'||pillarTop(p)<1) continue; for(const c of cs){ if(!/^(THIGH|SHIN|FOOT|HIPS|W_SWORD|HAND)/.test(c.name)) continue;
       const a=B.localToWorld(c.a.clone()), b=B.localToWorld(c.b.clone()), r=c.r*B.scale.x, q=closestOnSeg(V(p.x,Math.min(pillarTop(p),Math.max(a.y,b.y)),p.z),a,b);
       if(Math.abs(q.x-p.x)<p.hw+r&&Math.abs(q.z-p.z)<p.hw+r&&q.y<pillarTop(p)+r){ p.st='smash'; p.t=0; for(let k=0;k<6;k++) puff(V(p.x+(Math.random()-.5)*p.hw*2,Math.random()*pillarTop(p),p.z+(Math.random()-.5)*p.hw*2),3,0x8a8a8a,1.2,.8); glowBall(V(p.x,pillarTop(p)*.6,p.z),0xffd9a0,2,.2); shake=Math.max(shake,.35); break; } } }
-  ENV.spT=(ENV.spT||0)-dt; if(ENV.spT<=0&&ENV.pillars.filter(p=>p.st!=='down'&&p.st!=='smash'&&p.st!=='fall').length<want){ ENV.spT=1.2; pillarSpawn(); } }
+  ENV.spT=(ENV.spT||0)-dt; if(NET.role!=='client'&&ENV.spT<=0&&ENV.pillars.filter(p=>p.st!=='down'&&p.st!=='smash'&&p.st!=='fall').length<want){ ENV.spT=1.2; pillarSpawn(); } }
 // a straight line from a to b: where does it first hit a block of cover?
 function rayBox(o,d,p){ const top=pillarTop(p); if(top<.3) return null; const mn=[p.x-p.hw,-50,p.z-p.hw], mx=[p.x+p.hw,top,p.z+p.hw], oo=[o.x,o.y,o.z], dd=[d.x,d.y,d.z]; let t0=0,t1=1e9;
   for(let i=0;i<3;i++){ if(Math.abs(dd[i])<1e-9){ if(oo[i]<mn[i]||oo[i]>mx[i]) return null; continue; } let a=(mn[i]-oo[i])/dd[i], b=(mx[i]-oo[i])/dd[i]; if(a>b) [a,b]=[b,a]; t0=Math.max(t0,a); t1=Math.min(t1,b); if(t0>t1) return null; } return t0; }
@@ -18861,9 +18890,8 @@ function blockedEnd(from,to){ if(!ENV.on) return to; const d=to.clone().sub(from
 // hazards from above: falling chunks (phase 2 on) and lightning (phase 3), aimed at where you are; red circles give a warning
 function envHazards(dt){ if(FIGHT.over||ENV.ph<2) return; ENV.hazT-=dt; if(ENV.hazT>0) return; const y=youAt().setY(0);
   if(ENV.ph>=3&&Math.random()<.6){ ENV.hazT=2.4+Math.random()*1.2; marker(y,.9); sgLater(()=>FIGHT.on&&lightning(y),900); }
-  else { ENV.hazT=ENV.ph>=3?3.2+Math.random()*1.5:3.6+Math.random()*1.6; marker(y,1.25); const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(1.8*SZ,0),new THREE.MeshStandardMaterial({color:0x6b6560,roughness:1}));
-    rock.position.set(y.x,70*SZ,y.z); rock.castShadow=true; fx.add(rock); fxAdd({m:rock,life:1.25,tick:(o,k)=>{ rock.position.y=70*SZ*(1-k*k); rock.rotation.x+=.1; rock.rotation.z+=.07; }, end:()=>{ boom(y,2.6,{shake:.5,crack:true,knock:5,dust:5}); }}); } }
-function lightning(p){ const pts=[], top=90*SZ; let x=p.x, z=p.z; for(let i=0;i<=12;i++){ const yy=top*(1-i/12); pts.push(V(x,yy,z)); x=p.x+(Math.random()-.5)*6*SZ*(1-i/12); z=p.z+(Math.random()-.5)*6*SZ*(1-i/12); } pts[pts.length-1].set(p.x,0,p.z);
+  else { ENV.hazT=ENV.ph>=3?3.2+Math.random()*1.5:3.6+Math.random()*1.6; marker(y,1.25); rockFall(y); } }
+function lightning0(p){ const pts=[], top=90*SZ; let x=p.x, z=p.z; for(let i=0;i<=12;i++){ const yy=top*(1-i/12); pts.push(V(x,yy,z)); x=p.x+(Math.random()-.5)*6*SZ*(1-i/12); z=p.z+(Math.random()-.5)*6*SZ*(1-i/12); } pts[pts.length-1].set(p.x,0,p.z);
   const g=new THREE.BufferGeometry().setFromPoints(pts), m=new THREE.Line(g,new THREE.LineBasicMaterial({color:0xdfe8ff,transparent:true,opacity:1,blending:THREE.AdditiveBlending,depthWrite:false}));
   fx.add(m); fxAdd({m,life:.25,tick:(o,k)=>{ m.material.opacity=1-k; }}); glowBall(p.clone().setY(.5),0xbfd4ff,3,.25,true); decal(scorchTex,p,5,6,.9); shock(p.x,p.z,8,0xbfd4ff); ENV.flash=1; shake=Math.max(shake,.5); knockAt(p,4.5,20); }
 
@@ -18880,7 +18908,7 @@ function envSky(dt){ const w=ENV.wx, t=ENV.wxT, k=Math.min(1,dt*.7); w.near+=(t.
 function envWind(dt){ const wi=fgEl('fgWind'); if(ENV.ph<3||FIGHT.over){ ENV.wind.multiplyScalar(Math.max(0,1-dt*2)); if(wi) wi.style.opacity=0; return; }
   ENV.gustT-=dt; if(ENV.gust<=0&&ENV.gustT<=0){ ENV.gust=3; ENV.gustT=6+Math.random()*4; const a=Math.random()*Math.PI*2; ENV.gustDir=V(Math.sin(a),0,Math.cos(a)); }
   const want=ENV.gust>0?ENV.gustDir.clone().multiplyScalar(6.5):V(0,0,0); ENV.gust=Math.max(0,ENV.gust-dt); ENV.wind.lerp(want,Math.min(1,dt*2));
-  if(PPL.t<0&&PL.dodge<=0){ ppl.position.x+=ENV.wind.x*dt; ppl.position.z+=ENV.wind.z*dt; }
+  if(PPL.t<0&&PL.dodge<=0){ ME.x+=ENV.wind.x*dt; ME.z+=ENV.wind.z*dt; }
   if(wi){ const s=ENV.wind.length(); wi.style.opacity=s>1?1:0; if(s>1){ const sa=Math.atan2(ENV.wind.x,ENV.wind.z)-FIGHT.camYaw; wi.querySelector('i').style.transform='rotate('+(-sa*180/Math.PI+180)+'deg)'; } } }
 // every frame of a fight
 function envTick(dt){ if(!ENV.on) return; envTiles(dt); envPillars(dt); envHazards(dt); envSky(dt); envWind(dt);
@@ -18991,7 +19019,7 @@ function bossHurt(n,p,crit){ if(FIGHT.deadT!=null||FIGHT.over) return; FIGHT.hp=
 function dmgNum(p,n,crit){ const v=p.clone().project(cam), r=el.getBoundingClientRect(); if(v.z>1) return; const d=document.createElement('div'); d.className='fgnum'+(crit?' crit':''); d.textContent=n;
   d.style.left=(r.left+(v.x+1)/2*r.width+(Math.random()-.5)*20)+'px'; d.style.top=(r.top+(1-v.y)/2*r.height)+'px'; document.body.appendChild(d);
   d.animate([{opacity:1,transform:'translate(-50%,-50%)'},{opacity:0,transform:'translate(-50%,-160%)'}],{duration:650,easing:'ease-out'}).onfinish=()=>d.remove(); }
-function phaseUp(ph){ FIGHT.phase=ph; FIGHT.spd=FT.phaseSpd[ph-1]; actStop(); FIGHT.pending='phase'; FIGHT.cd=0; envPhase(ph);
+function phaseUp0(ph){ FIGHT.phase=ph; FIGHT.spd=FT.phaseSpd[ph-1]; actStop(); FIGHT.pending='phase'; FIGHT.cd=0; envPhase(ph);
   if(ph===2) breakOff(['PLATE_R','KNEE_R']);
   if(ph===3){ breakOff(['WINGS']); if(!FT.glow0){ FT.glow0=glowMats.map(m=>m.emissive.clone()); FT.glow0c=glowMats.map(m=>m.color?m.color.clone():null); } glowMats.forEach(m=>{ m.emissive.set(0xff2a2a); if(m.color) m.color.set(0xff5a5a); }); }
   shake=Math.max(shake,.6); }
@@ -19005,23 +19033,23 @@ function breakOff(names){ B.updateMatrixWorld(true); for(const n of names){ cons
   }
 
 // ---------- after the pose: what hurts you, pushing you out of the robot's legs, the HUD ----------
-function fightPost(dt){ if(!FIGHT.on) return; gunAim(dt);
+function fightPost(dt){ if(!FIGHT.on) return; if(NET.role!=='client') gunAim(dt);
   // sword: the blade hurts while it is swinging fast (any sword move, the made ones and the pack's)
   let tip=null; if(BLADE&&BLADE.visible&&BLADE_LINE&&!(ATK.on&&ATK.swk>0.5)){ B.updateMatrixWorld(true); tip=BLADE.localToWorld(BLADE_LINE.t.clone()); const base=BLADE.localToWorld(BLADE_LINE.b.clone());
     FIGHT.tipV=FIGHT.tipP&&dt>0?tip.distanceTo(FIGHT.tipP)/dt:0;
-    if(FIGHT.tipV>14*SZ&&FIGHT.deadT==null&&PPL.t<0&&PL.inv<=0&&PL.dodge<=0&&!FIGHT.over){ const pc=ppl.position.clone().setY(.9), q=closestOnSeg(pc,base,tip); if(q.distanceTo(pc)<1.4*SZ+.4){ knockAt(q.clone().setY(0),40,26); } } }
+    if(FIGHT.tipV>14*SZ&&FIGHT.deadT==null&&PPL.t<0&&PL.inv<=0&&PL.dodge<=0&&!FIGHT.over){ const pc=ME.clone().setY(.9), q=closestOnSeg(pc,base,tip); if(q.distanceTo(pc)<1.4*SZ+.4){ knockAt(q.clone().setY(0),40,26); } } }
   else FIGHT.tipV=0; FIGHT.tipP=tip;
   if(tip&&FIGHT.tipV>14*SZ&&tip.y<1.3*SZ&&FIGHT.slamCd<=0&&FIGHT.deadT==null){ FIGHT.slamCd=.6; groundHit(tip,false); }   // the blade striking the floor
   // fists, the cannon arm and feet hurt you when they move fast and touch you (punches, the shield bash, the slide, being stepped on)
   { const cs=capsNow(); FIGHT.capPrev=FIGHT.capPrev||{}; let done=false; for(const c of cs){ if(!/^(HAND_|FARM_|W_CANNON|FOOT_|SHIN_)/.test(c.name)) continue; const a=B.localToWorld(c.a.clone()), b=B.localToWorld(c.b.clone()), mid=a.clone().add(b).multiplyScalar(.5), pv=FIGHT.capPrev[c.name]; FIGHT.capPrev[c.name]=mid;
-      if(done||!pv||dt<=0||mid.distanceTo(pv)/dt<13*SZ||PPL.t>=0||PL.inv>0||PL.dodge>0||FIGHT.over||FIGHT.deadT!=null) continue; const pc=ppl.position.clone().setY(.9), q=closestOnSeg(pc,a,b); if(q.distanceTo(pc)<c.r*B.scale.x+.6){ knockAt(q.clone().setY(0),40,22); done=true; } } }
-  if(ENV.on) for(const p of ENV.pillars){ if(pillarTop(p)<1) continue; const dx=ppl.position.x-p.x, dz=ppl.position.z-p.z, e=p.hw+.35; if(Math.abs(dx)<e&&Math.abs(dz)<e){ if(e-Math.abs(dx)<e-Math.abs(dz)) ppl.position.x=p.x+Math.sign(dx||1)*e; else ppl.position.z=p.z+Math.sign(dz||1)*e; } }
+      if(done||!pv||dt<=0||mid.distanceTo(pv)/dt<13*SZ||PPL.t>=0||PL.inv>0||PL.dodge>0||FIGHT.over||FIGHT.deadT!=null) continue; const pc=ME.clone().setY(.9), q=closestOnSeg(pc,a,b); if(q.distanceTo(pc)<c.r*B.scale.x+.6){ knockAt(q.clone().setY(0),40,22); done=true; } } }
+  if(ENV.on) for(const p of ENV.pillars){ if(pillarTop(p)<1) continue; const dx=ME.x-p.x, dz=ME.z-p.z, e=p.hw+.35; if(Math.abs(dx)<e&&Math.abs(dz)<e){ if(e-Math.abs(dx)<e-Math.abs(dz)) ME.x=p.x+Math.sign(dx||1)*e; else ME.z=p.z+Math.sign(dz||1)*e; } }
   // the laser beam burns while you stand in it
-  if(beam.visible&&!FIGHT.over&&PL.dodge<=0){ const a=beam.position.clone(), b=a.clone().add(V(0,0,1).applyQuaternion(beam.quaternion).multiplyScalar(beam.scale.z)), pc=ppl.position.clone().setY(.9);
+  if(beam.visible&&!FIGHT.over&&PL.dodge<=0){ const a=beam.position.clone(), b=a.clone().add(V(0,0,1).applyQuaternion(beam.quaternion).multiplyScalar(beam.scale.z)), pc=ME.clone().setY(.9);
     if(closestOnSeg(pc,a,b).distanceTo(pc)<1.6*SZ){ PL.hp=Math.max(0,PL.hp-45*dt); fgEl('fgHurt').style.opacity=.4; if(PL.hp<=0&&!FIGHT.over){ FIGHT.over='lose'; sgLater(()=>fightEnd('lose'),1600); } } }
   // you can't walk through its legs and feet
   if(PL.dodge<=0||true){ const cs=capsNow(); for(const c of cs){ if(!/^(THIGH|SHIN|FOOT|HIPS)/.test(c.name)) continue; const a=B.localToWorld(c.a.clone()), b=B.localToWorld(c.b.clone()), r=c.r*B.scale.x+.35;
-      const pc=ppl.position.clone(); pc.y=Math.max(Math.min(a.y,b.y),Math.min(Math.max(a.y,b.y),.9)); const q=closestOnSeg(pc,a,b), d=V(pc.x-q.x,0,pc.z-q.z), L=d.length(); if(Math.abs(pc.y-q.y)<r&&L<r){ if(L<1e-3) d.set(1,0,0); else d.divideScalar(L); ppl.position.addScaledVector(d,r-L); } } }
+      const pc=ME.clone(); pc.y=Math.max(Math.min(a.y,b.y),Math.min(Math.max(a.y,b.y),.9)); const q=closestOnSeg(pc,a,b), d=V(pc.x-q.x,0,pc.z-q.z), L=d.length(); if(Math.abs(pc.y-q.y)<r&&L<r){ if(L<1e-3) d.set(1,0,0); else d.divideScalar(L); ME.addScaledVector(d,r-L); } } }
   if(FT.core&&FT.coreL){ FT.core.position.copy(corePos()); FT.core.scale.setScalar(SZ*(.9+.25*Math.sin(T0*6))*(FIGHT.phase>=3?1.3:1)); FT.core.material.opacity=FIGHT.deadT!=null?0:.28+.12*Math.sin(T0*6); }
   fightHud(); }
 function closestOnSeg(p,a,b){ const ab=b.clone().sub(a), L=ab.lengthSq()||1e-9; const u=Math.max(0,Math.min(1,p.clone().sub(a).dot(ab)/L)); return a.clone().addScaledVector(ab,u); }
@@ -19079,8 +19107,8 @@ stage.addEventListener('pointerup',fgUp,true); stage.addEventListener('pointerca
 
 let last=performance.now(), T0=0, dtNow=0;
 function start(){ requestAnimationFrame(loop); }
-function tick(dt){ dtNow=dt; T0+=dt; const db=FIGHT.on?dt*FIGHT.spd:dt; mt+=db; if(B){ fightPre(dt); atkTick(db); pose(T0); atkPost(db); fightPost(dt); }
-  fxTick(dt); pplTick(dt); if(B) trailTick(dt);
+function tick(dt){ dtNow=dt; T0+=dt; const db=FIGHT.on?dt*FIGHT.spd:dt; mt+=db; if(B){ fightPre(dt); atkTick(db); pose(T0); atkPost(db); NET.quiet++; try{ fightPost(dt); } finally{ NET.quiet--; } }
+  NET.quiet++; try{ fxTick(dt); } finally{ NET.quiet--; } pplTick(dt); if(B) trailTick(dt);
   for(let i=rings.length-1;i>=0;i--){ const r=rings[i]; r.t+=dt; const k=r.t/1.1; if(k>=1){ fx.remove(r.m); r.m.geometry.dispose(); r.m.material.dispose(); rings.splice(i,1); continue; } r.m.scale.setScalar((1+k*r.size)*(r.sz||1)); r.m.material.opacity=.7*(1-k); } }
 function loop(now){ const dt=window.__shogun.freeze?0:Math.min(.05,(now-last)/1000); last=now; tick(dt); anTick(); pkTick();
   keyCam(dt); placeCam(); if(shake>0){ cam.position.x+=(Math.random()-.5)*shake; cam.position.y+=(Math.random()-.5)*shake; shake=Math.max(0,shake-dt*1.6); }
@@ -19088,13 +19116,15 @@ function loop(now){ const dt=window.__shogun.freeze?0:Math.min(.05,(now-last)/10
 
 // ================= in the game: the page's camera, controls and HUD are replaced by the game's own =================
 // (these function declarations come last, so they replace the page's versions of the same name)
+// ppl = who the robot is going after (its target); ME = you, the player on this computer (what hurts and pushes you)
 function start(){} function resize(){} function viewShift(){} function placeCam(){} function keyCam(){} function fightCam(){}
 function plMove(){} function plFire(){} function plDodge(){} function pplTick(){} function pkUI(){} function pkTick(){} function anTick(){}
 // you get hurt: the game's own health (the difference is handed to the game after each frame)
 function plHurt(n){ if(FIGHT.over||!FIGHT.on) return; PL.hp=Math.max(0,PL.hp-n); PL.inv=.6; }
-// a hit or blast near you: hurts and knocks you away from it (big hits throw you off your feet)
-function knockAt(p,r,dm){ const r0=r; r*=SZ; const dx=ppl.position.x-p.x, dz=ppl.position.z-p.z, L=Math.hypot(dx,dz); if(L>r||!FIGHT.on||FIGHT.over||PL.inv>0||FIGHT.deadT!=null) return;
-  if(ppl.position.y-(p.y||0)>Math.max(5,r)) return;   // well above the blast
+// a hit or blast near you: hurts and knocks you away from it (big hits throw you off your feet). Online, the host sends it to everyone.
+function knockAt(p,r,dm){ if(NET.role==='host'&&!NET.quiet) NET.q.push(['kn',NV(p),r,dm==null?null:dm]);
+  const r0=r; r*=SZ; const dx=ME.x-p.x, dz=ME.z-p.z, L=Math.hypot(dx,dz); if(L>r||!FIGHT.on||FIGHT.over||PL.inv>0||FIGHT.deadT!=null) return;
+  if(ME.y-(p.y||0)>Math.max(5,r)) return;   // well above the blast
   const n=dm!=null?dm:Math.min(35,6+r0*1.6); plHurt(n); SGK.push({n, dx:L>.01?dx/L:Math.sin(BOSS.yaw), dz:L>.01?dz/L:Math.cos(BOSS.yaw)}); }
 function fightHud(){ GAME.hud(FIGHT); }
 function dmgNum(p,n,crit){ GAME.num(p,n,crit); }
@@ -19104,14 +19134,14 @@ function envSky(dt){ if(ENV.flash>0){ GAME.flash(ENV.flash); ENV.flash=0; } }
 // every frame of a fight (falling through a hole is real in the game: the game puts you back on the floor)
 function envTick(dt){ if(!ENV.on) return; envTiles(dt); envPillars(dt); envHazards(dt); envSky(dt); envWind(dt);
   if(ENV.ph>=2&&!FIGHT.over){ ENV.crackT-=dt; if(ENV.crackT<=0){ ENV.crackT=ENV.ph>=3?4.5:7.5; crackPatchNear(ppl.position.x,ppl.position.z,ENV.ph>=3?3:2); } } }
-function fightStart(){ if(!B) return; fightRestore(); if(ATK.on) atkStop(); actStop(); FIGHT.stag=0; PL.fall=null;
+function fightStart(){ if(!B) return; fightRestore(); if(ATK.on) atkStop(); actStop(); FIGHT.stag=0; PL.fall=null; NET.n++;
   FIGHT.on=true; FIGHT.over=null; FIGHT.phase=1; FIGHT.spd=1; FIGHT.glowK=null; FIGHT.hpMax=FT.hpMax; FIGHT.hp=FT.hpMax; FIGHT.cd=2.2; FIGHT.last=null; FIGHT.t=0; FIGHT.deadT=null; FIGHT.pending=null;
   BOSS.x=0; BOSS.z=0; BOSS.yaw=Math.atan2(ppl.position.x,ppl.position.z); bossPlace();
   PL.hp=100; PL.inv=0; PL.dodge=0; PL.vx=PL.vz=0; PL.fireT=0; PPL.t=-1; FIGHT.camYaw=0; FIGHT.yawOff=0; FIGHT.capPrev={}; FIGHT.tipP=null;
   coreMake(); FT.core.visible=true; setMode('idle'); fightHud(); }
 function fightStop(){ actStop(); PL.fall=null; FIGHT.on=false; FIGHT.over=null; FIGHT.glowK=null; FIGHT.spd=1; FIGHT.deadT=null; FIGHT.pending=null; if(ATK.on) atkStop(); fightRestore(); beamOff();
   BOSS.x=BOSS.z=0; BOSS.yaw=GAME.restYaw; bossPlace(); if(FT.core) FT.core.visible=false; PK.speed=1; setMode('idle'); envBuild(); GAME.weather(0); fightHud(); }
-function fightEnd(r){ if(r==='win') GAME.win(FIGHT); }
+function fightEnd(r){ if(r==='win'&&NET.role!=='client') GAME.win(FIGHT); }
 
 // ---- running inside the game: while the robot's code runs, its group sits at the world's middle (the robot's code works in
 // its own arena frame), and it goes back to the crash site before the game draws. Delayed effects wait for the next frame. ----
@@ -19123,15 +19153,83 @@ function sgLoad(url,ok,prog,bad){ new THREE.GLTFLoader().load(url,sgWrap(ok),pro
 let SGC=null, SGCI=null;   // the body-part capsules right now (arena frame) and the matrix into the robot's frame, for hits between frames
 function sgCaps(){ B.updateMatrixWorld(true); SGC=capsNow(); SGCI=new THREE.Matrix4().copy(B.matrixWorld).invert(); }
 function sgPart(p,pad){ if(!SGC) return null; const pl=p.clone().applyMatrix4(SGCI); let best=null, bd=1e9; for(const c of SGC){ const q=closestOnSeg(pl,c.a,c.b), d=q.distanceTo(pl)-c.r; if(d<bd){ bd=d; best=c; } } return bd<(pad||0)?{name:best.name,d:bd}:null; }
-// a hit from the game's weapons: n is the game's damage (x10 for the robot), weak spots count more
+// a hit from the game's weapons: n is the game's damage (x10 for the robot), weak spots count more. Online, friends' hits go to the host.
 function sgHurt(name,p,n){ if(!FIGHT.on||FIGHT.deadT!=null||FIGHT.over) return; let k=FT.mult[name]||1, crit=k>=1.5;
-  if((name==='TORSO'||name==='HIPS')&&FT.coreL&&p.distanceTo(corePos())<2.2*SZ){ k=3; crit=true; FIGHT.stag=(FIGHT.stag||0)+n*10*k; if(FIGHT.stag>420&&!FIGHT.pending&&!(ACT.on&&(ACT.a.n==='stagger'||ACT.a.n==='phase'))){ FIGHT.stag=0; actStop(); FIGHT.pending='stagger'; } }
+  const core=(name==='TORSO'||name==='HIPS')&&FT.coreL&&p.distanceTo(corePos())<2.2*SZ; if(core){ k=3; crit=true; }
+  if(NET.role==='client'){ GAME.netHit(name,[+p.x.toFixed(2),+p.y.toFixed(2),+p.z.toFixed(2)],+n.toFixed(2)); glowBall(p,crit?0xffc040:0xfff0c0,crit?.9:.55,.12,true); dmgNum(p,Math.max(1,Math.round(n*10*k)),crit); return; }
+  if(core){ FIGHT.stag=(FIGHT.stag||0)+n*10*k; if(FIGHT.stag>420&&!FIGHT.pending&&!(ACT.on&&(ACT.a.n==='stagger'||ACT.a.n==='phase'))){ FIGHT.stag=0; actStop(); FIGHT.pending='stagger'; } }
   bossHurt(Math.max(1,Math.round(n*10*k*(.9+Math.random()*.2))),p,crit); }
 const SGQ=[], SGK=[]; let SGPREP=false;
-// sounds for the big moments
-function boom(p,size,opt){ boom0(p,size,opt); GAME.snd('boom',p); }
-function gunShot(spd){ gunShot0(spd); const mz=wpos('W_CANNON','cnMz'); if(mz) GAME.snd('shot',mz); }
-function missile(from,to,flight){ missile0(from,to,flight); GAME.snd('launch',from); }
+
+// ---- online: the host's game runs the robot. Everything it does that others need to see or be hurt by is sent as an event,
+// and everyone else plays it locally (so each player works out their own hits). Its pose is sent 12 times a second. ----
+const NV=v=>v&&v.isVector3?[+v.x.toFixed(2),+v.y.toFixed(2),+v.z.toFixed(2)]:v;
+function NETW(k,args,f){ if(NET.role==='host'&&!NET.quiet) NET.q.push([k,...args.map(a=>a&&a.isVector3?NV(a):(a&&typeof a==='object'?JSON.parse(JSON.stringify(a)):a))]); NET.quiet++; try{ return f(); } finally{ NET.quiet--; } }
+function boom(p,size,opt){ return NETW('bm',[p,size,opt],()=>{ boom0(p,size,opt); GAME.snd('boom',p); }); }
+function gunShot(spd){ return gunShot0(spd); }
+function missile(from,to,flight){ return NETW('mi',[from,to,flight],()=>{ const r=missile0(from,to,flight); GAME.snd('launch',from); return r; }); }
+function bolt(from,to,spd){ return NETW('bo',[from,to,spd],()=>{ const r=bolt0(from,to,spd); GAME.snd('shot',from); return r; }); }
+function shell(from,to,flight){ return NETW('sh',[from,to,flight],()=>shell0(from,to,flight)); }
+function lob(from,to,flight){ return NETW('lb',[from,to,flight],()=>lob0(from,to,flight)); }
+function marker(p,life){ return NETW('mk',[p,life],()=>marker0(p,life)); }
+function lightning(p){ return NETW('lt',[p],()=>lightning0(p)); }
+function groundHit(p,big){ return NETW('gh',[p,big],()=>groundHit0(p,big)); }
+function landSlam(){ return NETW('ls',[],()=>landSlam0()); }
+function crackTile(k,delay){ return NETW('ct',[k,delay],()=>crackTile0(k,delay)); }
+function phaseUp(ph){ return NETW('ph',[ph],()=>phaseUp0(ph)); }
+function rockFall(y){ return NETW('rk',[y],()=>{ const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(1.8*SZ,0),new THREE.MeshStandardMaterial({color:0x6b6560,roughness:1}));
+  rock.position.set(y.x,70*SZ,y.z); rock.castShadow=true; fx.add(rock); fxAdd({m:rock,life:1.25,tick:(o,k)=>{ rock.position.y=70*SZ*(1-k*k); rock.rotation.x+=.1; rock.rotation.z+=.07; }, end:()=>{ boom(y,2.6,{shake:.5,crack:true,knock:5,dust:5}); }}); }); }
+function pillarSpawn(){ const ok=ENV.tiles.filter(t=>t.st===0&&Math.hypot(t.x,t.z)<ENV.R-12*SZ&&Math.hypot(t.x-BOSS.x,t.z-BOSS.z)>16*SZ&&Math.hypot(t.x-ppl.position.x,t.z-ppl.position.z)>9*SZ&&ENV.pillars.every(p=>Math.hypot(t.x-p.x,t.z-p.z)>14*SZ));
+  if(!ok.length) return; const t=ok[Math.floor(Math.random()*ok.length)], L=ENV_LIFE[ENV.ph-1]; pillarMake(ENV.map.get(t.i+','+t.j),9+Math.random()*4,L[0]+Math.random()*(L[1]-L[0])); }
+function pillarMake(k,hh,life,st,t0){ return NETW('pm',[k,hh,life],()=>{ const t=ENV.tiles[k]; if(!t||ENV.pillars.some(p=>p.k===k)) return; const hw=3*SZ, h=hh*SZ;
+  const m=new THREE.Mesh(new THREE.BoxGeometry(hw*2,h,hw*2).translate(0,h/2,0),new THREE.MeshStandardMaterial({map:ENV.im.material.map,color:0x5f646b,roughness:.9})); m.castShadow=true; m.receiveShadow=true; m.position.set(t.x,-h,t.z); fx.add(m);
+  const p={m,x:t.x,z:t.z,hw,h,hh,st:st||'up',t:t0||0,life,k}; ENV.pillars.push(p); if(p.st==='stay') m.position.y=0; else { dust(V(t.x,0,t.z),6,4); shake=Math.max(shake,.15); } }); }
+// a phase change as friends see it: armour breaks off, the glow turns red, the arena changes
+function phaseVis(ph){ if(ph<=FIGHT.phase) return; FIGHT.phase=ph; envPhase(ph); if(ph===2) breakOff(['PLATE_R','KNEE_R']);
+  if(ph===3){ breakOff(['WINGS']); if(!FT.glow0){ FT.glow0=glowMats.map(m=>m.emissive.clone()); FT.glow0c=glowMats.map(m=>m.color?m.color.clone():null); } glowMats.forEach(m=>{ m.emissive.set(0xff2a2a); if(m.color) m.color.set(0xff5a5a); }); }
+  shake=Math.max(shake,.6); }
+function ringsTick(dt){ for(let i=rings.length-1;i>=0;i--){ const r=rings[i]; r.t+=dt; const k=r.t/1.1; if(k>=1){ fx.remove(r.m); r.m.geometry.dispose(); r.m.material.dispose(); rings.splice(i,1); continue; } r.m.scale.setScalar((1+k*r.size)*(r.sz||1)); r.m.material.opacity=.7*(1-k); } }
+let NODES=null;   // the moving parts whose turns are sent
+function netNodes(){ if(NODES) return NODES; NODES=[...ORDER,'HANG'].filter(n=>P[n]).map(n=>P[n]); const ex=['W_SWORD','WB_PIVOT'].map(n=>P[n]||B.getObjectByName(n)).filter(Boolean); NODES.ex=ex; return NODES; }
+const R4=v=>Math.round(v*1e4)/1e4, R2=v=>Math.round(v*100)/100;
+function netSnap(full){ const N=netNodes(), q=[]; for(const o of N) q.push(R4(o.quaternion.x),R4(o.quaternion.y),R4(o.quaternion.z),R4(o.quaternion.w));
+  const ex=[]; for(const o of N.ex) ex.push(R2(o.position.x),R2(o.position.y),R2(o.position.z),R4(o.quaternion.x),R4(o.quaternion.y),R4(o.quaternion.z),R4(o.quaternion.w));
+  const s={t:'sgs',n:NET.n,o:FIGHT.on?1:0,d:FIGHT.deadT!=null?1:0,w:FIGHT.over==='win'?1:0,hid:B.visible?0:1,h:Math.round(FIGHT.hp),hm:FIGHT.hpMax,ph:FIGHT.phase,
+    b:[R2(B.position.x),R2(B.position.y),R2(B.position.z),R4(B.quaternion.x),R4(B.quaternion.y),R4(B.quaternion.z),R4(B.quaternion.w)],bs:[R2(BOSS.x),R2(BOSS.z),R4(BOSS.yaw)],
+    hp:[R2(P.HIPS.position.x),R2(P.HIPS.position.y),R2(P.HIPS.position.z)],q,ex,bl:BLADE&&BLADE.visible?1:0,gl:R2(glowMats[0]?glowMats[0].emissiveIntensity:1),j:R2(ATK.jet||0),
+    bm:beam.visible?[R2(beam.position.x),R2(beam.position.y),R2(beam.position.z),R4(beam.quaternion.x),R4(beam.quaternion.y),R4(beam.quaternion.z),R4(beam.quaternion.w),R2(beam.scale.z),R2(beamMat.opacity),R2(beam.scale.x)]:0,
+    ch:charge.visible?[R2(charge.position.x),R2(charge.position.y),R2(charge.position.z),R2(charge.scale.x)]:0};
+  if(full){ s.tl=ENV.tiles.map(t=>t.st).join(''); s.pl=ENV.pillars.filter(p=>p.st==='stay'||p.st==='up').map(p=>[p.k,R2(p.hh),R2(p.life),p.st,R2(p.t)]); }
+  return s; }
+// friends: put the robot where the host's robot is (eased between updates)
+function netApply(dt){ const s=NET.snap; if(!s||!B) return; const k=1-Math.exp(-dt*14), N=netNodes(), qq=new THREE.Quaternion();
+  if(s.n!==NET.n||(s.o&&!FIGHT.on)){ if(FIGHT.on) fightStop(); if(s.o) fightStart(); NET.n=s.n; }
+  else if(!s.o&&FIGHT.on) fightStop();
+  B.visible=!s.hid; if(BLADE_PIV) BLADE_PIV.visible=!s.hid;
+  B.position.lerp(V(s.b[0],s.b[1],s.b[2]),k); B.quaternion.slerp(qq.set(s.b[3],s.b[4],s.b[5],s.b[6]),k); BOSS.x=s.bs[0]; BOSS.z=s.bs[1]; BOSS.yaw=s.bs[2];
+  N.forEach((o,i)=>{ const j=i*4; if(s.q.length>j+3) o.quaternion.slerp(qq.set(s.q[j],s.q[j+1],s.q[j+2],s.q[j+3]),k); });
+  P.HIPS.position.lerp(V(s.hp[0],s.hp[1],s.hp[2]),k);
+  N.ex.forEach((o,i)=>{ const j=i*7; if(s.ex.length>j+6){ o.position.lerp(V(s.ex[j],s.ex[j+1],s.ex[j+2]),k); o.quaternion.slerp(qq.set(s.ex[j+3],s.ex[j+4],s.ex[j+5],s.ex[j+6]),k); } });
+  if(BLADE) BLADE.visible=!!s.bl; for(const m of glowMats) m.emissiveIntensity=s.gl;
+  if(s.bm){ beam.visible=true; beam.position.set(s.bm[0],s.bm[1],s.bm[2]); beam.quaternion.set(s.bm[3],s.bm[4],s.bm[5],s.bm[6]); beam.scale.set(s.bm[9]||1,s.bm[9]||1,s.bm[7]); beamMat.opacity=s.bm[8]; } else { beam.visible=false; beamMat.opacity=0; }
+  if(s.ch){ charge.visible=true; charge.position.set(s.ch[0],s.ch[1],s.ch[2]); charge.scale.setScalar(s.ch[3]); } else charge.visible=false;
+  FIGHT.hp=s.h; FIGHT.hpMax=s.hm||FIGHT.hpMax; if(FIGHT.on){ while(FIGHT.phase<s.ph) phaseVis(FIGHT.phase+1); if(s.d&&FIGHT.deadT==null){ FIGHT.deadT=0; FIGHT.over='win'; } FIGHT.glowK=s.d?0:null; }
+  if(s.tl&&ENV.on){ for(let i=0;i<ENV.tiles.length&&i<s.tl.length;i++){ const t=ENV.tiles[i]; if(s.tl[i]==='2'&&t.st!==2){ t.st=1; t.t=0; } } }
+  if(s.pl&&ENV.on){ const ks=new Set(s.pl.map(p=>p[0])); for(const p of ENV.pillars) if(((p.st==='stay')||(p.st==='up'&&p.t>1))&&!ks.has(p.k)){ p.st='down'; p.t=0; }   // the host's block was smashed or sank
+    for(const [k,hh,life,st,t0] of s.pl) if(!ENV.pillars.some(p=>p.k===k)) pillarMake(k,hh,life,st,t0); }
+  s.tl=null; s.pl=null; }
+function netEvent(e){ const k=e[0], a=e.slice(1), Vv=v=>V(v[0],v[1],v[2]);
+  switch(k){ case 'bm': boom0(Vv(a[0]),a[1],a[2]||undefined); GAME.snd('boom',Vv(a[0])); break; case 'mi': missile0(Vv(a[0]),Vv(a[1]),a[2]); GAME.snd('launch',Vv(a[0])); break;
+    case 'bo': bolt0(Vv(a[0]),Vv(a[1]),a[2]); GAME.snd('shot',Vv(a[0])); break; case 'sh': shell0(Vv(a[0]),Vv(a[1]),a[2]); break; case 'lb': lob0(Vv(a[0]),Vv(a[1]),a[2]); break;
+    case 'mk': marker0(Vv(a[0]),a[1]); break; case 'lt': lightning0(Vv(a[0])); break; case 'rk': rockFall(Vv(a[0])); break; case 'gh': groundHit0(Vv(a[0]),a[1]); break;
+    case 'ls': landSlam0(); break; case 'ct': if(ENV.on) crackTile0(a[0],a[1]); break; case 'ph': if(FIGHT.on) phaseVis(a[0]); break; case 'kn': knockAt(Vv(a[0]),a[1],a[2]==null?undefined:a[2]); break;
+    case 'pm': if(ENV.on) pillarMake(a[0],a[1],a[2]); break; } }
+function repTick(dt){ dtNow=dt; T0+=dt; PL.inv=Math.max(0,PL.inv-dt); PL.dodge=Math.max(0,PL.dodge-dt);
+  for(let i=SGQ.length-1;i>=0;i--){ if(SGQ[i].t<=T0){ const q=SGQ.splice(i,1)[0]; try{ q.f(); }catch(e){} } }
+  for(const e of NET.inQ.splice(0)){ try{ netEvent(e); }catch(err){ console.warn('shogun net',err); } }
+  netApply(dt); B.updateMatrixWorld(true);
+  if(ENV.on){ envTiles(dt); envPillars(dt); envSky(dt); envWind(dt); }
+  if(FIGHT.on) fightPost(dt); fxTick(dt); trailTick(dt); jetsTick(NET.snap&&NET.snap.j>.5); ringsTick(dt); }
 FT.hpMax=9000;
 envBuild();
 const API={
@@ -19142,13 +19240,16 @@ const API={
   ground(x,z){ if(!ENV.on) return -1; const k=ENV.map.get(Math.round(x/ENV.ts)+','+Math.round(z/ENV.ts)); return k==null?-1:(ENV.tiles[k].st<2?1:0); },
   cells:()=>ENV.tiles.map(t=>[t.i,t.j]), ts:()=>ENV.ts,
   safeTile(x,z){ const t=nearestTile(x,z,16*SZ)||nearestTile(x,z,0); return t?{x:t.x,z:t.z}:{x:0,z:0}; },
-  tick(dt,you){ ppl.position.set(you.x,you.y,you.z); PL.hp=you.hp; const was=ppl.position.clone(); SGK.length=0;
+  // me: you on this computer {x,y,z,hp}; tgt: who it goes after (the host picks; null = you)
+  tick(dt,me,tgt){ ME.set(me.x,me.y,me.z); const T=tgt||me; ppl.position.set(T.x,T.y,T.z); PL.hp=me.hp; const was=ME.clone(); SGK.length=0;
     sgEnter(); try{
-      for(let i=SGQ.length-1;i>=0;i--){ if(SGQ[i].t<=T0){ const q=SGQ.splice(i,1)[0]; try{ q.f(); }catch(e){ console.warn('shogun later',e); } } }
-      tick(dt); sgCaps();
+      if(NET.role==='client') repTick(dt);
+      else { for(let i=SGQ.length-1;i>=0;i--){ if(SGQ[i].t<=T0){ const q=SGQ.splice(i,1)[0]; try{ q.f(); }catch(e){ console.warn('shogun later',e); } } }
+        tick(dt); }
+      sgCaps();
     } finally{ sgExit(); }
     if(FIGHT.over==='lose') FIGHT.over=null;   // the game decides when you're beaten
-    const sh=shake; shake=0; return {push:ppl.position.clone().sub(was), dmg:Math.max(0,you.hp-PL.hp), knocks:SGK.slice(), shake:sh}; },
+    const sh=shake; shake=0; return {push:ME.clone().sub(was), dmg:Math.max(0,me.hp-PL.hp), knocks:SGK.slice(), shake:sh}; },
   start:sgWrap(()=>fightStart()), stop:sgWrap(()=>fightStop()),
   hide(h){ if(B) B.visible=!h; if(BLADE_PIV) BLADE_PIV.visible=!h; trail.visible=false; },
   // the game's weapons against the robot (points and rays in the arena frame)
@@ -19159,9 +19260,16 @@ const API={
   hurtAt:sgWrap((name,p,n)=>sgHurt(name,p,n)),
   blast:sgWrap((p,n,R)=>{ const c=sgPart(p,R); if(!c) return false; const f=Math.max(0,1-Math.max(0,c.d)/R); if(f>0) sgHurt(c.name,p,n*f); return true; }),
   nearBody(p,pad){ return !!sgPart(p,pad); },
-  dead:()=>FIGHT.deadT!=null, on:()=>FIGHT.on, won:()=>FIGHT.over==='win'
+  dead:()=>FIGHT.deadT!=null, on:()=>FIGHT.on, won:()=>FIGHT.over==='win',
+  // online
+  setRole(r){ if(r===NET.role) return; const was=NET.role; NET.role=r; NET.q.length=0; NET.inQ.length=0; NET.snap=null; if(FIGHT.on||was==='client') sgWrap(()=>fightStop())(); },
+  role:()=>NET.role,
+  snap:sgWrap(full=>netSnap(full)), events(){ return NET.q.splice(0); },
+  netIn(d){ if(NET.role!=='client') return; if(d.t==='sgs') NET.snap=d; else if(d.t==='sge'&&Array.isArray(d.l)) for(const e of d.l) if(Array.isArray(e)&&typeof e[0]==='string') NET.inQ.push(e); },
+  netHit:sgWrap((name,p,n)=>{ if(NET.role==='client'||!Array.isArray(p)||!SGC||!SGC.some(c=>c.name===name)) return; const v=V(+p[0]||0,+p[1]||0,+p[2]||0); if(v.length()>200) return; sgHurt(name,v,Math.max(0,Math.min(40,+n||0))); }),
+  snapState:()=>NET.snap
 };
-window.__sgGame={ev:s=>eval(s),API,FIGHT,PL,BOSS,FT,ACT,ENV,PK,get B(){ return B; },get SZ(){ return SZ; },get mode(){ return mode; },capsNow:()=>SGC,setMode:m=>setMode(m)};
+window.__sgGame={ev:s=>eval(s),API,FIGHT,PL,BOSS,FT,ACT,ENV,PK,NET,get B(){ return B; },get SZ(){ return SZ; },get mode(){ return mode; },capsNow:()=>SGC,setMode:m=>setMode(m)};
 return API;
 
 }
