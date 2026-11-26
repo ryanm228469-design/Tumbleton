@@ -17004,43 +17004,68 @@ function mpTick(dt){ if(!MP.on) return; MP.sendT+=dt;
   mpHouseTick(dt); mpPolSend(dt); mpPolTick(dt);
   if(!MP.host){ MP.sinceHost+=dt; if(MP.sinceHost>15){ MP.conn=null; mpEnd('Lost connection to the host.'); return; } }
   mpAvatars(dt); }
-/* public server list: the first public server also runs a tiny "lobby" that the others report to; if it closes, another public server takes over */
-const MPL_ID='tumbleton-lobby-'+MPV.replace(/[^a-z0-9]/gi,'').toLowerCase();
-const MPL={peer:null,conn:null,lp:null,claiming:false,ads:new Map(),role:'',list:undefined,tick:0};
-function mplStart(role){ MPL.role=role; if(MPL.peer){ mplConnect(); return; }
+/* public server list: the first public servers also run a tiny "lobby" that the others report to. There are MPL_N lobby slots, so one lobby that
+   stops answering (a sleeping phone tab, a game where online play is blocked) can't hide everyone: hosts that get no answer within a few seconds
+   move to the next slot (or take it over), and the list shows the servers from every slot that answers. */
+const MPL_ID='tumbleton-lobby-'+MPV.replace(/[^a-z0-9]/gi,'').toLowerCase(), MPL_N=4, MPL_WAIT=7000;
+const mplId=k=>k?MPL_ID+'-'+k:MPL_ID;
+const MPL={peer:null,lp:null,lk:-1,claiming:false,ads:new Map(),role:'',list:undefined,tick:0,slots:[],ak:0,bad:{},t0:0};
+function mplSlot(k){ return MPL.slots[k]||(MPL.slots[k]={conn:null,t:-1e9,ack:-1e9,games:null,gT:-1e9,none:-1e9}); }
+function mplStart(role){ MPL.role=role; MPL.t0=performance.now(); if(MPL.peer){ mplPump(); return; }
   mpLoad().then(Peer=>{ if(MPL.peer||!MPL.role) return; const p=new Peer({debug:0}); MPL.peer=p;
-    p.on('open',()=>{ if(MPL.peer===p) mplConnect(); });
-    p.on('error',e=>{ if(MPL.peer!==p) return; if(e&&e.type==='peer-unavailable'){ MPL.conn=null; if(MPL.role==='ad') mplClaim(); else { MPL.list=[]; mplRender(); } } else if(MPL.role==='browse'&&MPL.list===undefined){ MPL.list=null; mplRender(); } });
+    p.on('open',()=>{ if(MPL.peer===p) mplPump(); });
+    p.on('error',e=>{ if(MPL.peer!==p) return; if(e&&e.type==='peer-unavailable'){ const m=String(e.message||'').match(/tumbleton-lobby-[a-z0-9]+(?:-(\d))?/i), k=m?(+m[1]||0):-1; if(k<0) return;
+        const S=mplSlot(k); S.conn=null; S.none=performance.now(); S.games=[]; S.gT=performance.now();
+        if(MPL.role==='ad'&&k===MPL.ak) mplClaim(k); else mplRender(); }
+      else if(MPL.role==='browse'&&MPL.list===undefined&&performance.now()-MPL.t0>4000){ MPL.list=null; mplRender(); } });
     p.on('disconnected',()=>{ if(MPL.peer===p) try{ p.reconnect(); }catch(err){} }); }).catch(()=>{ MPL.list=null; mplRender(); }); }
-function mplConnect(){ const p=MPL.peer; if(!p||MPL.lp||MPL.claiming||(MPL.conn&&!MPL.conn.closedX)||p.disconnected||p.destroyed) return; const c=p.connect(MPL_ID,{reliable:true,serialization:'json'}); MPL.conn=c;
-  c.on('open',()=>{ if(MPL.conn!==c) return; if(MPL.role==='browse') c.send({t:'list'}); else mplAd(); });
-  c.on('data',d=>{ if(MPL.conn!==c||!d||d.t!=='games'||!Array.isArray(d.l)) return; MPL.list=d.l.slice(0,60).filter(g=>Array.isArray(g)&&typeof g[0]==='string'&&/^[A-Z]{4}$/.test(g[0])).map(g=>[g[0],mpClean(g[1],24),clamp(Math.round(mpNum(g[2])),0,MPMAX),MPMAX]); mplRender(); });
-  c.on('close',()=>{ if(MPL.conn!==c) return; MPL.conn=null; if(MPL.role) setTimeout(()=>{ if(MPL.role&&!MPL.conn) mplConnect(); },400+Math.random()*1600); }); c.on('error',()=>{}); }
-function mplClaim(){ if(MPL.lp||MPL.claiming||MPL.role!=='ad') return; MPL.claiming=true;
-  mpLoad().then(Peer=>{ const lp=new Peer(MPL_ID,{debug:0});
-    lp.on('open',()=>{ MPL.claiming=false; if(MPL.role!=='ad'){ lp.destroy(); return; } MPL.lp=lp; MPL.ads.clear(); });
-    lp.on('connection',c=>{ c.on('data',d=>mplLobbyData(c,d)); c.on('close',()=>{ for(const [k,a] of MPL.ads) if(a.conn===c) MPL.ads.delete(k); }); c.on('error',()=>{}); });
-    lp.on('error',e=>{ if(e&&e.type==='unavailable-id'){ MPL.claiming=false; try{ lp.destroy(); }catch(err){} setTimeout(mplConnect,800+Math.random()*1500); } });
+// (re)connect to one lobby slot
+function mplConnect(k){ const p=MPL.peer, S=mplSlot(k); if(!p||p.disconnected||p.destroyed||S.conn) return; const c=p.connect(mplId(k),{reliable:true,serialization:'json'}); S.conn=c; S.t=performance.now(); S.ack=0;
+  c.on('open',()=>{ if(S.conn!==c) return; if(MPL.role==='browse') c.send({t:'list'}); else mplAd(); });
+  c.on('data',d=>{ if(S.conn!==c||!d) return; S.ack=performance.now();
+    if(d.t==='games'&&Array.isArray(d.l)){ S.games=d.l.slice(0,60).filter(g=>Array.isArray(g)&&typeof g[0]==='string'&&/^[A-Z]{4}$/.test(g[0])).map(g=>[g[0],mpClean(g[1],24),clamp(Math.round(mpNum(g[2])),0,MPMAX),MPMAX]); S.gT=performance.now(); mplRender(); } });
+  c.on('close',()=>{ if(S.conn===c) S.conn=null; }); c.on('error',()=>{}); }
+function mplDrop(k){ const S=mplSlot(k); if(S.conn){ try{ S.conn.close(); }catch(e){} S.conn=null; } }
+// run every second: hosts keep one working lobby to report to; players ask every slot
+function mplPump(){ const now=performance.now(); if(!MPL.peer||MPL.peer.disconnected) return;
+  if(MPL.role==='ad'){ if(MPL.lp||MPL.claiming) return; const k=MPL.ak, S=mplSlot(k);
+    if(!S.conn){ if(now-S.none<1500&&!MPL.claiming) mplClaim(k); else mplConnect(k); return; }
+    if(S.conn.open) mplAd();
+    // no answer from this lobby: it's stuck, so report to the next one (and take it over if nobody has it)
+    if(now-Math.max(S.t,S.ack)>MPL_WAIT){ mplDrop(k); MPL.bad[k]=now; let n=-1; for(let i=1;i<=MPL_N;i++){ const j=(k+i)%MPL_N; if(!(now-(MPL.bad[j]||-1e9)<60000)){ n=j; break; } } MPL.ak=n<0?(k+1)%MPL_N:n; if(n<0) MPL.bad={}; } }
+  else if(MPL.role==='browse'){ for(let k=0;k<MPL_N;k++){ const S=mplSlot(k);
+      if(!S.conn){ if(now-S.none>4000&&now-S.t>2500) mplConnect(k); continue; }
+      if(S.conn.open&&MPL.tick%3===0) try{ S.conn.send({t:'list'}); }catch(e){}
+      if(now-Math.max(S.t,S.ack)>MPL_WAIT){ mplDrop(k); S.t=now; } }
+    if(MPL.list===undefined&&now-MPL.t0>9000){ MPL.list=[]; } mplRender(); } }
+function mplClaim(k){ if(MPL.lp||MPL.claiming||MPL.role!=='ad') return; MPL.claiming=true;
+  mpLoad().then(Peer=>{ const lp=new Peer(mplId(k),{debug:0});
+    lp.on('open',()=>{ MPL.claiming=false; if(MPL.role!=='ad'){ lp.destroy(); return; } MPL.lp=lp; MPL.lk=k; MPL.ads.clear(); mplDrop(k); });
+    lp.on('connection',c=>{ c.on('data',d=>mplLobbyData(c,d)); c.on('close',()=>{ for(const [key,a] of MPL.ads) if(a.conn===c) MPL.ads.delete(key); }); c.on('error',()=>{}); });
+    lp.on('error',e=>{ if(e&&e.type==='unavailable-id'){ MPL.claiming=false; try{ lp.destroy(); }catch(err){} const S=mplSlot(k); S.none=-1e9; S.t=-1e9; } });   // someone has it: report to them (or move on if they never answer)
     lp.on('disconnected',()=>{ if(MPL.lp===lp) try{ lp.reconnect(); }catch(err){} }); }).catch(()=>{ MPL.claiming=false; }); }
 function mplLobbyData(c,d){ if(!d||typeof d!=='object') return;
-  if(d.t==='ad'&&typeof d.code==='string'&&/^[A-Z]{4}$/.test(d.code)){ if(MPL.ads.size>200&&!MPL.ads.has(d.code)) return; MPL.ads.set(d.code,{code:d.code,name:mpClean(d.name,24),n:clamp(Math.round(mpNum(d.n)),0,MPMAX),conn:c,t:performance.now()}); }
+  if(d.t==='ad'&&typeof d.code==='string'&&/^[A-Z]{4}$/.test(d.code)){ if(MPL.ads.size>200&&!MPL.ads.has(d.code)) return; MPL.ads.set(d.code,{code:d.code,name:mpClean(d.name,24),n:clamp(Math.round(mpNum(d.n)),0,MPMAX),conn:c,t:performance.now()}); try{ c.send({t:'ok'}); }catch(e){} }
   else if(d.t==='bye'&&typeof d.code==='string'){ const a=MPL.ads.get(d.code); if(a&&a.conn===c) MPL.ads.delete(d.code); }
   else if(d.t==='list'){ try{ c.send({t:'games',l:mplGames()}); }catch(e){} } }
 function mplGames(){ const now=performance.now(), l=[]; for(const [k,a] of MPL.ads){ if(now-a.t>15000){ MPL.ads.delete(k); continue; } l.push([a.code,a.name,a.n]); }
   if(MP.on&&MP.host&&MP.pub) l.push([MP.code,MP.sname,MP.pl.size]); return l.sort((a,b)=>(b[2]<MPMAX)-(a[2]<MPMAX)||b[2]-a[2]).slice(0,60); }
-function mplAd(){ if(!(MP.on&&MP.host&&MP.pub)) return; if(MPL.conn&&MPL.conn.open) try{ MPL.conn.send({t:'ad',code:MP.code,name:MP.sname,n:MP.pl.size}); }catch(e){} }
-function mplBrowse(){ if(MPL.role!=='browse'||!MPL.peer) mplStart('browse'); else if(MPL.conn&&MPL.conn.open) MPL.conn.send({t:'list'}); else mplConnect(); }
-function mplStop(){ const m=MPL; if(m.conn&&m.conn.open&&MP.code&&m.role==='ad') try{ m.conn.send({t:'bye',code:MP.code}); }catch(e){} m.role=''; m.claiming=false;
-  const p=m.peer, lp=m.lp; m.peer=null; m.conn=null; m.lp=null; m.ads.clear(); setTimeout(()=>{ try{ if(p) p.destroy(); }catch(e){} try{ if(lp) lp.destroy(); }catch(e){} },150); }
-function mplRender(){ const box=$('mpgames'); if(!box||mpEl.hidden||MP.on||MP.busy) return; const L=MPL.list, key=JSON.stringify(L===undefined?'u':L); if(box.dataset.key===key&&box.childElementCount) return; box.dataset.key=key; box.textContent='';
+function mplAd(){ if(!(MP.on&&MP.host&&MP.pub)) return; const S=mplSlot(MPL.ak); if(S.conn&&S.conn.open) try{ S.conn.send({t:'ad',code:MP.code,name:MP.sname,n:MP.pl.size}); }catch(e){} }
+function mplBrowse(){ if(MPL.role!=='browse'||!MPL.peer) mplStart('browse'); else mplPump(); }
+function mplStop(){ const m=MPL; if(MP.code&&m.role==='ad'){ const S=m.slots[m.ak]; if(S&&S.conn&&S.conn.open) try{ S.conn.send({t:'bye',code:MP.code}); }catch(e){} } m.role=''; m.claiming=false;
+  const p=m.peer, lp=m.lp; m.peer=null; m.lp=null; m.lk=-1; m.slots=[]; m.ak=0; m.bad={}; m.ads.clear(); setTimeout(()=>{ try{ if(p) p.destroy(); }catch(e){} try{ if(lp) lp.destroy(); }catch(e){} },150); }
+// the list a player sees: every slot that answered lately, joined together
+function mplMerged(){ const now=performance.now(), seen=new Map(); let any=false; for(const S of MPL.slots){ if(!S||!S.games||now-S.gT>12000) continue; any=true; for(const g of S.games) if(!seen.has(g[0])) seen.set(g[0],g); }
+  if(any) MPL.list=[...seen.values()].sort((a,b)=>(b[2]<b[3])-(a[2]<a[3])||b[2]-a[2]); return MPL.list; }
+function mplRender(){ const box=$('mpgames'); if(!box||mpEl.hidden||MP.on||MP.busy) return; const L=mplMerged(), key=JSON.stringify(L===undefined?'u':L); if(box.dataset.key===key&&box.childElementCount) return; box.dataset.key=key; box.textContent='';
   if(L===undefined||L===null){ const d=document.createElement('div'); d.className='empty'; d.textContent=L===null?'Couldn\'t load the server list. Check your internet. (It may not work inside the Claude preview: use the website.)':'Looking for public servers…'; box.appendChild(d); return; }
   if(!L.length){ const d=document.createElement('div'); d.className='empty'; d.textContent='No public servers right now. Make one below, or play by yourself.'; box.appendChild(d); return; }
   for(const [code,name,n,max] of L){ const b=document.createElement('button'); b.type='button'; b.className='mpgame'; const full=n>=max;
     const nm=document.createElement('span'); nm.textContent=name; const ct=document.createElement('span'); ct.className='n'; ct.textContent=n+'/'+max+' players'; const j=document.createElement('span'); j.className='j'; j.textContent=full?'FULL':'JOIN';
     b.append(nm,ct,j); b.disabled=full; b.setAttribute('aria-label','Join '+name+', '+n+' of '+max+' players'); b.addEventListener('click',()=>mpJoin(code)); box.appendChild(b); } }
 setInterval(()=>{ MPL.tick++;
-  if(MP.on&&MP.host&&MP.pub){ if(!MPL.role) mplStart('ad'); else if(!MPL.lp&&!MPL.claiming){ if(MPL.conn&&MPL.conn.open) mplAd(); else if(MPL.peer&&!MPL.conn) mplConnect(); } }
-  else if(MPL.role==='browse'&&!mpEl.hidden&&!MP.on&&!MP.busy&&MPL.tick%3===0) mplBrowse(); },1000);
+  if(MP.on&&MP.host&&MP.pub){ if(MPL.role!=='ad') mplStart('ad'); else mplPump(); }
+  else if(MPL.role==='browse'&&!mpEl.hidden&&!MP.on&&!MP.busy) mplBrowse(); },1000);
 addEventListener('pagehide',()=>{ try{ if(MP.on&&MP.host) mpBroadcast({t:'x',why:'host'}); mplStop(); if(MP.peer) MP.peer.destroy(); }catch(e){} });
 setInterval(()=>{ if(!MP.on) return; try{ if(MP.host){ if(performance.now()-(MP.lastSnap||0)>900) mpBroadcast({t:'k'}); } else if(MP.conn&&MP.conn.open) MP.conn.send({t:'k'}); }catch(e){} },1000); // keeps the game alive while a tab is hidden
 
