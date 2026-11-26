@@ -10541,7 +10541,7 @@ function mapPlaces(){ const L=[], P=(ic,n,f)=>{ try{ const [x,z]=f(); if(isFinit
   P('🍕','Pizza',()=>[PIZ.T.x,PIZ.T.z]); P('🪖','Camp Kahu',()=>[BASES.camp.gate.x,BASES.camp.gate.z]); P('🏰','Fort Kererū',()=>[NORTH.fort.x,NORTH.fort.z]); P('🏁','Raceway',()=>[EAST.ring.x,EAST.ring.z]); P('🛹','Stunt park',()=>[430,200]); P('🎡','Kiwi Land',()=>[EAST.park.x0+30,203]);
   P('⛰','Lookout',()=>[NORTH.look.x,NORTH.look.z]); P('🚡','Gondola',()=>[NORTH.cable.a.x,NORTH.cable.a.z]); P('💧','Dam',()=>[NORTH.dam.x,NORTH.dam.z]); P('⛏','Quarry',()=>[NORTH.quarry.x,NORTH.quarry.z]); P('🏖','Beach',()=>[SOUTH.beach.x,SOUTH.beach.z]); P('⚓','Port',()=>[SOUTH.harbour.x,SOUTH.harbour.z]);
   P('⛴','Ferry',()=>[SOUTH.ferry.x,SOUTH.ferry.z]); P('🏝','Mōtu Island',()=>[SOUTH.isle.x,SOUTH.isle.z]); P('🗜','Car crusher',()=>[SOUTH.crusher.x,SOUTH.crusher.z]); P('🏘','Rangiwai',()=>[COUNTRY.town.x,COUNTRY.town.z]); P('⛽','Petrol',()=>[-455,COUNTRY.town.z+20]); P('🐑','Hillcrest Farm',()=>[COUNTRY.farmA.x,COUNTRY.farmA.z]);
-  P('🏚','Crew base',()=>[CB.x,CB.z]); if(XP.found.cave) P('💧','Glowworm Caves',()=>[CAVE.surf.x,CAVE.surf.z]); P('⛰','Maunga Tūrama',()=>[CAVE.surf.x,CAVE.surf.z-50]); P('☣','Quarantine Zone',()=>[(QZ.x0+QZ.x1)/2,QZ.gz]); P('🚪','Bunker Kōwhai',()=>[QZ.door.x,QZ.door.z]); P('💥','Cannon',()=>[CANNON.x,CANNON.z]); for(const S of SALE) if(GAR.h[S.i]&&GAR.h[S.i].own) P('🏠','Your home',()=>[S.portal.x,S.portal.z]); for(const T of TOWN.list) P(ZONES.freed.includes(T.id)?'🛒':'🧟',(TOWN.name[T.id]||'Town').replace(/^the /,''),()=>[T.x,T.z]);
+  P('🏚','Crew base',()=>[CB.x,CB.z]); if(XP.found.cave) P('💧','Glowworm Caves',()=>[CAVE.surf.x,CAVE.surf.z]); P('⛰','Maunga Tūrama',()=>[CAVE.surf.x,CAVE.surf.z-50]); P('☣','Quarantine Zone',()=>[(QZ.x0+QZ.x1)/2,QZ.gz]); P('🚪','Bunker Kōwhai',()=>[QZ.door.x,QZ.door.z]); P('💥','Cannon',()=>[CANNON.x,CANNON.z]); P('⚔','Robot crash site · the Shogun',()=>[SGF.x,SGF.z]); for(const S of SALE) if(GAR.h[S.i]&&GAR.h[S.i].own) P('🏠','Your home',()=>[S.portal.x,S.portal.z]); for(const T of TOWN.list) P(ZONES.freed.includes(T.id)?'🛒':'🧟',(TOWN.name[T.id]||'Town').replace(/^the /,''),()=>[T.x,T.z]);
   return L; }
 function mapToggle(){ if(MAP.on){ mapClose(); return; } if(!state.started||state.over||!cfEl.hidden||PHOTO.on) return; if(PHONE.on) phoneToggle(); MAP.on=true; MAP.prevPause=state.paused; state.paused=true; for(const k in keys) keys[k]=false; try{ document.exitPointerLock&&document.exitPointerLock(); }catch(e){}
   if(!MAP.el){ const d=document.createElement('div'); d.style.cssText='position:fixed;inset:0;z-index:80;background:#0d1117;display:none;touch-action:none'; const cv=document.createElement('canvas'); cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;cursor:grab'; d.appendChild(cv);
@@ -14304,6 +14304,7 @@ function findMenu(){ if(!state.started||state.over||!cfEl.hidden) return; const 
   add('Fun & games','Fishing off the pier, surf hire, basketball hoops, Rangiwai Arcade and the drive-in',()=>{ const prev=cfPrevPaused, a2=menuOpen('Fun & games'); cfPrevPaused=prev; a2('🎣 Fishing','End of the Tumbleton Beach pier · '+dist(FUN.fish.x,FUN.fish.z),go(FUN.fish.x,FUN.fish.z,'The end of the pier is marked'));
     a2('🏄 Surf hire','Tumbleton Beach · ride the waves for cash · '+dist(FUN.surf.x,FUN.surf.z),go(FUN.surf.x,FUN.surf.z-3,'The surf hire is marked')); a2('🏀 Basketball hoops','Behind the furniture store · '+dist(FUN.court.x,FUN.court.z),go(FUN.court.spot.x,FUN.court.spot.z,'The court is marked'));
     a2('🕹 Rangiwai Arcade','Kiwi Dash. High scores pay cash · '+dist(-523,-80),go(-523,-80,'The arcade is marked')); a2('💥 Human cannonball','Send It Stunt Park · fire yourself at the targets · '+dist(CANNON.x,CANNON.z),go(CANNON.x,CANNON.z+3,'The cannon is marked')); a2('🎬 Tumbleton Drive-in','Park up and watch a movie · '+dist(FUN.drive.x,FUN.drive.z),go(-600,-190,'The drive-in is marked')); a2('Back','',()=>{ menuDone(); findMenu(); }); },'pick-go');
+  add('⚔ Robot crash site','The Shogun, a war machine that fell from the sky · far north-east, past the Spire · '+dist(SGF.x,SGF.z),go(SGF.x,SGF.z+95,'The robot crash site is marked. Step onto the slabs to wake the Shogun'));
   add('☣ The Quarantine Zone','The walled-off district in the far north-west · '+dist(QZ.x1,QZ.gz),go(QZ.x1+12,QZ.gz,'The Quarantine Zone is marked. Head for the broken gate'));
   add('Te Ana Tūrama · Glowworm Caves',(XP.found.cave?'Behind the waterfall on Maunga Tūrama · ':'Hidden somewhere along the foot of Maunga Tūrama, the mountain in the north-west · ')+dist(-395,-470),go(-395,-440,XP.found.cave?'The Glowworm Caves are marked':'Maunga Tūrama is marked. The way in is hidden. Listen for water.'));
   add('Tumbleton Beach','Sand, surf club, pier and jet skis · '+dist(SOUTH.beach.x,SOUTH.beach.z),go(SOUTH.beach.x,SOUTH.beach.z,'Tumbleton Beach is marked. Head south'));
@@ -17493,9 +17494,11 @@ function sgBuildSite(){ const A=SGF.api, ts=A.ts(), cells=A.cells(), set=new Set
       m.castShadow=m.receiveShadow=true; root.add(m); } }
   // smoke from the pit
   { const cv=document.createElement('canvas'); cv.width=cv.height=64; const x=cv.getContext('2d'), gr=x.createRadialGradient(32,32,0,32,32,32); gr.addColorStop(0,'rgba(255,255,255,1)'); gr.addColorStop(.5,'rgba(255,255,255,.4)'); gr.addColorStop(1,'rgba(255,255,255,0)'); x.fillStyle=gr; x.fillRect(0,0,64,64);
-    const t=new THREE.CanvasTexture(cv); for(let i=0;i<34;i++){ const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,color:0x4a4440,transparent:true,depthWrite:false,opacity:0})); root.add(s); SGF.smoke.push({s,t:Math.random()*9,life:9}); } } }
-function sgSmoke(dt){ for(const q of SGF.smoke){ q.t+=dt; if(q.t>=q.life){ q.t=0; q.life=7+Math.random()*5; const a=Math.random()*6.283, r=40+Math.random()*40; q.x=Math.cos(a)*r; q.z=Math.sin(a)*r; q.vx=(Math.random()-.5)*1.5; q.vz=(Math.random()-.5)*1.5; }
-    if(q.x==null) continue; const k=q.t/q.life; q.s.position.set(q.x+q.vx*q.t,-30+k*75,q.z+q.vz*q.t); q.s.scale.setScalar(8+k*26); q.s.material.opacity=.55*Math.sin(Math.PI*k); } }
+    const t=new THREE.CanvasTexture(cv); for(let i=0;i<34;i++){ const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,color:0x4a4440,transparent:true,depthWrite:false,opacity:0})); root.add(s); SGF.smoke.push({s,t:Math.random()*9,life:9}); }
+    // a tall smoke column so you can spot the crash site from far away
+    for(let i=0;i<18;i++){ const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,color:0x3c3834,transparent:true,depthWrite:false,opacity:0})); root.add(s); SGF.smoke.push({s,t:i,life:18,tall:true}); } } }
+function sgSmoke(dt){ for(const q of SGF.smoke){ q.t+=dt; if(q.t>=q.life){ q.t=0; q.life=q.tall?16+Math.random()*5:7+Math.random()*5; const a=Math.random()*6.283, r=q.tall?Math.random()*22:40+Math.random()*40; q.x=Math.cos(a)*r; q.z=Math.sin(a)*r; q.vx=(Math.random()-.5)*1.5; q.vz=(Math.random()-.5)*1.5; }
+    if(q.x==null) continue; const k=q.t/q.life; if(q.tall){ q.s.position.set(q.x+q.vx*q.t+k*k*40,-20+k*190,q.z+q.vz*q.t+k*k*25); q.s.scale.setScalar(16+k*55); q.s.material.opacity=.6*Math.sin(Math.PI*Math.min(1,k*1.3)); continue; } q.s.position.set(q.x+q.vx*q.t,-30+k*75,q.z+q.vz*q.t); q.s.scale.setScalar(8+k*26); q.s.material.opacity=.55*Math.sin(Math.PI*k); } }
 // the boss bar, damage numbers, weather and sounds
 function sgHud(F){ const show=F.on&&F.deadT==null; SGF.bar=show; if(show) xpBossBar('⚔ The Shogun · '+['','I','II','III'][F.phase]+(F.phase===3?' · Berserk':''),Math.max(0,F.hp/F.hpMax)); else if(XP.bar&&XP.bar.style.display!=='none'&&!xpAnyBoss()) xpBossBar(''); }
 function sgNum(p,n,crit){ const v=new THREE.Vector3(p.x+SGF.x,p.y,p.z+SGF.z).project(camera); if(v.z>1) return; const d=document.createElement('div');
@@ -17508,8 +17511,10 @@ function sgWin(F){ SGF.dead=true; brespSet('shogun'); achStat('shogun'); const f
   banner('THE SHOGUN IS DOWN','+'+money(cash)+(first?' · the war machine from the sky is beaten. It reboots in 10 minutes':' · it reboots in 10 minutes')); Snd.fanfare&&Snd.fanfare(); SGF.bar=false; xpBossBar(''); sgWeather(0); }
 // every frame
 function sgTick(dt){ const P=player.pos, dx=P.x-SGF.x, dz=P.z-SGF.z, d=Math.hypot(dx,dz);
-  if(!SGF.api&&!SGF.loading&&d<520&&state.started) sgBoot();
-  const A=SGF.api; if(!A) return; if(SGF.root) SGF.root.visible=d<1100; if(d<600) sgSmoke(dt);
+  // the crash site is built a few seconds into every game (so it's on the map and you can see its smoke from anywhere)
+  if(state.started&&SGF.t0==null) SGF.t0=perfT;
+  if(!SGF.api&&!SGF.loading&&state.started&&(d<520||perfT-SGF.t0>8)) sgBoot();
+  const A=SGF.api; if(!A) return; sgSmoke(dt);
   if(!A.ready()){ if(A.boss()&&!SGF.prep){ SGF.prep=true; A.prepare(); } return; }
   if(SGF.dead&&!A.on()&&!SGF.hid){ SGF.hid=true; A.hide(true); }
   if(d<170&&!SGF.found){ SGF.found=true; try{ xpFind('shogun','Robot crash site','A war machine fell out of the sky. Step onto the slabs to wake it',300); }catch(e){} }
