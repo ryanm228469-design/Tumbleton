@@ -14975,6 +14975,9 @@ try{ upgLooks(); }catch(e){ console.warn('upgrade looks',e); }
    Hold the left mouse button to fire a continuous beam. It runs hot: let go to cool it down. Coloured with your character's own colours. */
 WEAPONS.gauntlet={id:'gauntlet',name:'Power gauntlet',price:35000,ranged:true,auto:true,cd:.08,stats:'Hold to fire a beam · overheats',desc:'A mechanical gauntlet with a palm blaster. Hold the left mouse button to fire a beam that burns through zombies. Coloured to match your look.',
   svg:'<svg viewBox="0 0 24 24"><rect x="2.5" y="9" width="9" height="6.5" rx="1.6" fill="#7b2fe0"/><rect x="11" y="8" width="6" height="8.5" rx="1.4" fill="#5b6068"/><circle cx="14" cy="12.25" r="2.1" fill="#9ff4ff"/><path d="M17 8.6h4v1.4h-4zM17 11.2h4.6v1.4H17zM17 13.8h4v1.4h-4z" fill="#5b6068"/></svg>'};
+// the gauntlet is added to the weapon list after the save is read, so it was dropped on rejoin: read it back here.
+// Gauntlets lost that way come back too: buying one also records its on/off switch in the upgrades save.
+try{ const sv=JSON.parse(localStorage.getItem('tumbleton-save')||'null'); if((sv&&sv.owned&&sv.owned.gauntlet===true)||(UPG.on.fists&&typeof UPG.on.fists.gauntlet==='boolean')) state.owned.gauntlet=true; }catch(e){}
 // it's part of your fists now (creator's ask): tap the left mouse button to punch, hold it to blast. Bought once at the fist upgrade bench
 function gauntOn(){ return !!state.owned.gauntlet&&!(UPG.on.fists&&UPG.on.fists.gauntlet===false)&&state.weapon==='fists'; }
 const GAUNT={heat:0,over:false,fireT:-9,tick:0,beam:null,glow:null,fpKey:null,tpKey:null,tp:null,cols:null};
