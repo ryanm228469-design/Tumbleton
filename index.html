@@ -314,6 +314,7 @@ kbd{font:700 12px/1 var(--f-body);min-width:22px;padding:4px 6px 3px;border-radi
 .goals .gr{display:flex;justify-content:space-between;gap:8px;margin-top:4px}.goals .gr span{flex:1;min-width:0}.goals .gr b{color:#7fd88c;font-weight:700;white-space:nowrap}
 .goals .gt{position:relative;height:9px;border-radius:5px;background:#2c2f36;margin-top:3px;overflow:hidden}.goals .gt i{position:absolute;left:0;top:0;bottom:0;background:#4fae62}.goals .gt em{position:absolute;right:4px;top:-2px;font:700 9px/13px var(--f-body);font-style:normal;color:#fff}
 body.touch .goals{transform:scale(.8);transform-origin:top left}
+.fcbar{left:50%;bottom:30%;transform:translateX(-50%);min-width:280px;text-align:center;background:rgba(16,19,24,.88);border:2px solid #0b0b14;border-radius:12px;padding:8px 14px;color:#fff;font:700 15px/1.3 var(--f-body)}.fcbar b{display:block;margin-bottom:6px}.fcbar i{display:block;height:10px;border-radius:5px;background:#2c2f36;overflow:hidden}.fcbar u{display:block;height:100%;width:0;background:linear-gradient(90deg,#ffb300,#ff6a2a)}
 .lvroad{position:fixed;inset:0;z-index:80;background:rgba(3,8,26,.62);display:flex;align-items:center;justify-content:center;font-family:'Lilita One',var(--f-display);letter-spacing:.02em}.lvroad[hidden]{display:none}
 .lvroad .ol{text-shadow:2px 0 0 #0b0b14,-2px 0 0 #0b0b14,0 2px 0 #0b0b14,0 -2px 0 #0b0b14,2px 2px 0 #0b0b14,-2px 2px 0 #0b0b14,2px -2px 0 #0b0b14,-2px -2px 0 #0b0b14,0 4px 0 #0b0b14}
 .lvr-box{position:relative;width:min(960px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;box-sizing:border-box;border:4px solid #0b0b14;border-radius:24px;padding:14px 18px 12px;color:#fff;
@@ -11615,8 +11616,8 @@ function pzRiotGuard(p,dt){ const P=player.pos, tw=p.pz.role==='tower';
   if(Math.random()<dt*.06) say(p,['Get down!','Back to your cells!','Stop right there!','Lockdown! LOCKDOWN!'][Math.floor(Math.random()*4)],false); }
 function pzEscPath(p){ const P=[]; const x=p.pos.x, z=p.pos.z; if(pzInYard(x,z)&&z>-80) P.push({x:700,z:-77},{x:700,z:-84}); if(pzInBlock(x,z)||P.length) P.push({x:624.5,z:-104},{x:624.2,z:-112.8},{x:620,z:-112.8}); P.push({x:612,z:-113.6},{x:607,z:-113.6},{x:605,z:-109},{x:598,z:-109}); return P; }
 function pzRiot0(){ if(PZ.mode!=='jail') return; PZ.mode='riot'; PZ.riotT=0; menuDone&&menuDone();
-  banner('JAILBREAK!','Smokey cut the fence behind the boiler shed. Get outside the fence. The guards will shoot!',true); Snd.sting(); state.shake=.5;
-  PZ.doorWant=1; PZ.fenceCut=true; PZ.backBox.y0=50; PZ.backBox.h=50.1; PZ.cutBox.y0=50; PZ.cutBox.h=50.1; PZ.cutM.rotation.set(0,0,0); PZ.cutM.position.set(0,-2.2,0); PZ.backDoor.rotation.y=-1.9; PZ.backDoor.position.z+=.9;
+  banner('JAILBREAK!','Get to the fence behind Smokey\'s shed: hold R to cut through it, or press F to blow it open. The guards will shoot!',true); Snd.sting(); state.shake=.5;
+  PZ.doorWant=1; PZ.fenceCut=false; PZ.backBox.y0=50; PZ.backBox.h=50.1; PZ.backDoor.rotation.y=-1.9; PZ.backDoor.position.z+=.9;
   for(const p of PZ.ppl){ if(!p.pz||!people.includes(p)) continue; pzStand(p); p.pz.path=null; if(p.pz.role==='inmate'){ p.pz.task={k:'riot',t:0}; if(Math.random()<.35&&!p.pz.upper){ p.pz.esc=true; pzGo(p,pzEscPath(p)); } } if(p.pz.role==='dealer'){ say(p,'GO GO GO!',true); } }
   PZ.locked=false; if(PZ.saved&&PZ.saved!=='fists'&&state.owned[PZ.saved]) equip(PZ.saved); flash('Your gear is back. Smokey slipped it out of the evidence room'); }
 function pzEscaped(){ PZ.mode='free'; PZ.left=0; pzHud(false); state.wanted=null; startWanted(); const W=state.wanted; if(W){ W.stars=5; W.t=200; W.spawnT=2; } banner('YOU BROKE OUT!','Five stars. Every cop in Tumbleton is after you. Lose them!',true); Snd.sting();
@@ -11704,15 +11705,16 @@ function pzTick(dt){ if(mpClient()||!state.started) return; try{ jbTick(dt); }ca
     const inCell=Math.abs(P.x-PZ.cell.x)<2.1&&Math.abs(P.z-PZ.cell.z)<2.6;
     if(!open&&!inCell&&!state.cine&&PZ.yardK<.1){ PZ.outT=(PZ.outT||0)+dt; if(PZ.outT>6){ PZ.outT=0; xpFade(); player.pos.set(PZ.cell.x-.4,HIP,PZ.cell.z); player.vel.set(0,0,0); flash('The guards marched you back to your cell'); } else if(PZ.outT<dt*1.5) flash('Lockup! Get back in your cell'); } else PZ.outT=0;
     if(!pzInside(P.x,P.z)&&!state.cine) { PZ.mode='riot'; pzEscaped(); } }
-  if(PZ.mode==='riot'){ PZ.riotT+=dt; if(PZ.hud) PZ.hud.innerHTML='🚨 JAILBREAK · get outside the fence<br><span style="font-weight:500">Through the broken wall, out of the boiler shed, through the cut in the fence</span>'; if(!pzInside(P.x,P.z)) pzEscaped(); } }
+  if(PZ.mode==='riot'){ PZ.riotT+=dt; if(PZ.hud) PZ.hud.innerHTML='🚨 JAILBREAK · get outside the fence<br><span style="font-weight:500">'+(PZ.fenceCut?'Through the broken wall, out of the boiler shed, through the hole in the fence':'Out through the boiler shed, then at the fence: hold R to cut it or press F to blow it')+'</span>'; if(!pzInside(P.x,P.z)) pzEscaped(); } }
 /* ---------- R to use: bunks, the food counter, Smokey ---------- */
 function pzNearK(){ if(PZ.mode!=='jail'&&PZ.mode!=='riot'||activeCar||state.cine) return null; const P=player.pos;
+  if(typeof fcNear==='function'&&fcNear()) return 'fence';
   if(Math.hypot(P.x-PZ.shop.x,P.z-PZ.shop.z)<2.6&&P.x<622) return 'dealer';
   if(PZ.mode==='jail'&&Math.hypot(P.x-PZ.cell.bed.x,P.z-PZ.cell.bed.z)<1.7) return 'bunk';
   if(PZ.mode==='jail'&&pzPeriod()==='meal'&&Math.hypot(P.x-PZ.counter.x,P.z-PZ.counter.z)<2.2) return 'food';
   return null; }
-function pzPrompt(){ const k=pzNearK(); if(!k) return ''; return k==='dealer'?'<kbd>R</kbd> Talk to Smokey':k==='bunk'?'<kbd>R</kbd> Sleep until '+(pzNextHour()%24)+':00':'<kbd>R</kbd> Grab a tray'; }
-function pzUse(){ const k=pzNearK(); if(!k) return false;
+function pzPrompt(){ const k=pzNearK(); if(!k) return ''; return k==='fence'?'<kbd>R</kbd> Hold to cut the fence · <kbd>F</kbd> Blow it open':k==='dealer'?'<kbd>R</kbd> Talk to Smokey':k==='bunk'?'<kbd>R</kbd> Sleep until '+(pzNextHour()%24)+':00':'<kbd>R</kbd> Grab a tray'; }
+function pzUse(){ const k=pzNearK(); if(!k) return false; if(k==='fence'){ if(document.body.classList.contains('touch')){ FC.auto=true; flash('Cutting the fence… stay close'); } else flash('Hold R to cut through the fence, or press F to blow it open'); return true; }
   if(k==='bunk'){ const nh=pzNextHour(), h=((DAY.t%1)+1)%1*24, dh=nh-h, sec=dh/24*(DAY.len||1200); xpFade(); DAY.t+=dh/24; PZ.left-=sec; FOOD.v=Math.max(30,FOOD.v-dh*1.5); flash('You slept for '+Math.round(dh*10)/10+' hours'); PZ.per=null; return true; }
   if(k==='food'){ if((PZ.ate||0)>perfT){ flash('One tray each. Come back next meal'); return true; } PZ.ate=perfT+120; FOOD.v=100; FOOD.poison=false; foodSave&&foodSave(); state.hp=Math.min(100,state.hp+20); flash(['Mystery stew. Your food bar is full','Grey mashed potato and a bread roll. Full!','Beans and a suspicious sausage. Full!'][Math.floor(Math.random()*3)]); Snd.can&&Snd.can(); return true; }
   if(k==='dealer'){ pzDealerMenu(); return true; } return false; }
@@ -11720,7 +11722,7 @@ const PZ_GUNS=['zipgun','jailsawn','taser','riotgun'];
 function pzDealerMenu(){ const add=menuOpen('Smokey · behind the broken wall');
   for(const id of PZ_GUNS){ const W=WEAPONS[id]; const own=!!state.owned[id]; add((own?'✓ ':'')+W.name+(own?' · ammo $'+AMMO[id].price:' · '+fmt$(W.price)),W.desc,()=>{ if(own){ if(state.money<AMMO[id].price){ menuDone('Smokey wants cash up front'); return; } state.money-=AMMO[id].price; state.ammo[id]={mag:AMMO[id].mag,res:AMMO[id].tot-AMMO[id].mag}; save(); equip(id); menuDone('Ammo for the '+W.name); return; }
       if(state.money<W.price){ menuDone('"Come back when you\'ve got '+fmt$(W.price)+'."'); return; } state.money-=W.price; state.owned[id]=true; state.ammo[id]={mag:AMMO[id].mag,res:AMMO[id].tot-AMMO[id].mag}; save(); showGain('-'+fmt$(W.price),true); equip(id); menuDone('You bought the '+W.name+'. Keep it out of sight'); }); }
-  if(PZ.mode==='jail') add('🚨 Start the jailbreak','Smokey opens every cell, cuts the fence behind his shed, and the whole block goes off. The guards will shoot.',()=>{ menuDone(); pzRiot(); },'pick-go');
+  if(PZ.mode==='jail') add('🚨 Start the jailbreak','Smokey opens every cell and gives you bolt cutters and a charge. You cut or blow the fence behind his shed while the whole block goes off. The guards will shoot.',()=>{ menuDone(); pzRiot(); },'pick-go');
   add('Back','',()=>menuDone()); }
 /* ---------- the police station's new look: navy frame, entrance canopy with a lit POLICE sign, flags, bollards, a prisoner transfer door ---------- */
 function pzStationLook(){ const S=STATION; if(!S||S.newLook) return; S.newLook=true; const cx=S.cx, cz=S.cz, X0=cx-14, X1=cx+14, Z0=cz-19, Z1=cz-3, cell=cellAt(cx,cz), V=[];
@@ -13302,7 +13304,8 @@ function keyLayer(e){ if(e.__lay||e.__touch||!e.code) return; if(e.target&&(e.ta
     if(dn&&!LEAN.q&&!leanOnFoot()) return; if(!dn&&!LEAN.q) return;
     e.stopImmediatePropagation(); e.preventDefault(); LEAN.q=dn; return; }
   if(c==='KeyE'){ e.stopImmediatePropagation(); e.preventDefault(); LEAN.e=dn&&(LEAN.e||leanOnFoot()); return; }
-  if(c==='KeyR'){ e.stopImmediatePropagation(); e.preventDefault();
+  if(c==='KeyF'&&typeof fcKeyF==='function'&&fcKeyF(dn)){ e.stopImmediatePropagation(); e.preventDefault(); return; }
+  if(c==='KeyR'){ e.stopImmediatePropagation(); e.preventDefault(); if(typeof fcKeyR==='function'&&fcKeyR(dn)) return;
     if(dn){ if(e.repeat||LEAN.r) return; const can=!!(activeHeli||(!activeCar&&!FOODH.out&&AMMO[state.weapon]&&(player.mode==='walk'||player.mode==='lift')));
       // menus and talking: act straight away
       if(state.cine||(typeof dlg!=='undefined'&&dlg.open)||state.paused){ keySend('keydown','KeyE'); keySend('keyup','KeyE'); return; }
@@ -17545,7 +17548,8 @@ function jbShoot(p,x,y,z){ pzShootFx(p,x,y,z); }
 // the riot itself, on top of the old one: everyone gets a job, Smokey's stash goes round, fires start
 function jbStart(){ JB.armT=0; let n=0;
   for(const p of PZ.ppl){ if(!p.pz||p.pz.role!=='inmate'||p.pz.upper||!people.includes(p)) continue; const r=Math.random(); const kind=r<.45?'gun':r<.75?'taser':r<.9?'brawl':'run';
-    p.pz.jb={kind,armed:false,armAt:R(1,7)+(n++%5)*.4,fightFor:R(18,45),cd:R(.3,1.5)}; p.pz.gun=false; p.pz.esc=kind==='run'; if(p.pz.esc) pzGo(p,pzEscPath(p)); }
+    p.pz.jb={kind,armed:false,armAt:R(1,7)+(n++%5)*.4,fightFor:R(18,45),cd:R(.3,1.5)}; p.pz.gun=false; p.pz.esc=kind==='run';
+    const c=p.pz.cell; if(c&&c.door&&pzInBlock(p.pos.x,p.pos.z)&&Math.abs(p.pos.z-pzLaneZ(c))>1.2) p.pz.jbExit=[{x:c.door.x,z:c.door.z},pzOut(c)]; else if(p.pz.esc) pzGo(p,pzEscPath(p)); }
   flash('Smokey threw open his stash: guns and tasers for everyone!'); jbFires(); }
 function jbFires(){ jbFiresClear(); const spots=[]; const Y=PZ.yard, B=PZ.cb; if(Y) for(let i=0;i<4;i++) spots.push({x:R(Y.x0+6,Y.x1-6),z:R(Y.z0+6,Y.z1-6),y:0}); if(B) for(let i=0;i<3;i++) spots.push({x:R(B.x0+4,B.x1-4),z:(B.z0+B.z1)/2+R(-3,3),y:0});
   const fm=new THREE.MeshBasicMaterial(Object.assign({color:0xff8a2a,transparent:true,opacity:.85,depthWrite:false,blending:THREE.AdditiveBlending})), fm2=new THREE.MeshBasicMaterial({color:0xffd36a,transparent:true,opacity:.9,depthWrite:false,blending:THREE.AdditiveBlending});
@@ -17559,8 +17563,9 @@ function pzRiotInmate(p,dt){ pzStand(p); p.pz.arms=false; const J=p.pz.jb;
   if(!J){ return pzRiotInmate0(p,dt); }
   if(p.pz.upper) return pzRiotInmate0(p,dt);
   if(!J.armed&&PZ.riotT>J.armAt) jbArm(p);
+  if(p.pz.jbExit&&p.pz.jbExit.length){ if(PZ.doorK<.8){ pzLegs(p,0,dt); return; } const q=p.pz.jbExit[0]; if(pzStep(p,q.x,q.z,3.6,dt)<.1) p.pz.jbExit.shift(); if(!p.pz.jbExit.length&&p.pz.esc) pzGo(p,pzEscPath(p)); return; }
   if(p.pz.esc){ const near=Math.hypot(p.pos.x-PZ.dealerAt.x,p.pos.z-PZ.dealerAt.z)<7; if(near&&!J.armed){ if(J.kind!=='gun'&&J.kind!=='taser') J.kind=Math.random()<.6?'gun':'taser'; jbArm(p); }
-    if(pzFollow(p,4.4,dt)) jbOut(p); return; }
+    if(jbFenceWait(p,dt)) return; p.pz.wait=null; if(pzFollow(p,4.4,dt)) jbOut(p); return; }
   const guards=PZ.ppl.filter(q=>q.pz&&q.pz.role==='guard'&&!q.dead&&q.mode!=='ragdoll'), g=pzNear(p,guards,60);
   if(!g||PZ.riotT>J.fightFor||PZ.mode==='free'){ p.pz.esc=true; pzGo(p,pzEscPath(p)); if(Math.random()<.4) say(p,jbPick('run'),false); return; }
   const d=Math.hypot(g.pos.x-p.pos.x,g.pos.z-p.pos.z), face=()=>{ p.yaw=lerpA(p.yaw,Math.atan2(g.pos.x-p.pos.x,g.pos.z-p.pos.z),Math.min(1,dt*9)); pzLegs(p,0,dt); }; J.cd-=dt;
@@ -17614,9 +17619,33 @@ function jbCopsTick(dt){ if(!JB.esc.length) return; JB.esc=JB.esc.filter(p=>peop
     for(const e of JB.esc){ const d=Math.hypot(e.pos.x-q.pos.x,e.pos.z-q.pos.z); if(d<bd&&!(e.jbHide&&Math.random()<.7)){ bd=d; t=e; } } if(!t){ q.jbCD=.6; continue; }
     q.jbCD=R(1.1,1.8); q.yaw=Math.atan2(t.pos.x-q.pos.x,t.pos.z-q.pos.z); q.aimT=.8; const tr=new THREE.Mesh(beamGeo(q.pos.x,q.pos.y+.45,q.pos.z,t.pos.x,t.pos.y+.2,t.pos.z,.04),copTracerMat); scene.add(tr); tracers.push({m:tr,t:.05}); Snd.pistol(q.pos.x,q.pos.z);
     if(Math.random()<.4) pzHurt(t,1,q); if(Math.random()<.08) say(q,['Drop the weapon!','Escaped prisoner!','Shots fired!','Get on the ground!'][Math.floor(Math.random()*4)],false); } }
-function jbTick(dt){ if(JB.fires.length) jbFiresTick(dt); jbCopsTick(dt); }
+function jbTick(dt){ if(JB.fires.length) jbFiresTick(dt); jbCopsTick(dt); try{ fcTick(dt); }catch(e){} }
 function pzRiot(){ pzRiot0(); try{ PZ.jbOn=true; jbStart(); }catch(e){ console.warn('jb',e); } }
-function pzReset(){ try{ jbFiresClear(); PZ.jbOn=false; }catch(e){} pzReset0(); }
+function pzReset(){ try{ jbFiresClear(); PZ.jbOn=false; fcReset(); }catch(e){} pzReset0(); }
+/* ---------- the fence is your job: hold R to cut through it, or F to blow it open ---------- */
+const FC={hold:false,auto:false,p:0,charge:null,el:null};
+function fcNear(){ const P=player.pos; return PZ.mode==='riot'&&!PZ.fenceCut&&!activeCar&&P.x>PZ.x0&&P.x<PZ.x0+2.8&&Math.abs(P.z+109)<3.4; }
+function fcKeyR(dn){ if(dn){ if(!state.paused&&!state.cine&&fcNear()){ FC.hold=true; return true; } return false; } if(FC.hold){ FC.hold=false; return true; } return false; }
+function fcKeyF(dn){ if(!dn||state.paused||state.cine||!fcNear()||FC.charge) return false; fcPlant(); return true; }
+function fcOpen(how){ if(PZ.fenceCut) return; PZ.fenceCut=true; FC.hold=FC.auto=false; FC.p=0; PZ.cutBox.y0=50; PZ.cutBox.h=50.1;
+  if(how==='blow'){ PZ.cutM.visible=false; for(let i=0;i<14;i++) puff(PZ.x0+R(-.5,.5),R(.3,4),-109+R(-3,3),i%3?0x777777:0xc9ced3,R(.3,.8),false); }
+  else { PZ.cutM.rotation.set(0,0,0); PZ.cutM.position.set(0,-2.2,0); Snd.thud&&Snd.thud(PZ.x0,-109,6); }
+  banner(how==='blow'?'BOOM! THE FENCE IS DOWN':'YOU\'RE THROUGH THE FENCE','Go go go! Get outside before the guards stop you',true); const sm=PZ.ppl.find(p=>p.pz&&p.pz.role==='dealer'); if(sm) say(sm,how==='blow'?'Ha! That\'s my boy!':'Nice work! GO!',true); }
+function fcPlant(){ const g=new THREE.Group(); g.add(new THREE.Mesh(mergeGeos([{g:BX(.18,.32,.42,0,0,0),c:'#5b4a32'},{g:BX(.2,.06,.44,0,.08,0),c:'#2a2c30'},{g:BX(.2,.06,.44,0,-.08,0),c:'#2a2c30'}],true),VC));
+  const led=new THREE.Mesh(new THREE.SphereGeometry(.05,6,4),new THREE.MeshBasicMaterial({color:0xff2a2a})); led.position.set(.1,.12,0); g.add(led); g.position.set(PZ.x0+.12,1.1,-109); scene.add(g);
+  FC.charge={g,led,t:3,bt:0}; flash('Charge planted! Get back!'); Snd.pop&&Snd.pop(); }
+function fcTick(dt){ if(PZ.mode!=='riot'||PZ.fenceCut){ if(FC.el) FC.el.hidden=true; if(FC.charge&&PZ.fenceCut){} if(!FC.charge) return; }
+  const C=FC.charge; if(C){ C.t-=dt; C.bt-=dt; if(C.bt<=0){ C.bt=C.t<1?.12:.4; C.led.visible=!C.led.visible; Snd.tink&&Snd.tink(PZ.x0,-109); }
+    if(C.t<=0){ scene.remove(C.g); C.g.traverse(o=>{ if(o.geometry) o.geometry.dispose(); }); FC.charge=null; try{ explode(PZ.x0,1.2,-109,.8,'chaos'); }catch(e){} fcOpen('blow'); } }
+  if(PZ.mode!=='riot'||PZ.fenceCut) return;
+  const near=fcNear(); if(!near) FC.auto=false; const cutting=near&&(FC.hold||FC.auto)&&!FC.charge;
+  if(cutting){ FC.p=Math.min(1,FC.p+dt/4); FC.st=(FC.st||0)-dt; if(FC.st<=0){ FC.st=.16; puff(PZ.x0+.1,R(.6,2),-109+R(-1.5,1.5),Math.random()<.5?0xffd27a:0xffffff,.12,false); Snd.tink&&Snd.tink(PZ.x0,-109); } player.armR&&(player.armR.rotation.x=-1.1); if(FC.p>=1) fcOpen('cut'); }
+  if(!FC.el){ const d=document.createElement('div'); d.className='hud fcbar'; d.innerHTML='<b></b><i><u></u></i>'; document.body.appendChild(d); FC.el=d; }
+  const show=near||FC.p>0; FC.el.hidden=!show; if(show){ FC.el.querySelector('b').textContent=FC.charge?'💣 Charge planted · get back!':cutting?'✂ Cutting the fence… '+Math.round(FC.p*100)+'%':FC.p>0?'✂ Fence '+Math.round(FC.p*100)+'% cut · hold R to keep cutting':'Hold R to cut the fence · F to blow it open'; FC.el.querySelector('u').style.width=Math.round(FC.p*100)+'%'; } }
+function fcReset(){ FC.hold=FC.auto=false; FC.p=0; if(FC.charge){ scene.remove(FC.charge.g); FC.charge=null; } if(PZ.cutM) PZ.cutM.visible=true; if(FC.el) FC.el.hidden=true; }
+// inmates heading out wait at the fence until it's open
+function jbFenceWait(p,dt){ if(PZ.fenceCut) return false; const P=p.pz.path, q=P&&P[p.pz.pi]; if(!q||q.x>PZ.x0+.4) return false;
+  const W=p.pz.wait||(p.pz.wait={x:PZ.x0+R(1.6,4.5),z:-109+R(-3.5,3.5)}); if(pzStep(p,W.x,W.z,3.6,dt)<.2){ p.yaw=lerpA(p.yaw,-PI/2,Math.min(1,dt*4)); if(Math.random()<dt*.15) say(p,['Cut the fence!','Hurry up!','Blow it open!','Come on, come on!'][Math.floor(Math.random()*4)],false); } return true; }
 /*JB-END*/
 /*GL-BEGIN*/
 /* ---------- 🎯 goal board: three goals at a time, from first steps to the big stuff, then repeatable ones ---------- */
