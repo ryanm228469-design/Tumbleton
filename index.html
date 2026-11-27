@@ -310,11 +310,7 @@ kbd{font:700 12px/1 var(--f-body);min-width:22px;padding:4px 6px 3px;border-radi
 .goals{top:226px;left:16px;width:200px;box-sizing:border-box;background:rgba(21,23,28,.88);border:1px solid var(--asphalt-hi);border-radius:8px;padding:6px 10px 7px;font:600 12px/1.3 var(--f-body);color:#e9e6dc;pointer-events:auto;cursor:pointer}
 .goals .lv{display:flex;justify-content:space-between;align-items:baseline;font-weight:800;letter-spacing:.08em;color:#ffd166;font-size:12px}.goals .lvg{color:#9be7ff;font-size:11px;letter-spacing:0}.goals .gt.lvb{height:11px;margin:3px 0 6px}.goals .gt.lvb i{background:#e0b234}.goals .gt.lvb em{top:-1px}
 .goals .gh{font-weight:800;letter-spacing:.12em;color:#ffd166;font-size:11px;margin-bottom:3px}
-.goals .gr{display:flex;justify-content:space-between;gap:8px;margin-top:4px}.goals .gr span{flex:1;min-width:0}.goals .gr b{color:#7fd88c;font-weight:700;white-space:nowrap}
-.goals .gt{position:relative;height:9px;border-radius:5px;background:#2c2f36;margin-top:3px;overflow:hidden}.goals .gt i{position:absolute;left:0;top:0;bottom:0;background:#4fae62}.goals .gt em{position:absolute;right:4px;top:-2px;font:700 9px/13px var(--f-body);font-style:normal;color:#fff}
-body.touch .goals{transform:scale(.8);transform-origin:top left}
-.goals{top:226px;left:16px;width:200px;box-sizing:border-box;background:rgba(21,23,28,.88);border:1px solid var(--asphalt-hi);border-radius:8px;padding:6px 10px 7px;font:600 12px/1.3 var(--f-body);color:#e9e6dc;pointer-events:auto;cursor:pointer}
-.goals .gh{font-weight:800;letter-spacing:.12em;color:#ffd166;font-size:11px;margin-bottom:3px}
+.goals .gr.dl{margin:2px 0 4px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,.08)}
 .goals .gr{display:flex;justify-content:space-between;gap:8px;margin-top:4px}.goals .gr span{flex:1;min-width:0}.goals .gr b{color:#7fd88c;font-weight:700;white-space:nowrap}
 .goals .gt{position:relative;height:9px;border-radius:5px;background:#2c2f36;margin-top:3px;overflow:hidden}.goals .gt i{position:absolute;left:0;top:0;bottom:0;background:#4fae62}.goals .gt em{position:absolute;right:4px;top:-2px;font:700 9px/13px var(--f-body);font-style:normal;color:#fff}
 body.touch .goals{transform:scale(.8);transform-origin:top left}
@@ -16944,7 +16940,7 @@ function mpHostData(conn,d){ if(!d||typeof d!=='object') return; const P=conn.mp
   if(d.t==='hi'){ if(P) return; if(d.v!==MPV){ try{ conn.send({t:'x',why:'old'}); }catch(e){} setTimeout(()=>conn.close(),500); return; }
     if(MP.pl.size>=MPMAX){ try{ conn.send({t:'x',why:'full'}); }catch(e){} setTimeout(()=>conn.close(),500); return; }
     const id=MP.nextId++; conn.mp={id,name:mpClean(d.n),col:mpColOk(d.c),conn,st:null,t:0,seen:performance.now()}; MP.pl.set(id,conn.mp);
-    conn.send({t:'w',id,code:MP.code,sn:MP.sname,pub:MP.pub,pvp:MP.pvp?1:0}); mpBlocksTo(conn.mp); mpRoster(); setTimeout(()=>{ mpHouseBroadcast(); mpGsSend(); },400); mpSys(conn.mp.name+' joined'); mpBroadcast({t:'c',id:-1,m:conn.mp.name+' joined the game'},conn); return; }
+    conn.send({t:'w',id,code:MP.code,sn:MP.sname,pub:MP.pub,pvp:MP.pvp?1:0}); try{ for(const [i,l] of mpLvs()) conn.send({t:'plv',id:i,l}); }catch(e){} mpBlocksTo(conn.mp); mpRoster(); setTimeout(()=>{ mpHouseBroadcast(); mpGsSend(); },400); mpSys(conn.mp.name+' joined'); mpBroadcast({t:'c',id:-1,m:conn.mp.name+' joined the game'},conn); return; }
   if(!P) return; P.seen=performance.now();
   if(d.t==='u'){ const st=mpSanState(d.s); if(st){ P.st=st; P.t=performance.now(); } }
   else if(d.t==='c'&&typeof d.m==='string'){ const m=d.m.slice(0,120).trim(); if(!m) return; mpChatShow(P.name,P.col,m); mpBroadcast({t:'c',id:P.id,m},conn); }
@@ -16954,6 +16950,7 @@ function mpHostData(conn,d){ if(!d||typeof d!=='object') return; const P=conn.mp
   else if(d.t==='sgh'){ try{ if(SGF.api) SGF.api.netHit(String(d.n||''),d.p,d.d); }catch(e){} }
   else if(d.t==='pv'){ if(MP.pvp&&P){ const to=+d.to; if(to===0) pvApply(d,P.id); else if(to!==P.id&&MP.pl.has(to)) mpSendTo(to,Object.assign({},d,{f:P.id})); } }
   else if(d.t==='pk'){ if(P) pvKill(+d.k,P.id); }
+  else if(d.t==='plv'){ if(P){ mpLvIn(P.id,+d.l); mpBroadcast({t:'plv',id:P.id,l:mpLvs().get(P.id)},conn); } }
   else if(d.t==='sgh'){ try{ if(SGF.api) SGF.api.netHit(String(d.n||''),d.p,d.d); }catch(e){} }
   else if(d.t==='zs') mpHostZSpawn(P,d);
   else if(d.t==='tr'){ const m=mpShotSan(d); if(m){ mpShotShow(m); mpBroadcast(m,conn); } }
@@ -16977,6 +16974,7 @@ function mpClientData(d){ if(!d||typeof d!=='object') return; MP.sinceHost=0;
   else if(d.t==='zd') mpZDamage(d);
   else if(d.t==='pv'){ if(+d.to===MP.id) pvApply(d,+d.f); }
   else if(d.t==='pk') pvKillShow(+d.k,+d.v);
+  else if(d.t==='plv'){ if(+d.id!==MP.id) mpLvIn(+d.id,+d.l); }
   else if(d.t==='w2') mpWorldApply(d);
   else if(d.t==='lv') lvNetApply(d);
   else if(d.t==='lvs') lvNetSay(d);
@@ -17249,12 +17247,12 @@ function mpClientTidy(){ for(let i=people.length-1;i>=0;i--){ const q=people[i];
 /* other players' characters */
 const _mv=new V3(), _mq=new THREE.Quaternion();
 function mpHash(t){ let h=7; for(let i=0;i<t.length;i++) h=(h*31+t.charCodeAt(i))>>>0; return h; }
-function mpTag(name,col){ const c=cv(256,64), x=c.getContext('2d'); x.font='700 30px system-ui,sans-serif'; const w=Math.min(250,x.measureText(name).width+40);
+function mpTag(name,col,lv){ if(lv) name=name+' · Lv '+lv; const c=cv(256,64), x=c.getContext('2d'); x.font='700 30px system-ui,sans-serif'; if(x.measureText(name).width>205) x.font='700 24px system-ui,sans-serif'; const w=Math.min(250,x.measureText(name).width+40);
   x.fillStyle='rgba(16,19,24,.8)'; x.beginPath(); if(x.roundRect) x.roundRect(128-w/2,8,w,48,24); else x.rect(128-w/2,8,w,48); x.fill(); x.fillStyle=col; x.beginPath(); x.arc(128-w/2+20,32,7,0,TAU); x.fill();
   x.fillStyle='#fff'; x.textBaseline='middle'; x.textAlign='center'; x.fillText(name,128+8,33); const t=new THREE.CanvasTexture(c);
   const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,depthWrite:false,transparent:true,fog:false})); sp.renderOrder=20; return sp; }
 function mpAvatar(id,P){ const h=mpHash(P.name+'#'+id), parts=makePersonMesh(SKIN[h%SKIN.length],P.col,PANTS[(h>>4)%PANTS.length],HAIR[(h>>8)%HAIR.length]);
-  parts.g.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.userData.body=true; } }); scene.add(parts.g); const tag=mpTag(P.name,P.col); scene.add(tag);
+  parts.g.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.userData.body=true; } }); scene.add(parts.g); const tag=mpTag(P.name,P.col,mpLvs().get(id)); scene.add(tag);
   return {id,parts,g:parts.g,tag,name:P.name,col:P.col,veh:null,vkey:'',pos:new V3(),tgt:new V3(),vel:new V3(),t:0,yaw:0,phase:0,spd:0,ck:0,pT:0,chute:null,first:true}; }
 function mpDispose(g){ scene.remove(g); g.traverse(o=>{ if(o.geometry) o.geometry.dispose(); }); }
 function mpAvDrop(id){ const av=MP.av.get(id); if(!av) return; mpDispose(av.g); scene.remove(av.tag); av.tag.material.map.dispose(); av.tag.material.dispose(); if(av.veh) mpDispose(av.veh.g); if(av.chute) mpDispose(av.chute); MP.av.delete(id); }
@@ -17554,6 +17552,7 @@ function glTick(dt){ if(!state.started||story.on){ if(GL.el) GL.el.hidden=true; 
   GL.t-=dt; if(GL.t<=0){ GL.t=1; glFill();
     for(const a of GL.act.slice()){ const D=glDef(a); if(!D){ GL.act.splice(GL.act.indexOf(a),1); continue; } let ok=false; try{ ok=D.done(); }catch(e){} if(!ok) continue;
       GL.act.splice(GL.act.indexOf(a),1); if(!a.id.startsWith('r_')) GL.done.push(a.id); GL.last=a.id; earn(D.r); glFill(); const nx=GL.act.length?glDef(GL.act[GL.act.length-1]):null; GL.q.push(['🎯 Goal complete: '+D.t,'+'+money(lvCash(D.r))+(nx?' · New goal: '+nx.t:'')]); glSave(); try{ lvAdd(Math.round(D.r/4)); }catch(e){} }
+    try{ dlTick(); }catch(e){}
     if(!GL.seen&&GL.act.length){ GL.seen=true; glSave(); flash('🎯 New: goals on the left. Click them or press B to see the way'); } }
   try{ lvTick(dt); }catch(e){}
   if(GL.q.length&&ACH.bT<=0&&!ACH.q.length){ const [a,b]=GL.q.shift(); ACH.bT=3.2; banner(a,b); Snd.fanfare&&Snd.fanfare(); }
@@ -17565,12 +17564,14 @@ function glHud(dt){ if(!GL.el){ const d=document.createElement('div'); d.classNa
   GL.el.style.top=y+'px';
   const wp=state.wpDest&&perfT<(state.shopWpUntil||0)?state.wpDest:null;
   const rows=GL.act.map(a=>{ const D=glDef(a); if(!D) return null; let p=null; try{ p=D.prog&&D.prog(); }catch(e){} return [D.t,D.r,p,a.wp&&wp&&Math.hypot(wp.x-a.wp.x,wp.z-a.wp.z)<1]; }).filter(Boolean);
-  const [L,x]=lvOf(LV.xp), gn=LV.gainT>0?LV.gain:0; const sig=JSON.stringify([rows,L,x,gn]); if(sig===GL.sig) return; GL.sig=sig; GL.el.textContent='';
+  const [L,x]=lvOf(LV.xp), gn=LV.gainT>0?LV.gain:0, dn=DL.list?DL.list.filter((c,i)=>DL.done.includes(i)).length:0; const sig=JSON.stringify([rows,L,x,gn,dn,!!DL.list]); if(sig===GL.sig) return; GL.sig=sig; GL.el.textContent='';
   { const r=document.createElement('div'); r.className='lv'; const b=document.createElement('b'); b.textContent='⭐ LEVEL '+L; const g=document.createElement('span'); g.className='lvg'; g.textContent=gn?'+'+gn+' XP':''; r.append(b,g); GL.el.appendChild(r); const tr=document.createElement('div'); tr.className='gt lvb'; const f=document.createElement('i'); f.style.width=Math.round(100*x/lvNeed(L))+'%'; const c=document.createElement('em'); c.textContent=x+'/'+lvNeed(L)+' XP'; tr.append(f,c); GL.el.appendChild(tr); }
   const h=document.createElement('div'); h.className='gh'; h.textContent='🎯 GOALS'; GL.el.appendChild(h);
+  if(DL.list){ const r=document.createElement('div'); r.className='gr dl'; const a=document.createElement('span'); a.textContent='📅 Daily challenges'; const b=document.createElement('b'); b.textContent=dn+'/'+DL.list.length; b.style.color=dn>=DL.list.length?'#7fd88c':'#ffd166'; r.append(a,b); GL.el.appendChild(r); }
   for(const [t,r,p,m] of rows){ const row=document.createElement('div'); row.className='gr'; const n=document.createElement('span'); n.textContent=(m?'📍 ':'')+t; const b=document.createElement('b'); b.textContent=money(r); row.append(n,b); GL.el.appendChild(row);
     if(p){ const tr=document.createElement('div'); tr.className='gt'; const f=document.createElement('i'); f.style.width=Math.round(100*p[0]/p[1])+'%'; const c=document.createElement('em'); c.textContent=p[0]+'/'+p[1]; tr.append(f,c); GL.el.appendChild(tr); } } }
 function glMenu(){ if(!state.started||state.over||story.on) return; glFill(); const nested=!cfEl.hidden, prev=cfPrevPaused; const [L,x]=lvOf(LV.xp), nr=LV_REW.find(r=>r[0]>L); const add=menuOpen('⭐ Level '+L+' · 🎯 '+GL.done.length+' of '+GOALS.length+' main goals done'); if(nested) cfPrevPaused=prev;
+  if(DL.list) add('📅 Daily challenges · '+DL.done.length+'/'+DL.list.length+' done'+(DL.streak>1?' · 🔥 '+DL.streak+' day streak':''),'New ones every day, plus a weekly challenge. Tap to see them',()=>dlMenu(),'');
   add('⭐ Level '+L+' · '+x+'/'+lvNeed(L)+' XP to level '+(L+1),(nr?'Next reward at level '+nr[0]+': '+nr[1]+'. ':'')+'Every level pays cash. Tap for all level rewards',()=>lvMenu(),'');
   for(const a of GL.act){ const D=glDef(a); if(!D) continue; let p=null; try{ p=D.prog&&D.prog(); }catch(e){} let w=null; try{ w=D.where&&D.where(); }catch(e){}
     menuHead(D.t+' · '+money(D.r)+(p?' · '+p[0]+'/'+p[1]:''));
@@ -17585,7 +17586,7 @@ try{ const d=JSON.parse(localStorage.getItem('tumbleton-level')||'null'); if(d){
 function lvSave(){ try{ localStorage.setItem('tumbleton-level',JSON.stringify({xp:LV.xp,ach:LV.ach,got:LV.got})); }catch(e){} }
 const lvNeed=L=>50+50*L;
 function lvOf(xp){ let L=1; while(L<99&&xp>=lvNeed(L)){ xp-=lvNeed(L); L++; } return [L,Math.floor(xp)]; }
-const LV_XP={zk:5,del:60,taxi:30,hunt:80,quest:80,rescue:100,horde:150,drop:60,raid:120,boss:200,race:150,league:150,champ:500,pizza:80,fish:15,veg:10,shogun:600,ring:30,cannon:40,hoops:30,surf:40,arcade:30,ride_wheel:20,ride_coaster:20,ride_tower:20,gond:20,host:30,horse:50,bull:200,blood30:300};
+const LV_XP={named:400,xpboss:400,zk:5,del:60,taxi:30,hunt:80,quest:80,rescue:100,horde:150,drop:60,raid:120,boss:200,race:150,league:150,champ:500,pizza:80,fish:15,veg:10,shogun:600,ring:30,cannon:40,hoops:30,surf:40,arcade:30,ride_wheel:20,ride_coaster:20,ride_tower:20,gond:20,host:30,horse:50,bull:200,blood30:300};
 function lvGun(id){ if(!WEAPONS[id]) return; state.owned[id]=true; try{ ammoOf(id); }catch(e){} save(); }
 const LV_REW=[[3,'🔫 A free pistol',()=>lvGun('pistol')],[5,'💰 +5% cash from everything',null],[8,'🔫 A free SMG',()=>lvGun('smg')],[10,'💰 +10% cash from everything',null],[12,'🔫 A free M4 carbine',()=>lvGun('m4')],[15,'🎯 A free sniper rifle',()=>lvGun('sniper')],[20,'💰 +15% cash from everything',null],
   [25,'🦾 A free power gauntlet',()=>{ state.owned.gauntlet=true; (UPG.on.fists=UPG.on.fists||{}).gauntlet=true; upgSave(); save(); }],[30,'🏎 The Lugatti unlocked at Vehicles R Us',()=>{ LUG.unlocked=true; lugSave(); }],[40,'💰 +25% cash from everything',null],[50,'👑 Legend of Tumbleton · $50,000',()=>{ state.money+=50000; save(); }]];
@@ -17597,7 +17598,7 @@ function lvAdd(n,quiet){ if(!(n>0)||!LV) return; const L0=lvOf(LV.xp)[0]; LV.xp+
   let cash=0; const got=[]; for(let L=L0+1;L<=L1;L++){ cash+=100*L; for(const R of LV_REW) if(R[0]===L&&!LV.got.includes(L)){ LV.got.push(L); got.push(R[1]); try{ R[2]&&R[2](); }catch(e){} } }
   state.money+=cash; save(); lvSave(); const g=document.getElementById('gain'); if(g){ g.textContent='+$'+cash; g.classList.remove('show','neg'); void g.offsetWidth; g.classList.add('show'); }
   if(!quiet) GL.q.push(['⭐ LEVEL '+L1+'!','+'+money(cash)+(got.length?' · '+got.join(' · '):'')]); return {L1,cash,got}; }
-function lvTick(dt){ LV.gainT-=dt;
+function lvTick(dt){ LV.gainT-=dt; try{ lvNet(); }catch(e){}
   if(LV.ach<0){ // first time: everything you've already done counts
     let xp=Math.min(achSt('zk'),3000)*5; for(const id of ACH.got){ const A=ACHL.find(a=>a[0]===id); if(A) xp+=Math.round(A[3]/5); } LV.ach=ACH.got.length; lvSave();
     if(xp>0){ const r=lvAdd(xp,true); const L=lvOf(LV.xp)[0]; if(L>1) GL.q.unshift(['⭐ You\'re level '+L+'!','Everything you\'ve already done counts'+(r?' · +'+money(r.cash)+(r.got.length?' · '+r.got.join(' · '):''):'')]); } return; }
@@ -17607,6 +17608,42 @@ function lvMenu(){ const [L,x]=lvOf(LV.xp); const add=menuOpen('⭐ Level '+L+' 
   for(const [n,t] of LV_REW) add((L>=n?'✓ ':'🔒 ')+'Level '+n+' · '+t,L>=n?'Unlocked':'',null,'',L<n);
   menuHead('XP comes from zombies (5 each), goals, achievements, jobs, races, quests, rescues, bosses and more');
   add('Back','',()=>glMenu(),''); add('Close','',()=>menuDone()); }
+
+/* ---------- 📅 daily and weekly challenges: the same for everyone on the same day, a streak for doing all three ---------- */
+const DL={day:'',base:{},done:[],list:null,streak:0,allDay:'',wk:'',wbase:0,wdone:false,w:null};
+try{ const d=JSON.parse(localStorage.getItem('tumbleton-daily')||'null'); if(d) Object.assign(DL,{day:d.day||'',base:d.base||{},done:d.done||[],streak:d.streak|0,allDay:d.allDay||'',wk:d.wk||'',wbase:+d.wbase||0,wdone:!!d.wdone}); }catch(e){}
+function dlSave(){ try{ localStorage.setItem('tumbleton-daily',JSON.stringify({day:DL.day,base:DL.base,done:DL.done,streak:DL.streak,allDay:DL.allDay,wk:DL.wk,wbase:DL.wbase,wdone:DL.wdone})); }catch(e){} }
+const DL_POOL=[['zk','Defeat {n} zombies',[30,50,80],15],['del','Finish {n} courier jobs',[2,3],400],['taxi','Complete {n} taxi fares',[2,4],250],['hunt','Finish {n} hunting contract',[1],600],['quest','Help {n} local with a yellow !',[1],500],
+  ['fish','Catch {n} things off the pier',[3,5],150],['race','Win {n} race at Tumbleton Raceway',[1],800],['league','Win {n} Racing League race',[1],900],['rescue','Rescue {n} survivor in a random event',[1],800],['pizza','Finish {n} pizza delivery run',[1],600],
+  ['horde','Beat {n} zombie horde event',[1],900],['drop','Reach {n} supply drop',[1],600],['gond','Ride the gondola {n} time',[1],300],['named','Beat {n} named boss',[1],1500]];
+const WK_POOL=[['zk','Defeat {n} zombies this week',300],['del','Finish {n} courier jobs this week',10],['taxi','Complete {n} taxi fares this week',15],['race','Win {n} Raceway races this week',3],['league','Win {n} Racing League races this week',3],['quest','Help {n} locals this week',5],['named','Beat {n} named bosses this week',2],['rescue','Rescue {n} survivors this week',3]];
+function dlKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function dlRand(seed){ let h=2166136261; for(const ch of seed){ h^=ch.charCodeAt(0); h=Math.imul(h,16777619); } return ()=>{ h+=0x6D2B79F5; let t=h; t=Math.imul(t^t>>>15,t|1); t^=t+Math.imul(t^t>>>7,t|61); return ((t^t>>>14)>>>0)/4294967296; }; }
+function dlMake(day){ const r=dlRand('tb-day-'+day), pool=DL_POOL.slice(), out=[]; let ev=0;
+  while(out.length<3&&pool.length){ const k=Math.floor(r()*pool.length), P=pool.splice(k,1)[0]; if(['rescue','horde','drop'].includes(P[0])&&ev++) continue; const n=P[2][Math.floor(r()*P[2].length)]; out.push({k:P[0],t:P[1].replace('{n}',n),n,r:n*P[3]}); } return out; }
+function dlWeek(){ const d=new Date(), m=new Date(d.getFullYear(),d.getMonth(),d.getDate()-((d.getDay()+6)%7)); const key=dlKey(m), r=dlRand('tb-week-'+key), P=WK_POOL[Math.floor(r()*WK_POOL.length)]; return {key,k:P[0],t:P[1].replace('{n}',P[2]),n:P[2],r:8000}; }
+const dlLeft=()=>{ const d=new Date(), e=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1), h=Math.floor((e-d)/36e5), m=Math.floor((e-d)%36e5/6e4); return h+'h '+m+'m'; };
+function dlTick(){ if(!state.started||story.on) return; const day=dlKey(new Date());
+  if(DL.day!==day){ const y=new Date(); y.setDate(y.getDate()-1); if(DL.allDay!==dlKey(y)&&DL.allDay!==day) DL.streak=0; DL.day=day; DL.done=[]; DL.list=dlMake(day); DL.base={}; for(const c of DL.list) DL.base[c.k]=achSt(c.k); dlSave(); }
+  if(!DL.list){ DL.list=dlMake(day); for(const c of DL.list) if(DL.base[c.k]===undefined) DL.base[c.k]=achSt(c.k); }
+  const W=dlWeek(); if(DL.wk!==W.key){ DL.wk=W.key; DL.wbase=achSt(W.k); DL.wdone=false; dlSave(); } DL.w=W;
+  DL.list.forEach((c,i)=>{ if(DL.done.includes(i)) return; if(achSt(c.k)-(DL.base[c.k]||0)>=c.n){ DL.done.push(i); earn(c.r); dlSave(); try{ lvAdd(Math.round(c.r/3)); }catch(e){} GL.q.push(['📅 Daily challenge done!',c.t+' · +'+money(lvCash(c.r))+' · '+DL.done.length+'/3 today']);
+      if(DL.done.length>=DL.list.length){ const y=new Date(); y.setDate(y.getDate()-1); DL.streak=(DL.allDay===dlKey(y)?DL.streak:0)+1; DL.allDay=day; const bonus=Math.round(1000*Math.min(2,1+(DL.streak-1)*.25)); earn(bonus); try{ lvAdd(300); }catch(e){} dlSave(); GL.q.push(['🔥 All 3 done today!','Bonus +'+money(lvCash(bonus))+' · '+DL.streak+' day streak'+(DL.streak<5?' · keep it going tomorrow for a bigger bonus':'')]); } } });
+  if(!DL.wdone&&achSt(W.k)-DL.wbase>=W.n){ DL.wdone=true; earn(W.r); try{ lvAdd(1500); }catch(e){} dlSave(); GL.q.push(['🗓 Weekly challenge done!',W.t+' · +'+money(lvCash(W.r))+' · +1500 XP']); } }
+function dlMenu(){ dlTick(); const add=menuOpen('📅 Challenges · new ones in '+dlLeft()+(DL.streak?' · 🔥 '+DL.streak+' day streak':''));
+  menuHead('Today (the same for everyone playing today)');
+  (DL.list||[]).forEach((c,i)=>{ const p=Math.max(0,Math.min(c.n,achSt(c.k)-(DL.base[c.k]||0))); add((DL.done.includes(i)?'✓ ':'')+c.t,(DL.done.includes(i)?'Done':p+'/'+c.n)+' · '+money(c.r)+' and '+Math.round(c.r/3)+' XP',null,'',DL.done.includes(i)); });
+  { const y=new Date(); y.setDate(y.getDate()-1); const st=DL.allDay===DL.day?DL.streak:(DL.allDay===dlKey(y)?DL.streak+1:1); menuHead(DL.done.length>=(DL.list||[]).length?'All done today. Come back tomorrow to keep your streak':'Do all three for a bonus of '+money(Math.round(1000*Math.min(2,1+(st-1)*.25)))+'. Every day in a row adds 25% (up to double)'); }
+  const W=DL.w||dlWeek(), wp=Math.max(0,Math.min(W.n,achSt(W.k)-DL.wbase)); menuHead('This week');
+  add((DL.wdone?'✓ ':'')+W.t,(DL.wdone?'Done':wp+'/'+W.n)+' · '+money(W.r)+' and 1,500 XP',null,'',DL.wdone);
+  add('Back','',()=>glMenu(),''); add('Close','',()=>menuDone()); }
+
+/* ---------- online: your level on your name tag ---------- */
+function mpLvs(){ return MP.lvs||(MP.lvs=new Map()); }
+function mpLvTag(id){ const av=MP.av.get(id); if(!av) return; scene.remove(av.tag); try{ av.tag.material.map.dispose(); av.tag.material.dispose(); }catch(e){} av.tag=mpTag(av.name,av.col,mpLvs().get(id)); scene.add(av.tag); }
+function mpLvIn(id,l){ l=Math.max(1,Math.min(99,l|0)); if(!l) return; mpLvs().set(id,l); mpLvTag(id); }
+function lvNet(){ if(!MP.on){ LV.netK=''; return; } const L=lvOf(LV.xp)[0], k=MP.code+'#'+MP.id+'#'+L; if(LV.netK===k) return; if(!LV.netK||!LV.netK.startsWith(MP.code+'#')) mpLvs().clear(); LV.netK=k; mpLvs().set(MP.id,L);
+  if(MP.host) mpBroadcast({t:'plv',id:MP.id,l:L}); else mpSendHost({t:'plv',l:L}); }
 /*GL-END*/
 /*PV-BEGIN*/
 /* ---------- online: player fighting (the host picks it when making a server) ---------- */
