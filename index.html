@@ -350,7 +350,7 @@ body.touch .goals{transform:scale(.8);transform-origin:top left}
 @keyframes lvrPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
 .lvr-ok,.lvr-lock{position:absolute;top:-6px;right:-4px;width:24px;height:24px;border-radius:50%;border:3px solid #0b0b14;box-sizing:border-box;display:grid;place-items:center;font:14px/1 'Lilita One',var(--f-display)}
 .lvr-ok{background:#3fcf45;color:#fff}.lvr-lock{background:#2b2f4a;font-size:11px}
-.lvr-name{position:absolute;top:168px;transform:translateX(-50%);width:112px;text-align:center;font-size:14px;line-height:1.15;color:#fff}.lvr-name b{display:block;font-weight:400;font-size:13px;color:#ffd21f;margin-bottom:2px}.lvr-name.got b{color:#9dff6a}
+.lvr-name{position:absolute;top:168px;transform:translateX(-50%);width:92px;text-align:center;font-size:14px;line-height:1.15;color:#fff}.lvr-name b{display:block;font-weight:400;font-size:13px;color:#ffd21f;margin-bottom:2px}.lvr-name.got b{color:#9dff6a}
 .lvr-you{position:absolute;top:0;transform:translateX(-50%);z-index:3;background:linear-gradient(#fff27a,#ffb300);color:#0b0b14;font-size:15px;padding:3px 12px;border:3px solid #0b0b14;border-radius:12px;box-shadow:0 4px 0 #0b0b14;white-space:nowrap;animation:lvrBob 1.1s ease-in-out infinite}
 @keyframes lvrBob{0%,100%{margin-top:0}50%{margin-top:-5px}}
 .lvr-pin{position:absolute;top:30px;width:6px;height:92px;margin-left:-3px;background:#ffd21f;border:2px solid #0b0b14;box-sizing:border-box;border-radius:3px;z-index:2}
@@ -6326,11 +6326,11 @@ function knock(p,vx,vy,vz,spin,dmg){
   if(dmg) hurt(p,dmg);
 }
 function damagePlayer(n){
-  if(state.over||state.downT>0||!state.started||n<=0) return;
+  if(state.over||state.downT>0||!state.started||n<=0) return; try{ n=lvDmg(n); }catch(e){}
   state.hp=Math.max(0,state.hp-n); state.lastHurt=perfT; if(player&&n>=3&&perfT-(player.hitAt||-9)>.6){ player.hitAt=perfT; player.hitN=(player.hitN||0)+1; } Snd.oof(); state.hurtFx=Math.min(1,state.hurtFx+n/28);
   if(state.hp<=0) playerDown();
 }
-function playerDown(){ try{ pvDown(); }catch(e){} playerDown0(); }
+function playerDown(){ try{ if(lvSecondWind()) return; }catch(e){} try{ pvDown(); }catch(e){} try{ LVP.sw=false; }catch(e){} playerDown0(); }
 function playerDown0(){
   try{ if(PQ.on&&XP.in===CAVE){ PQ.died=true; if(XP.ride) xpRideEnd(true); } }catch(e){}
   if(story.m) missionFail('You were knocked out.');
@@ -7395,10 +7395,10 @@ function updatePerson(p,dt){
     p.armR.rotation.set(-Math.sin(t)*.8*fl,0,1.3+Math.sin(t*1.1)*.5*fl);
     p.legL.rotation.set(Math.sin(t*1.2)*.7*fl,0,-.3);
     p.legR.rotation.set(-Math.sin(t*1.2)*.7*fl,0,.3); }
-    if(p.isPlayer&&!p.dead&&!(state.downT>0||state.over)){ p.ragT=(p.ragT||0)+dt; if(p.ragT>5){ p.ragT=0; p.vel.set(0,0,0); const gh=groundHeight(p.pos.x,p.pos.z,p.pos.y); if(p.pos.y<gh+.3) p.pos.y=gh+.3; for(const z of people){ if(!z.zombie||z.dead||z.mode!=='walk') continue; const dx=z.pos.x-p.pos.x, dz=z.pos.z-p.pos.z, d=Math.hypot(dx,dz); if(d<2.8) knock(z,dx/(d||1)*7,3,dz/(d||1)*7,4,0); } p.immune=Math.max(p.immune||0,2); startGetup(p); return; } }
-    if(!p.dead&&!(p.isPlayer&&(state.downT>0||state.over))&&p.ground&&p.vel.lengthSq()<1){ p.restT+=dt; if(p.restT>(p.zombie?1.1:1.4)) startGetup(p); } else p.restT=0;
+    if(p.isPlayer&&!p.dead&&!(state.downT>0||state.over)){ p.ragT=(p.ragT||0)+dt; if(p.ragT>(lvPerk('getup')?2.5:5)){ p.ragT=0; p.vel.set(0,0,0); const gh=groundHeight(p.pos.x,p.pos.z,p.pos.y); if(p.pos.y<gh+.3) p.pos.y=gh+.3; for(const z of people){ if(!z.zombie||z.dead||z.mode!=='walk') continue; const dx=z.pos.x-p.pos.x, dz=z.pos.z-p.pos.z, d=Math.hypot(dx,dz); if(d<2.8) knock(z,dx/(d||1)*7,3,dz/(d||1)*7,4,0); } p.immune=Math.max(p.immune||0,2); startGetup(p); return; } }
+    if(!p.dead&&!(p.isPlayer&&(state.downT>0||state.over))&&p.ground&&p.vel.lengthSq()<1){ p.restT+=dt; if(p.restT>(p.zombie?1.1:(p.isPlayer&&lvPerk('getup')?.6:1.4))) startGetup(p); } else p.restT=0;
   } else if(p.mode==='getup'){
-    p.getT+=dt/(p.guQ&&p.shinL?1.05:.6); const k=Math.min(1,p.getT), e=k*k*(3-2*k);
+    p.getT+=dt/(p.guQ&&p.shinL?1.05:.6)*(p.isPlayer&&lvPerk('getup')?2:1); const k=Math.min(1,p.getT), e=k*k*(3-2*k);
     p.g.quaternion.copy(p.qFrom).slerp(p.qTo,e);
     const gh=p.getFloor!==undefined?p.getFloor:groundHeight(p.pos.x,p.pos.z,p.pos.y-.15);
     if(p.guQ&&p.shinL){ // roll over, get the knees under you, push up with the hands, stand
@@ -7418,7 +7418,7 @@ function walkUpdate(p,dt){
       const fx=Math.sin(camYaw), fz=Math.cos(camYaw), rx=-Math.cos(camYaw), rz=Math.sin(camYaw);
       const mf=Math.max(K('KeyW'),K('ArrowUp'))-Math.max(K('KeyS'),K('ArrowDown')), ms=Math.max(K('KeyD'),K('ArrowRight'))-Math.max(K('KeyA'),K('ArrowLeft'));
       const dx=fx*mf+rx*ms, dz=fz*mf+rz*ms, l=Math.hypot(dx,dz);
-      if(l>0){ const spd=(p.crouch?(state.aimHeld?1.3:1.9):state.aimHeld?2.6:(keys.ShiftLeft||keys.ShiftRight||TJ.run)?9.5:4.6)*Math.min(1,l*1.15)*(p.isPlayer?xpSpeedMul()*foodSlow():1); dvx=dx/l*spd; dvz=dz/l*spd; if(p.landT>.2){ dvx*=.3; dvz*=.3; } }
+      if(l>0){ const spd=(p.crouch?(state.aimHeld?1.3:1.9):state.aimHeld?2.6:(keys.ShiftLeft||keys.ShiftRight||TJ.run)?(lvPerk('run')?10.45:9.5):4.6)*Math.min(1,l*1.15)*(p.isPlayer?xpSpeedMul()*foodSlow():1); dvx=dx/l*spd; dvz=dz/l*spd; if(p.landT>.2){ dvx*=.3; dvz*=.3; } }
       if(keys.Space&&p.ground&&!p.jumpHeld){ if(p.crouch) p.crouch=false; else { p.vel.y=9.5; p.ground=false; } }
       else if(keys.Space&&!p.ground&&!p.jumpHeld){ if(p.chute) closeChute(false); else if(p.vel.y<-2&&p.pos.y-HIP-groundHeight(p.pos.x,p.pos.z,p.pos.y-HIP)>3.5) openChute(); }
       p.jumpHeld=!!keys.Space;
@@ -7474,7 +7474,7 @@ function walkUpdate(p,dt){
   let gh=groundHeight(p.pos.x,p.pos.z,foot);
   const nf=p.pos.y-HIP;
   if(nf<=gh||(p.vel.y<=0&&p.ground&&nf-gh<.35)){ const vy=p.vel.y; p.pos.y=gh+HIP; if(p.vel.y<0) p.vel.y=0; p.ground=true;
-    if(p.isPlayer){ if(p.chute){ closeChute(true); p.landT=.55; p.landA=.6; Snd.thud(p.pos.x,p.pos.z,3); } else if(vy<-27.5&&gh>WATER_Y-.2&&!state.over){ knock(p,p.vel.x*.5,3,p.vel.z*.5,6); damagePlayer(Math.round((-vy-27.5)*2.6)); Snd.thud(p.pos.x,p.pos.z,-vy); state.shake=Math.max(state.shake,.35); }
+    if(p.isPlayer){ if(p.chute){ closeChute(true); p.landT=.55; p.landA=.6; Snd.thud(p.pos.x,p.pos.z,3); } else if(vy<-27.5&&gh>WATER_Y-.2&&!state.over){ knock(p,p.vel.x*.5,3,p.vel.z*.5,6); damagePlayer(Math.round((-vy-27.5)*2.6*lvBlastMul())); Snd.thud(p.pos.x,p.pos.z,-vy); state.shake=Math.max(state.shake,.35); }
       else if(vy<-9&&gh>WATER_Y-.2){ p.landT=.55; p.landA=clamp((-vy-8)/16,.35,1); Snd.thud(p.pos.x,p.pos.z,Math.min(10,-vy*.45)); }
       else if(vy<-10&&gh<WATER_Y) puff(p.pos.x,WATER_Y+.1,p.pos.z,0xdff3ff,1,false); } } else p.ground=false;
   const sp=Math.hypot(p.vel.x,p.vel.z);
@@ -10567,7 +10567,7 @@ var FOOD={v:100,poison:false,until:0,hurtT:0,warn:0,el:null};
 try{ const f=JSON.parse(localStorage.getItem('tumbleton-food')||'null'); if(f&&typeof f.v==='number') FOOD.v=clamp(f.v,0,100); }catch(e){}
 function foodSave(){ try{ localStorage.setItem('tumbleton-food',JSON.stringify({v:+FOOD.v.toFixed(1)})); }catch(e){} }
 function eat(n){ const was=FOOD.v; FOOD.v=Math.min(100,FOOD.v+n); if(FOOD.poison){ FOOD.until=perfT+15; flash('The poison wears off in 15 seconds'); } foodSave(); if(was<30) Snd.pop&&Snd.pop(); }
-function foodTick(dt){ if(!state.started||state.over||story.on) return; const sp=activeCar?0:Math.hypot(player.vel.x,player.vel.z), rate=100/(13*60)*(sp>7.2?2:1)*(state.surv.on?.6:1); const v0=FOOD.v; FOOD.v=Math.max(0,FOOD.v-rate*dt);
+function foodTick(dt){ if(!state.started||state.over||story.on) return; const sp=activeCar?0:Math.hypot(player.vel.x,player.vel.z), rate=100/(13*60)*(sp>7.2?2:1)*(state.surv.on?.6:1)*(lvPerk('food')?.7:1); const v0=FOOD.v; FOOD.v=Math.max(0,FOOD.v-rate*dt);
   if(Math.floor(v0/5)!==Math.floor(FOOD.v/5)) foodSave();
   if(FOOD.v<=0&&!FOOD.poison){ FOOD.poison=true; FOOD.until=Infinity; banner('STARVING','You\'re poisoned! Eat something: vending machines, markets or the pizza shop'); }
   if(FOOD.poison&&FOOD.v>0&&FOOD.until===Infinity) FOOD.until=perfT+15;
@@ -10580,7 +10580,7 @@ function foodHUD(){ if(!FOOD.el) FOOD.el={n:$('fdn'),f:$('fdf'),l:$('fdl')}; con
 // thrown by an explosion: you also take fall damage when you hit the ground
 const BLASTF={on:false,minVy:0,t:0};
 function blastFallTick(dt){ if(!BLASTF.on) return; BLASTF.t+=dt; const vy=player.vel.y; if(vy<BLASTF.minVy) BLASTF.minVy=vy;
-  if(BLASTF.minVy<-4&&vy>BLASTF.minVy*.4){ const imp=-BLASTF.minVy; BLASTF.on=false; if(imp>8){ damagePlayer(Math.min(30,(imp-8)*1.6)); state.shake=Math.max(state.shake,.3); Snd.thud&&Snd.thud(player.pos.x,player.pos.z,8); } return; }
+  if(BLASTF.minVy<-4&&vy>BLASTF.minVy*.4){ const imp=-BLASTF.minVy; BLASTF.on=false; if(imp>8){ damagePlayer(Math.min(30,(imp-8)*1.6)*lvBlastMul()); state.shake=Math.max(state.shake,.3); Snd.thud&&Snd.thud(player.pos.x,player.pos.z,8); } return; }
   if(BLASTF.t>8||activeCar) BLASTF.on=false; }
 
 /* ---------- the map: a real bird's-eye photo of the whole world (/ key) ---------- */
@@ -15292,7 +15292,7 @@ function updateWorld(dt){
   sun.position.set(f.x+90,190,f.z+60); sun.target.position.set(f.x,0,f.z);
   // health
   state.hurtFx=Math.max(0,state.hurtFx-dt*1.2);
-  if(!state.over&&state.downT<=0&&state.hp<100&&!FOOD.poison&&perfT-state.lastHurt>5) state.hp=Math.min(100,state.hp+(state.surv.on?3:6)*dt);
+  if(!state.over&&state.downT<=0&&state.hp<100&&!FOOD.poison&&perfT-state.lastHurt>5) state.hp=Math.min(100,state.hp+(state.surv.on?3:6)*dt*(lvPerk('heal')?1.5:1));
   if(state.downT>0){ state.downT-=dt; if(state.downT<=0){ freshPlayer(); } }
   // last stand waves
   const sv=state.surv;
@@ -16866,7 +16866,7 @@ const burntMat=lam("#2b2724",{roughness:1}), VFX={t:0}, burning=[], SMK=[], smkG
 function smoke(x,y,z,col,sz,life,rise){ if(SMK.length>160) return; const m=new THREE.Mesh(smkGeo,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.7,depthWrite:false})); m.position.set(x,y,z); m.scale.setScalar(sz); m.rotation.set(R(0,3),R(0,3),0); scene.add(m); SMK.push({m,t:0,life,rise,sz}); }
 function smokeTick(dt){ for(let i=SMK.length-1;i>=0;i--){ const S=SMK[i]; S.t+=dt; const k=S.t/S.life; if(k>=1){ scene.remove(S.m); S.m.material.dispose(); SMK.splice(i,1); continue; }
     S.m.position.y+=S.rise*dt; S.m.position.x+=dt*.4; S.m.scale.setScalar(S.sz*(1+k*2.2)); S.m.material.opacity=.7*(1-k); } }
-function vehDmg(v,amt){ try{ if(amt>=4&&v&&!v.net&&!v.wreck) carDent(v,amt); }catch(e){} if(v&&v.net){ if(amt>0&&(v.cdT||0)<perfT){ v.cdT=perfT+.1; mpSendHost({t:'cd',id:v.net,a:Math.round(amt)}); } return; } if(!v||v.wreck||!(amt>0)||state.cine) return; if(v.hp===undefined) v.hp=100; const was=v.hp; v.hp-=amt*(v.armor||1);
+function vehDmg(v,amt){ if(v&&(v===activeCar||v===activeHeli)&&amt>0&&lvPerk('wheels')) amt*=.8; try{ if(amt>=4&&v&&!v.net&&!v.wreck) carDent(v,amt); }catch(e){} if(v&&v.net){ if(amt>0&&(v.cdT||0)<perfT){ v.cdT=perfT+.1; mpSendHost({t:'cd',id:v.net,a:Math.round(amt)}); } return; } if(!v||v.wreck||!(amt>0)||state.cine) return; if(v.hp===undefined) v.hp=100; const was=v.hp; v.hp-=amt*(v.armor||1);
   if(v.story||v.boat||(v.isHeli&&v===policeHeli&&!state.started)) v.hp=Math.max(v.hp,28);
   if(was>70&&v.hp<=70) vehDent(v); if(was>45&&v.hp<=45){ vehDent(v); if(!burning.includes(v)) burning.push(v); if(v===activeCar||v===activeHeli) flash('Your vehicle is smoking!'); }
   if(was>20&&v.hp<=20){ if(v===activeCar||v===activeHeli) flash('It\'s on fire! Get out before it blows!'); Snd.thud(v.pos.x,v.pos.z,4); }
@@ -17631,8 +17631,11 @@ const lvNeed=L=>50+50*L;
 function lvOf(xp){ let L=1; while(L<99&&xp>=lvNeed(L)){ xp-=lvNeed(L); L++; } return [L,Math.floor(xp)]; }
 const LV_XP={named:400,xpboss:400,zk:5,del:60,taxi:30,hunt:80,quest:80,rescue:100,horde:150,drop:60,raid:120,boss:200,race:150,league:150,champ:500,pizza:80,fish:15,veg:10,shogun:600,ring:30,cannon:40,hoops:30,surf:40,arcade:30,ride_wheel:20,ride_coaster:20,ride_tower:20,gond:20,host:30,horse:50,bull:200,blood30:300};
 function lvGun(id){ if(!WEAPONS[id]) return; state.owned[id]=true; try{ ammoOf(id); }catch(e){} save(); }
-const LV_REW=[[3,'🔫 A free pistol',()=>lvGun('pistol')],[5,'💰 +5% cash from everything',null],[8,'🔫 A free SMG',()=>lvGun('smg')],[10,'💰 +10% cash from everything',null],[12,'🔫 A free M4 carbine',()=>lvGun('m4')],[15,'🎯 A free sniper rifle',()=>lvGun('sniper')],[20,'💰 +15% cash from everything',null],
-  [25,'🦾 A free power gauntlet',()=>{ state.owned.gauntlet=true; (UPG.on.fists=UPG.on.fists||{}).gauntlet=true; upgSave(); save(); }],[30,'🏎 The Lugatti unlocked at Vehicles R Us',()=>{ LUG.unlocked=true; lugSave(); }],[40,'💰 +25% cash from everything',null],[50,'👑 Legend of Tumbleton · $50,000',()=>{ state.money+=50000; save(); }]];
+const LV_REW=[[3,'🔫 A free pistol',()=>lvGun('pistol')],[4,'🦺 Light vest: -10% damage',null,'vest1'],[5,'💰 +5% cash from everything',null],[6,'🍖 Iron stomach: food lasts longer',null,'food'],[7,'👟 Marathon runner: sprint faster',null,'run'],[8,'🔫 A free SMG',()=>lvGun('smg')],
+  [9,'❤️ Fast healing: heal 50% faster',null,'heal'],[10,'💰 +10% cash from everything',null],[11,'🤸 Quick recovery: get up 2× faster',null,'getup'],[12,'🔫 A free M4 carbine',()=>lvGun('m4')],[14,'🎒 Deep pockets: +50% spare ammo',null,'ammo'],[15,'🎯 A free sniper rifle',()=>lvGun('sniper')],
+  [17,'🛡️ Military vest: -20% damage',null,'vest2'],[18,'🛞 Tough wheels: vehicles take less damage',null,'wheels'],[20,'💰 +15% cash from everything',null],[22,'💥 Blast proof: explosions hurt less',null,'blast'],
+  [25,'🦾 A free power gauntlet',()=>{ state.owned.gauntlet=true; (UPG.on.fists=UPG.on.fists||{}).gauntlet=true; upgSave(); save(); }],[27,'💪 Second wind: get back up once per life',null,'wind'],[30,'🏎 The Lugatti unlocked at Vehicles R Us',()=>{ LUG.unlocked=true; lugSave(); }],
+  [35,'🪖 Heavy armour + helmet: -30% damage',null,'vest3'],[40,'💰 +25% cash from everything',null],[50,'👑 Legend of Tumbleton · $50,000',()=>{ state.money+=50000; save(); }]];
 function lvBonus(){ if(!LV) return 0; const L=lvOf(LV.xp)[0]; return L>=40?.25:L>=20?.15:L>=10?.1:L>=5?.05:0; }
 function lvCash(n){ return n>0?Math.round(n*(1+lvBonus())):n; }
 function lvStat(k,n){ const x=LV_XP[k]; if(x&&!story.on) lvAdd(x*n); }
@@ -17641,7 +17644,7 @@ function lvAdd(n,quiet){ if(!(n>0)||!LV) return; const L0=lvOf(LV.xp)[0]; LV.xp+
   let cash=0; const got=[]; for(let L=L0+1;L<=L1;L++){ cash+=100*L; for(const R of LV_REW) if(R[0]===L&&!LV.got.includes(L)){ LV.got.push(L); got.push(R[1]); try{ R[2]&&R[2](); }catch(e){} } }
   state.money+=cash; save(); lvSave(); const g=document.getElementById('gain'); if(g){ g.textContent='+$'+cash; g.classList.remove('show','neg'); void g.offsetWidth; g.classList.add('show'); }
   if(!quiet) GL.q.push(['⭐ LEVEL '+L1+'!','+'+money(cash)+(got.length?' · '+got.join(' · '):'')]); return {L1,cash,got}; }
-function lvTick(dt){ LV.gainT-=dt; try{ lvNet(); }catch(e){}
+function lvTick(dt){ LV.gainT-=dt; LVP.L=lvOf(LV.xp)[0]; try{ lvNet(); }catch(e){} try{ lvArmourTick(); }catch(e){}
   if(LV.ach<0){ // first time: everything you've already done counts
     let xp=Math.min(achSt('zk'),3000)*5; for(const id of ACH.got){ const A=ACHL.find(a=>a[0]===id); if(A) xp+=Math.round(A[3]/5); } LV.ach=ACH.got.length; lvSave();
     if(xp>0){ const r=lvAdd(xp,true); const L=lvOf(LV.xp)[0]; if(L>1) GL.q.unshift(['⭐ You\'re level '+L+'!','Everything you\'ve already done counts'+(r?' · +'+money(r.cash)+(r.got.length?' · '+r.got.join(' · '):''):'')]); } return; }
@@ -17695,7 +17698,7 @@ function lvRoad(){ if(!state.started) return; if(!cfEl.hidden) menuDone();
   if(!LVR.el){ const o=document.createElement('div'); o.className='lvroad'; o.id='lvroad'; o.setAttribute('role','dialog'); o.setAttribute('aria-label','Level rewards'); o.hidden=true; document.body.appendChild(o); LVR.el=o;
     o.addEventListener('click',e=>{ if(e.target===o) lvRoadClose(); });
     addEventListener('keydown',e=>{ if(LVR.el&&!LVR.el.hidden&&(e.code==='Escape'||e.code==='KeyB')){ e.preventDefault(); e.stopImmediatePropagation(); lvRoadClose(); } },true); }
-  const o=LVR.el, [L,x]=lvOf(LV.xp), need=lvNeed(L), maxL=Math.max(50,L+5), STEP=64, PAD=56, X=l=>PAD+(l-1)*STEP, W=X(maxL)+PAD, prog=X(L)+STEP*x/need;
+  const o=LVR.el, [L,x]=lvOf(LV.xp), need=lvNeed(L), maxL=Math.max(50,L+5), STEP=96, PAD=56, X=l=>PAD+(l-1)*STEP, W=X(maxL)+PAD, prog=X(L)+STEP*x/need;
   const nx=LV_REW.find(r=>r[0]>L), el=(t,c,txt)=>{ const e=document.createElement(t); if(c) e.className=c; if(txt!==undefined) e.textContent=txt; return e; };
   o.textContent=''; const box=el('div','lvr-box'); o.appendChild(box);
   const top=el('div','lvr-top'); const sw=el('div','lvr-starw'), st=el('div','lvr-star'); st.appendChild(el('span','ol',String(L))); sw.appendChild(st); const h=el('div','lvr-hd'); h.append(el('div','lvr-title ol','LEVEL ROAD'),el('div','lvr-sub ol','Level '+L+' · cash bonus +'+Math.round(lvBonus()*100)+'%'));
@@ -17709,11 +17712,60 @@ function lvRoad(){ if(!state.started) return; if(!cfEl.hidden) menuDone();
   for(const [l,txt] of LV_REW){ const sp=txt.indexOf(' '), ic=txt.slice(0,sp), nm=txt.slice(sp+1), got=L>=l;
     const r=el('div','lvr-rw'+(got?' got':l===(nx&&nx[0])?' next':'')); r.style.left=X(l)+'px';
     const c=el('div','lvr-c',ic); r.appendChild(c); r.appendChild(got?el('div','lvr-ok','✓'):el('div','lvr-lock','🔒')); tr.appendChild(r);
-    const n=el('div','lvr-name'+(got?' got':'')); n.style.left=X(l)+'px'; n.append(el('b','ol','LEVEL '+l),el('span','ol',nm)); tr.appendChild(n); }
+    const n=el('div','lvr-name'+(got?' got':'')); if(txt.includes(': ')) n.title=txt; n.style.left=X(l)+'px'; n.append(el('b','ol','LEVEL '+l),el('span','ol',nm)); tr.appendChild(n); }
   const you=el('div','lvr-you','YOU'); you.style.left=prog+'px'; tr.appendChild(you); const pin=el('div','lvr-pin'); pin.style.left=prog+'px'; tr.appendChild(pin);
   box.appendChild(el('div','lvr-foot ol','Every level pays $100 × the level. XP comes from zombies, goals, daily challenges, achievements, jobs, races, quests, rescues and bosses'));
   LVR.prev=state.paused; state.paused=true; for(const k in keys) keys[k]=false; state.mouseHeld=false; try{ document.exitPointerLock&&document.exitPointerLock(); }catch(e){}
   o.hidden=false; sc.scrollLeft=Math.max(0,prog-sc.clientWidth*.4); }
+
+/* ---------- perks from the Level Road ---------- */
+var LVP={L:1,sw:false,arm:null,armK:''};
+const LV_PERK={}; for(const R of LV_REW) if(R[3]) LV_PERK[R[3]]=R[0];
+function lvPerk(id){ return !!LV&&LVP.L>=(LV_PERK[id]||999); }
+function lvTier(){ return lvPerk('vest3')?3:lvPerk('vest2')?2:lvPerk('vest1')?1:0; }
+// damage you take: armour, plus blast proof for explosions and big falls
+function lvDmg(n){ if(!LV) return n; n*=1-.1*lvTier(); if(mpInBoom&&lvPerk('blast')) n*=.75; return n; }
+const lvBlastMul=()=>lvPerk('blast')?.75:1;
+// second wind: once per life you get back up instead of being knocked out
+function lvSecondWind(){ if(!LV||!lvPerk('wind')||LVP.sw||story.on||state.surv.on||state.over) return false; LVP.sw=true; state.hp=30; state.downT=0; player.immune=Math.max(player.immune||0,2.5); state.shake=Math.max(state.shake,.35); state.hurtFx=1; flash('💪 Second wind! You got back up with 30 health'); Snd.fanfare&&Snd.fanfare(); return true; }
+// deep pockets: spare ammo reads through a getter, like the bigger magazine
+for(const id in AMMO){ const A=AMMO[id], dsc=A&&Object.getOwnPropertyDescriptor(A,'tot'); if(!dsc||dsc.get||typeof A.tot!=='number') continue; A.tot0=A.tot; delete A.tot; Object.defineProperty(A,'tot',{get(){ return lvPerk('ammo')?Math.round(this.tot0*1.5):this.tot0; },enumerable:true,configurable:true}); }
+// the armour you wear: built to fit your character's chest (and head for the helmet)
+const LVA={box:{}};
+function lvTorso(key){ if(LVA.box[key]!==undefined) return LVA.box[key]; const D=HUM_DATA.c[key]; if(!D){ LVA.box[key]=null; return null; }
+  const s=atob(D.bin), bin=new Uint8Array(s.length); for(let i=0;i<s.length;i++) bin[i]=s.charCodeAt(i); const vc=D.vc;
+  const qp=new Uint16Array(bin.buffer.slice(0,vc*6)), jj=new Uint8Array(bin.buffer.slice(vc*6,vc*10)), ww=new Uint8Array(bin.buffer.slice(vc*10,vc*14)), mm=new Uint8Array(bin.buffer.slice(vc*14,vc*15));
+  const want=new Set(['Abdomen','Torso','Chest'].map(n=>D.n.indexOf(n))), b=new THREE.Box3(), v=new THREE.Vector3();
+  for(let i=0;i<vc;i++){ let best=0,bj=-1; for(let c=0;c<4;c++) if(ww[i*4+c]>best){ best=ww[i*4+c]; bj=jj[i*4+c]; } if(!want.has(bj)||/Hair|Eye|Hat/i.test(D.pn[mm[i]]||'')) continue; v.set(D.mn[0]+qp[i*3]/65535*(D.mx[0]-D.mn[0]),D.mn[1]+qp[i*3+1]/65535*(D.mx[1]-D.mn[1]),D.mn[2]+qp[i*3+2]/65535*(D.mx[2]-D.mn[2])); b.expandByPoint(v); }
+  LVA.box[key]=b.isEmpty()?null:b; return LVA.box[key]; }
+function lvBind(D,k){ const m=new THREE.Matrix4(), t=new THREE.Matrix4(), q=new THREE.Quaternion(), one=new THREE.Vector3(1,1,1), chain=[]; while(k>=0){ chain.unshift(k); k=D.p[k]; } for(const j of chain){ t.compose(new THREE.Vector3().fromArray(D.bt[j]),q.fromArray(D.bq[j]),one); m.multiply(t); } return m; }
+function lvVestGeo(tier,b){ const c=b.getCenter(new THREE.Vector3()), z=b.getSize(new THREE.Vector3()), W=z.x, H=z.y, Dp=z.z, P=[], bx=(w,h,d,x,y,zz,col)=>P.push({g:new THREE.BoxGeometry(w,h,d).translate(x,y,zz),c:col});
+  const sx=[1.08,1.12,1.18][tier-1], sd=[1.16,1.22,1.3][tier-1], h=H*[.76,.8,.86][tier-1], cy=c.y+H*.05, col=['#2e3b4e','#56633a','#2f3237'][tier-1], dk=['#222c3a','#434e2c','#1f2125'][tier-1];
+  bx(W*sx,h,Dp*sd,c.x,cy,c.z,col);
+  const fz=c.z+Dp*sd/2, bz=c.z-Dp*sd/2;
+  bx(W*.14,H*.2,Dp*.5,c.x-W*.27,cy+h/2+H*.06,c.z,dk); bx(W*.14,H*.2,Dp*.5,c.x+W*.27,cy+h/2+H*.06,c.z,dk);   // shoulder straps
+  bx(W*sx*1.01,h*.1,Dp*sd*1.02,c.x,cy-h*.32,c.z,dk);   // belt band
+  if(tier===1){ bx(W*.5,h*.5,Dp*.05,c.x,cy+h*.08,fz+Dp*.02,dk); }
+  if(tier>=2){ for(const k of [-1,0,1]) bx(W*.24,h*.24,Dp*.16,c.x+k*W*.28,cy-h*.16,fz+Dp*.08,dk);   // mag pouches
+    bx(W*.36,h*.2,Dp*.12,c.x,cy+h*.2,fz+Dp*.06,dk); bx(W*.12,h*.36,Dp*.3,c.x+W*sx*.5+W*.04,cy,c.z+Dp*.1,dk); bx(W*.5,h*.6,Dp*.08,c.x,cy+h*.05,bz-Dp*.04,dk); }
+  if(tier===3){ bx(W*.62,h*.56,Dp*.1,c.x,cy+h*.12,fz+Dp*.14,'#4a4f57');   // trauma plate
+    for(const k of [-1,1]) bx(W*.36,H*.12,Dp*1.2,c.x+k*W*.62,cy+h/2+H*.02,c.z,col);   // shoulder pads
+    bx(W*.7,H*.12,Dp*1.25,c.x,cy+h/2+H*.04,c.z,dk); }   // collar
+  return mergeGeos(P,true); }
+function lvHelmetGeo(b){ const c=b.getCenter(new THREE.Vector3()), z=b.getSize(new THREE.Vector3()), r=Math.max(z.x,z.z)*.62;
+  const dome=new THREE.SphereGeometry(r,10,6,0,TAU,0,Math.PI*.5).scale(z.x/Math.max(z.x,z.z)*1.04,1,1).translate(c.x,c.y+z.y*.05,c.z);
+  const brim=new THREE.CylinderGeometry(r*1.08,r*1.12,z.y*.06,10).translate(c.x,c.y+z.y*.05,c.z);
+  return mergeGeos([{g:dome,c:'#3a4330'},{g:brim,c:'#2c3324'},{g:new THREE.BoxGeometry(z.x*.5,z.y*.1,z.z*.08).translate(c.x,c.y+z.y*.25,c.z+r*.98),c:'#1c1f24'}],true); }
+function lvArmourDrop(){ const A=LVP.arm; if(!A) return; for(const g of A.g){ if(g.parent) g.parent.remove(g); g.traverse(o=>{ if(o.geometry) o.geometry.dispose(); }); } LVP.arm=null; }
+function lvArmourTick(){ const p=player; if(!p||!LV) return; const tier=lvTier(), key=p.cos?p.cos.key:'rig', k=tier+'|'+key+'|'+(p.cos?p.cos.root.uuid:'');
+  if(k!==LVP.armK){ LVP.armK=k; lvArmourDrop(); if(tier>0){ const gs=[];
+      try{ if(p.cos&&p.cos.C.hum){ const C=p.cos.C, D=C.D, b=lvTorso(p.cos.key), ti=C.idx.Torso, bone=p.cos.bones[ti];
+          if(b&&bone){ const g=new THREE.Group(); g.matrixAutoUpdate=false; g.matrix.copy(lvBind(D,ti)).invert(); g.add(new THREE.Mesh(lvVestGeo(tier,b),VC)); bone.add(g); gs.push(g); }
+          if(tier===3&&!C.head.isEmpty()){ const hi=C.idx.Head, hb=p.cos.bones[hi]; if(hb){ const g=new THREE.Group(); g.matrixAutoUpdate=false; g.matrix.copy(lvBind(D,hi)).invert(); g.add(new THREE.Mesh(lvHelmetGeo(C.head),VC)); hb.add(g); gs.push(g); } } }
+        else if(p.chestIn){ const b=new THREE.Box3(); for(const m of p.chestIn.children) if(m.isMesh&&m.geometry){ if(!m.geometry.boundingBox) m.geometry.computeBoundingBox(); m.updateMatrix(); b.union(m.geometry.boundingBox.clone().applyMatrix4(m.matrix)); }
+          if(!b.isEmpty()){ const g=new THREE.Group(); g.add(new THREE.Mesh(lvVestGeo(tier,b),VC)); p.chestIn.add(g); gs.push(g); } } }catch(e){ console.warn('armour',e); }
+      for(const g of gs) g.traverse(o=>{ if(o.isMesh){ o.castShadow=true; } }); LVP.arm={g:gs}; } }
+  if(LVP.arm) for(const g of LVP.arm.g) g.visible=!fp; }
 /*GL-END*/
 /*PV-BEGIN*/
 /* ---------- online: player fighting (the host picks it when making a server) ---------- */
