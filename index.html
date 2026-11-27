@@ -307,6 +307,11 @@ kbd{font:700 12px/1 var(--f-body);min-width:22px;padding:4px 6px 3px;border-radi
 .scope::before{width:min(68vh,68vw);height:2px;transform:translate(-50%,-50%)}
 .scope::after{height:min(68vh,68vw);width:2px;transform:translate(-50%,-50%)}
 .scope i{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:#e5484d}
+.goals{top:226px;left:16px;width:200px;box-sizing:border-box;background:rgba(21,23,28,.88);border:1px solid var(--asphalt-hi);border-radius:8px;padding:6px 10px 7px;font:600 12px/1.3 var(--f-body);color:#e9e6dc;pointer-events:auto;cursor:pointer}
+.goals .gh{font-weight:800;letter-spacing:.12em;color:#ffd166;font-size:11px;margin-bottom:3px}
+.goals .gr{display:flex;justify-content:space-between;gap:8px;margin-top:4px}.goals .gr span{flex:1;min-width:0}.goals .gr b{color:#7fd88c;font-weight:700;white-space:nowrap}
+.goals .gt{position:relative;height:9px;border-radius:5px;background:#2c2f36;margin-top:3px;overflow:hidden}.goals .gt i{position:absolute;left:0;top:0;bottom:0;background:#4fae62}.goals .gt em{position:absolute;right:4px;top:-2px;font:700 9px/13px var(--f-body);font-style:normal;color:#fff}
+body.touch .goals{transform:scale(.8);transform-origin:top left}
 .wallet.chaosbtn .lbl{font-weight:800;letter-spacing:.04em;color:#ffd166}
 .chaosfx{position:absolute;inset:0;pointer-events:none;background:#fff;opacity:0;z-index:2}
 .chaosfx.storm{background:transparent;box-shadow:inset 0 0 0 100vmax rgba(14,20,38,.38);opacity:1;transition:none}
@@ -9127,7 +9132,7 @@ function chaosMenu(){ if(!state.started||state.over) return; const nested=!cfEl.
   for(const [ic,t,d,busy,go] of CHAOS_EV){ const b=document.createElement('button'); b.type='button'; b.className='chaos-card'; const i=document.createElement('i'); i.textContent=ic; const bt=document.createElement('b'); bt.textContent=t+' '+ic; const sp=document.createElement('span'); sp.textContent=story.on?'Not during the story':busy()?'Happening now!':d; b.append(i,bt,sp); b.disabled=story.on||busy(); b.addEventListener('click',()=>{ menuDone(); go(); }); g.appendChild(b); }
   const row=document.createElement('div'); row.className='chaos-row'; cfOpts.appendChild(row);
   const mk=(t,fn)=>{ const b=document.createElement('button'); b.type='button'; b.className='chaos-small'; b.textContent=t; b.addEventListener('click',fn); row.appendChild(b); };
-  mk('🍂 Change the season',()=>seasonMenu()); mk('📍 Places, shops & more',()=>{ menuDone(); findMenu(); }); }
+  mk('🎯 Goals',()=>glMenu()); mk('🍂 Change the season',()=>seasonMenu()); mk('📍 Places, shops & more',()=>{ menuDone(); findMenu(); }); }
 
 /* ---------- shared helpers for jobs: a beam and a HUD line ---------- */
 function mkBeam(col){ const m=new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.3,80,10,1,true),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.32,depthWrite:false,side:THREE.DoubleSide,fog:false})); m.renderOrder=4; m.visible=false; scene.add(m);
@@ -13323,7 +13328,7 @@ function setupMotor(){ try{ setupSale(); }catch(e){ console.warn('houses',e); } 
   GREET.cars=['G\'day! Every vehicle comes with a free garage delivery.','Tanks are on special this week. Well, not really.','Have a look around, they don\'t bite.','Need a house first? Check the FOR SALE signs in the suburbs.'];
   GREET.motor=['Drive into a bay and press F.','Left bay for mods, right bay for repairs.','We fix anything that isn\'t a smoking crater.','Zombie rammer? Best money you\'ll ever spend.'];
   try{ for(const site of [0,1]){ const S=SITES[site]; if(!S) continue; const x=lotC(S[0]), z=lotC(S[1]); roadPark(x+10,z+24,site?'digger':'bulldozer'); } }catch(e){ console.warn('site vehicles',e); } }
-function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); southTick(dt); northTick(dt); eastTick(dt); basesTick(dt); rescueTick(dt); keepTick(dt); jobsTick(dt); homeTick(dt); bloodTick(dt); achTick(dt); furnTick(dt); keepOffProps(); eventsTick(dt); wlifeTick(dt); radioTick(dt); zonesTick(dt); questTick(dt); zaTick(dt); dayClock(); modTick(dt); kiwiTick(dt); fishTick(dt); surfTick(dt); bbTick(dt); driveTick(dt); townTick(dt); canTick(dt); chaosTick(dt); pizTick(dt); taxiTick(dt); seasonTick(dt); leagueTick(dt); nbossTick(dt); if(!mpClient()){ toyBossTick(dt); cqTick(dt); try{ pzTick(dt); pzStationFlags(); }catch(e){ console.warn('pz',e); } try{ spTick(dt); }catch(e){ console.warn('spire',e); } } try{ sgTick(dt); }catch(e){ console.warn('shogun',e); } zeroFxTick(dt); cbTick(dt); carLifeTick(dt); charTick(dt); worldTick(dt); twgTick(dt); foodTick(dt); blastFallTick(dt); pmisTick(dt); wheelieTick(dt); xpTick(dt); petsTick(dt); hostTick(dt); gardTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
+function emergTick(dt){ garageTick(dt); garageTick2(dt); autoPark(dt); houseMarks(); digTick(dt); countryTick(dt); trainTick(dt); southTick(dt); northTick(dt); eastTick(dt); basesTick(dt); rescueTick(dt); keepTick(dt); jobsTick(dt); homeTick(dt); bloodTick(dt); achTick(dt); try{ glTick(dt); }catch(e){} furnTick(dt); keepOffProps(); eventsTick(dt); wlifeTick(dt); radioTick(dt); zonesTick(dt); questTick(dt); zaTick(dt); dayClock(); modTick(dt); kiwiTick(dt); fishTick(dt); surfTick(dt); bbTick(dt); driveTick(dt); townTick(dt); canTick(dt); chaosTick(dt); pizTick(dt); taxiTick(dt); seasonTick(dt); leagueTick(dt); nbossTick(dt); if(!mpClient()){ toyBossTick(dt); cqTick(dt); try{ pzTick(dt); pzStationFlags(); }catch(e){ console.warn('pz',e); } try{ spTick(dt); }catch(e){ console.warn('spire',e); } } try{ sgTick(dt); }catch(e){ console.warn('shogun',e); } zeroFxTick(dt); cbTick(dt); carLifeTick(dt); charTick(dt); worldTick(dt); twgTick(dt); foodTick(dt); blastFallTick(dt); pmisTick(dt); wheelieTick(dt); xpTick(dt); petsTick(dt); hostTick(dt); gardTick(dt); vehWpnTick(dt); waterTick(dt); if(!state.started) return; const use=!state.paused&&!state.cine&&(state.mouseHeld||!!keys.KeyF);
   const c=activeCar;
   if(c&&c.emerg==='fire'&&use){ camera.getWorldDirection(_ewd); let dx=_ewd.x, dy=_ewd.y+.16, dz=_ewd.z; const l=Math.hypot(dx,dy,dz)||1; hoseSpray(nozzleWorld(c),{x:dx/l,y:Math.max(-.35,dy/l),z:dz/l},dt,true); }
   if(c&&c.emerg==='tow'){ if(use&&!c.useW){ if(c.towed){ towRelease(c); flash('Let go of the car'); } else { const h=hookWorld(c); let best=null,bd=4.6;
@@ -17474,6 +17479,97 @@ function dmgLoad(){ let d=null; try{ d=JSON.parse(localStorage.getItem('tumbleto
   // collision for small things is restored to "broken" by re-running the wall/circle passes above; holes keep their walls solid
   dmgFlush(); }
 try{ dmgLoad(); }catch(e){ console.warn('damage load',e); }
+/*GL-BEGIN*/
+/* ---------- 🎯 goal board: three goals at a time, from first steps to the big stuff, then repeatable ones ---------- */
+const GL={done:[],act:[],skip:[],seen:false,t:0,lt:0,q:[],last:null,el:null,sig:''};
+try{ const d=JSON.parse(localStorage.getItem('tumbleton-goals')||'null'); if(d){ GL.done=d.done||[]; GL.act=d.act||[]; GL.skip=d.skip||[]; GL.seen=!!d.seen; } }catch(e){}
+function glSave(){ try{ localStorage.setItem('tumbleton-goals',JSON.stringify({done:GL.done,act:GL.act,skip:GL.skip,seen:GL.seen})); }catch(e){} }
+const glAch=id=>ACH.got.includes(id);
+const glAt=(x,z,msg)=>()=>{ state.wpDest={x,z}; state.shopWpUntil=perfT+180; flash(msg+' Follow the arrow'); };
+const glNear=list=>{ let b=null,bd=1e9; for(const q of list){ const d=Math.hypot(q.x-player.pos.x,q.z-player.pos.z); if(d<bd){ bd=d; b=q; } } return b; };
+// [id, title, how, reward, done(), where() -> function that marks the way, or null; progress() -> [now, need]]
+const GOALS=[
+  ['look','Pick your look','Walk into Kia Ora Threads and choose a whole new character. Your first one is free',150,()=>!!(OUTFIT.freeUsed||OUTFIT.body),()=>{ const T=THREADS.door||THREADS; return glAt(T.x,T.z,'Kia Ora Threads is marked.'); }],
+  ['zk10','Fight back','Defeat 10 zombies. Press Z in Sandbox to start a zombie wave if none are around',200,null,null,{st:'zk',n:10}],
+  ['gun','Get a gun','Buy any weapon at the Hardware & Arms store',300,()=>Object.keys(state.owned).some(k=>k!=='fists'&&state.owned[k]&&WEAPONS[k]&&!WEAPONS[k].contraband),()=>()=>findStore()],
+  ['drink','Grab a cold one','Buy a drink from a vending machine. They stand against shop walls all over the city',100,()=>glAch('drink'),null],
+  ['del1','Courier run','Take a delivery job from a green job board and drop it off in time',300,()=>glAch('del1'),()=>glAt(JOB.boards[0].x,JOB.boards[0].z,'A job board is marked.')],
+  ['dog','A loyal friend','Adopt a dog at the Paws Animal Shelter. It follows you and bites zombies',200,()=>!!DOG.d,()=>glAt(-301,16,'The animal shelter is marked.')],
+  ['house','A place of your own','Buy a house. Houses for sale have red FOR SALE signs in the suburbs',500,()=>ownN()>=1,()=>{ const S=SALE.filter(S=>!(GAR.h[S.i]&&GAR.h[S.i].own)).sort((a,b)=>a.D.price-b.D.price)[0]; return S?glAt(S.signP.x,S.signP.z,S.D.name+' is for sale for '+money(S.D.price)+'.'):null; }],
+  ['pizza','Pizza run','Finish a round of scooter deliveries from The Pizza Shop',300,()=>glAch('pizza'),()=>PIZ.T?glAt(PIZ.T.x-5,PIZ.T.z+PIZ.T.D/2+2,'The Pizza Shop is marked.'):null],
+  ['car','Your own wheels','Buy a vehicle at Vehicles R Us. It goes in your garage (you need a house first)',500,()=>GAR.cars.length>=1,()=>glAt(CARYARD.kiosk.x,CARYARD.kiosk.z,'Vehicles R Us is marked.')],
+  ['top','Top of the world','Get to the Mt Tumbleton lookout. Drive the mountain road or ride the gondola',300,()=>glAch('top'),()=>glAt(NORTH.look.x,NORTH.look.z,'The lookout is marked.')],
+  ['nest1','Take back a district','Find a zombie nest, clear the zombies around it and blow it up',800,()=>ZONES.freed.length>=1,()=>{ const Z=glNear(ZONES.list.filter(Z=>!ZONES.freed.includes(Z.id)&&Z.x!==undefined)); return Z?glAt(Z.x,Z.z,'The '+Z.n+' nest is marked.'):null; }],
+  ['race','Raceway winner','Win a 3-lap race at Tumbleton Raceway. Stop on the yellow ring in the pits',600,()=>glAch('race'),()=>glAt(EAST.ring.x,EAST.ring.z,'The race start ring is marked.')],
+  ['island','Island hopper','Take the ferry (or a jet ski) out to Mōtu Island and look for the treasure',400,()=>glAch('island'),()=>glAt(SOUTH.ferry.x,SOUTH.ferry.z,'The ferry is marked.')],
+  ['rides','Thrill seeker','Ride the Ferris wheel, the Kea Coaster and the Sky Drop at Kiwi Land',500,()=>glAch('rides'),()=>glAt(EAST.park.x0,203,'Kiwi Land is marked.')],
+  ['fish','Gone fishing','Catch something off the end of the pier',200,()=>achSt('fish')>=1,()=>glAt(FUN.fish.x,FUN.fish.z,'The end of the pier is marked.')],
+  ['cave','Into the dark','Find the hidden Glowworm Caves behind a waterfall on Maunga Tūrama',600,()=>glAch('xp_cave'),()=>glAt(-395,-440,'Maunga Tūrama is marked. The cave is behind a waterfall on its south-west side.')],
+  ['boss','Giant slayer','Beat the boss zombie guarding a nest',800,()=>glAch('boss'),()=>{ const Z=glNear(ZONES.list.filter(Z=>!ZONES.freed.includes(Z.id)&&Z.x!==undefined)); return Z?glAt(Z.x,Z.z,'The '+Z.n+' nest is marked. Its boss is close by.'):null; }],
+  ['base','Home base','Claim the old woolshed out west as a base for your crew',600,()=>!!CB.own,()=>glAt(CB.x,CB.z+9,'The old woolshed is marked.')],
+  ['tt','Round the Ring','Get a medal in the Ring Road time trial',500,()=>glAch('tt'),()=>glAt(TT.ring.x,TT.ring.z,'The time trial ring is marked.')],
+  ['named1','Legend slayer','Beat a named boss zombie: the Bulldozer, the Screamer or Old Toothy',1000,()=>BOSS.got.length>=1,()=>()=>bossMenu()],
+  ['fort','Raid the fort','Fight your way into Fort Kererū in the mountains and find the supply cache',800,()=>!!BASES.got,()=>glAt(NORTH.fort.x,NORTH.fort.z+30,'Fort Kererū is marked.')],
+  ['kiwi10','Kiwi spotter','Find 10 hidden kiwi statues. Listen for the chirp',800,()=>KIWI.got.length>=10,null,{now:()=>KIWI.got.length,n:10}],
+  ['queen','Crown taker','Beat the Pale Queen deep in the Glowworm Caves',1500,()=>glAch('xp_queen'),()=>glAt(-395,-440,'Maunga Tūrama is marked.')],
+  ['league','Podium top step','Win a Racing League race',800,()=>glAch('league'),()=>()=>leagueMenu()],
+  ['qz','Restricted area','Get inside the Quarantine Zone in the far north-west',600,()=>glAch('xp_qz'),()=>glAt(QZ.x1+12,QZ.gz,'The Quarantine Zone gate is marked.')],
+  ['shogun','Steel Shogun','Defeat the Shogun at the robot crash site. Bring friends, or a helicopter',2500,()=>glAch('shogun'),()=>glAt(SGF.x,SGF.z+95,'The robot crash site is marked.')],
+  ['zero','Patient Zero','Reach the bottom of Bunker Kōwhai and beat Subject Zero',2000,()=>glAch('xp_zero'),()=>glAt(QZ.x1+12,QZ.gz,'The Quarantine Zone gate is marked. The bunker is inside.')],
+  ['nest3','Clearing the map','Free 3 districts from their nests',1500,()=>ZONES.freed.length>=3,()=>{ const Z=glNear(ZONES.list.filter(Z=>!ZONES.freed.includes(Z.id)&&Z.x!==undefined)); return Z?glAt(Z.x,Z.z,'The '+Z.n+' nest is marked.'):null; },{now:()=>ZONES.freed.length,n:3}],
+  ['zk100','Zombie hunter','Defeat 100 zombies in total',800,()=>achSt('zk')>=100,null,{now:()=>achSt('zk'),n:100}],
+  ['mansion','Living large','Own the Pōhutukawa Mansion',3000,()=>!!(GAR.h[3]&&GAR.h[3].own),()=>{ const S=SALE.find(S=>S.i===3); return S?glAt(S.signP.x,S.signP.z,'The mansion is marked.'):null; }],
+  ['safe','Tumbleton is safe','Take back all 7 districts',5000,()=>ZONES.freed.length>=ZONES.list.length,()=>{ const Z=glNear(ZONES.list.filter(Z=>!ZONES.freed.includes(Z.id)&&Z.x!==undefined)); return Z?glAt(Z.x,Z.z,'The '+Z.n+' nest is marked.'):null; },{now:()=>ZONES.freed.length,n:7}],
+  ['kiwi50','Kiwi whisperer','Find all 50 hidden kiwis',3000,()=>KIWI.got.length>=KIWI.N&&KIWI.N>0,null,{now:()=>KIWI.got.length,n:50}]];
+// repeatable goals: counted from the moment they appear, so there's always something to do
+const GLR=[
+  ['r_zk','Zombie sweep','Defeat {n} zombies',n=>n*12,()=>[25,40,60][Math.floor(Math.random()*3)],'zk',null],
+  ['r_del','Busy courier','Finish {n} courier jobs',n=>n*350,()=>2,'del',()=>glAt(JOB.boards[0].x,JOB.boards[0].z,'A job board is marked.')],
+  ['r_taxi','Cab shift','Complete {n} taxi fares (get in any taxi)',n=>n*200,()=>3,'taxi',null],
+  ['r_hunt','Bounty','Finish {n} hunting contract',n=>500,()=>1,'hunt',()=>()=>huntMenu()],
+  ['r_quest','Helping hand','Finish {n} quest for a local with a yellow !',n=>450,()=>1,'quest',null],
+  ['r_fish','Fresh catch','Catch {n} things off the pier',n=>n*120,()=>3,'fish',()=>glAt(FUN.fish.x,FUN.fish.z,'The end of the pier is marked.')],
+  ['r_race','Back on the track','Win a race at Tumbleton Raceway',n=>700,()=>1,'race',()=>glAt(EAST.ring.x,EAST.ring.z,'The race start ring is marked.')],
+  ['r_league','Racing season','Win a Racing League race',n=>900,()=>1,'league',()=>()=>leagueMenu()],
+  ['r_rescue','Search and rescue','Save a survivor from a random event (orange beam)',n=>700,()=>1,'rescue',null],
+  ['r_shogun','Rematch','Beat the Shogun again',n=>2000,()=>1,'shogun',()=>glAt(SGF.x,SGF.z+95,'The robot crash site is marked.')],
+  ['r_kiwi','Kiwi trail','Find {n} more hidden kiwis',n=>n*250,()=>2,'_kiwi',null]];
+const glStat=k=>k==='_kiwi'?KIWI.got.length:achSt(k);
+function glDef(a){ if(a.id.startsWith('r_')){ const R=GLR.find(r=>r[0]===a.id); if(!R) return null; return {id:a.id,t:R[1],how:R[2].replace('{n}',a.n),r:R[3](a.n),done:()=>glStat(R[5])-a.base>=a.n,where:R[6],prog:()=>[Math.max(0,Math.min(a.n,glStat(R[5])-a.base)),a.n]}; }
+  const G=GOALS.find(g=>g[0]===a.id); if(!G) return null; const P=G[6];
+  return {id:a.id,t:G[1],how:G[2],r:G[3],done:G[4]||(()=>glStat(P.st)-a.base>=P.n),where:G[5],prog:P?(P.st?()=>[Math.max(0,Math.min(P.n,glStat(P.st)-a.base)),P.n]:()=>[Math.min(P.n,P.now()),P.n]):null}; }
+function glFill(){ let ch=false;
+  for(const G of GOALS){ if(GL.act.length>=3) break; const id=G[0]; if(GL.done.includes(id)||GL.skip.includes(id)||GL.act.some(a=>a.id===id)) continue; let pre=false; try{ pre=!!(G[4]&&G[4]()); }catch(e){} if(pre){ GL.done.push(id); ch=true; continue; } GL.act.push({id,base:G[6]&&G[6].st?glStat(G[6].st):0}); ch=true; }
+  if(GL.act.length<3&&GL.skip.length){ const id=GL.skip.shift(); const G=GOALS.find(g=>g[0]===id); if(G&&!GL.done.includes(id)) GL.act.push({id,base:G[6]&&G[6].st?glStat(G[6].st):0}); ch=true; }
+  let tries=0; while(GL.act.length<3&&tries++<30){ const R=GLR[Math.floor(Math.random()*GLR.length)]; if(GL.act.some(a=>a.id===R[0])||R[0]===GL.last) continue;
+    if(R[0]==='r_shogun'&&!glAch('shogun')) continue; if(R[0]==='r_kiwi'&&KIWI.got.length>=KIWI.N-2) continue; const n=R[4](); GL.act.push({id:R[0],n,base:glStat(R[5])}); ch=true; }
+  if(ch) glSave(); }
+function glTick(dt){ if(!state.started||story.on){ if(GL.el) GL.el.hidden=true; return; }
+  GL.t-=dt; if(GL.t<=0){ GL.t=1; glFill();
+    for(const a of GL.act.slice()){ const D=glDef(a); if(!D){ GL.act.splice(GL.act.indexOf(a),1); continue; } let ok=false; try{ ok=D.done(); }catch(e){} if(!ok) continue;
+      GL.act.splice(GL.act.indexOf(a),1); if(!a.id.startsWith('r_')) GL.done.push(a.id); GL.last=a.id; earn(D.r); GL.q.push([D.t,D.r]); glSave(); }
+    if(!GL.seen&&GL.act.length){ GL.seen=true; glSave(); flash('🎯 New: goals on the left. Click them or press B to see the way'); } }
+  if(GL.q.length&&ACH.bT<=0&&!ACH.q.length){ const [t,r]=GL.q.shift(); ACH.bT=3.2; glFill(); const nx=GL.act.length?glDef(GL.act[GL.act.length-1]):null; banner('🎯 Goal complete: '+t,'+'+money(r)+(nx?' · New goal: '+nx.t:'')); Snd.fanfare&&Snd.fanfare(); }
+  glHud(dt); }
+function glHud(dt){ if(!GL.el){ const d=document.createElement('div'); d.className='hud goals'; d.id='goals'; d.setAttribute('role','button'); d.tabIndex=-1; d.setAttribute('aria-label','Your goals'); d.addEventListener('click',()=>glMenu()); document.getElementById('wallet').after(d); GL.el=d; }
+  const w=document.getElementById('wallet'); GL.el.hidden=w.hidden; if(w.hidden) return;
+  GL.lt-=dt; if(GL.lt>0) return; GL.lt=.5;
+  let y=w.offsetTop+w.offsetHeight*(document.body.classList.contains('touch')?.8:1)+8; for(const id of ['zplate','surv']){ const e=document.getElementById(id)||document.querySelector('.'+id); if(e&&!e.hidden&&e.offsetHeight) y=Math.max(y,e.offsetTop+e.offsetHeight*(document.body.classList.contains('touch')?.8:1)+8); }
+  GL.el.style.top=y+'px';
+  const wp=state.wpDest&&perfT<(state.shopWpUntil||0)?state.wpDest:null;
+  const rows=GL.act.map(a=>{ const D=glDef(a); if(!D) return null; let p=null; try{ p=D.prog&&D.prog(); }catch(e){} return [D.t,D.r,p,a.wp&&wp&&Math.hypot(wp.x-a.wp.x,wp.z-a.wp.z)<1]; }).filter(Boolean);
+  const sig=JSON.stringify(rows); if(sig===GL.sig) return; GL.sig=sig; GL.el.textContent='';
+  const h=document.createElement('div'); h.className='gh'; h.textContent='🎯 GOALS'; GL.el.appendChild(h);
+  for(const [t,r,p,m] of rows){ const row=document.createElement('div'); row.className='gr'; const n=document.createElement('span'); n.textContent=(m?'📍 ':'')+t; const b=document.createElement('b'); b.textContent=money(r); row.append(n,b); GL.el.appendChild(row);
+    if(p){ const tr=document.createElement('div'); tr.className='gt'; const f=document.createElement('i'); f.style.width=Math.round(100*p[0]/p[1])+'%'; const c=document.createElement('em'); c.textContent=p[0]+'/'+p[1]; tr.append(f,c); GL.el.appendChild(tr); } } }
+function glMenu(){ if(!state.started||state.over||story.on) return; glFill(); const nested=!cfEl.hidden, prev=cfPrevPaused; const add=menuOpen('🎯 Your goals · '+GL.done.length+' of '+GOALS.length+' main goals done'); if(nested) cfPrevPaused=prev;
+  for(const a of GL.act){ const D=glDef(a); if(!D) continue; let p=null; try{ p=D.prog&&D.prog(); }catch(e){} let w=null; try{ w=D.where&&D.where(); }catch(e){}
+    menuHead(D.t+' · '+money(D.r)+(p?' · '+p[0]+'/'+p[1]:''));
+    add(w?'📍 Show me the way':'How to do it',D.how,()=>{ menuDone(); if(w){ w(); if(state.wpDest) a.wp={x:state.wpDest.x,z:state.wpDest.z}; GL.sig=''; } else flash(D.how); },'pick-go');
+    add('Swap for another goal',a.id.startsWith('r_')?'Get a different one':'This one comes back later',()=>{ GL.act.splice(GL.act.indexOf(a),1); if(!a.id.startsWith('r_')) GL.skip.push(a.id); else GL.last=a.id; glSave(); GL.sig=''; glMenu(); },''); }
+  add('🏆 Achievements',ACH.got.length+' of '+ACHL.length+' unlocked',()=>{ menuDone(); achMenu(); },'');
+  add('Close','',()=>menuDone()); }
+/*GL-END*/
 /*PV-BEGIN*/
 /* ---------- online: player fighting (the host picks it when making a server) ---------- */
 const PV={by:null,bf:-1,rb:false,cash:200};
