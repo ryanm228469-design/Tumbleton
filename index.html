@@ -13995,7 +13995,7 @@ function enterExit(){
   if(activeCar){ const c=activeCar, dside=carAnimOK(c,true)?-1:1, lx=Math.cos(c.yaw)*dside, lz=-Math.sin(c.yaw)*dside; const eo=c.cr+1.35; let ex=c.pos.x+lx*eo, ez=c.pos.z+lz*eo, side=dside;
     const t={x:ex,z:ez}; if(collideStatics(t,.5,c.pos.y,c.pos.y+1.9)){ ex=c.pos.x-lx*eo; ez=c.pos.z-lz*eo; side=-dside; }
     if(carAnimOK(c,true)&&Math.hypot(c.vel.x,c.vel.z)<7){ doorSwing(c,side,.22,.45,.28); Snd.door(c.pos.x,c.pos.z,true); } c.engOff=perfT;
-    if(c.boat&&Math.abs(c.pos.z-RIVER_Z)>8.5){ ex=c.pos.x; ez=RIVER_Z+Math.sign(c.pos.z-RIVER_Z)*(RIV_OUT+1.2); }
+    if(c.boat){ const dz=Math.abs(c.pos.z-RIVER_Z), bz=RIVER_Z+Math.sign(c.pos.z-RIVER_Z)*(RIV_OUT+1.2); if(dz>8.5&&dz<RIV_OUT+3&&groundHeight(c.pos.x,bz)>WATER_Y+.3&&!collideStatics({x:c.pos.x,z:bz},.5,0,1.9)){ ex=c.pos.x; ez=bz; } }   // right by the river bank: step onto it; anywhere else (mid-river, the sea) you hop into the water beside the boat
     player.mode='walk'; player.g.visible=true; player.pos.set(ex,groundHeight(ex,ez,c.pos.y)+HIP,ez); player.yaw=c.yaw;
     player.vel.set(c.vel.x*.6,0,c.vel.z*.6); c.mode='free'; activeCar=null; if(c.ride){ riderReset(); player.g.quaternion.setFromAxisAngle(UP,c.yaw); } if(mpClient()) mpCarReturn(c);
     const sp=Math.hypot(c.vel.x,c.vel.z); if(sp>7){ knock(player,c.vel.x*.8+lx*4,5,c.vel.z*.8+lz*4,9); damagePlayer(Math.min(40,Math.max(0,sp-7)*2.2)); flash('You dived out and rolled!'); }
