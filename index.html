@@ -308,6 +308,12 @@ kbd{font:700 12px/1 var(--f-body);min-width:22px;padding:4px 6px 3px;border-radi
 .scope::after{height:min(68vh,68vw);width:2px;transform:translate(-50%,-50%)}
 .scope i{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:#e5484d}
 .goals{top:226px;left:16px;width:200px;box-sizing:border-box;background:rgba(21,23,28,.88);border:1px solid var(--asphalt-hi);border-radius:8px;padding:6px 10px 7px;font:600 12px/1.3 var(--f-body);color:#e9e6dc;pointer-events:auto;cursor:pointer}
+.goals .lv{display:flex;justify-content:space-between;align-items:baseline;font-weight:800;letter-spacing:.08em;color:#ffd166;font-size:12px}.goals .lvg{color:#9be7ff;font-size:11px;letter-spacing:0}.goals .gt.lvb{height:11px;margin:3px 0 6px}.goals .gt.lvb i{background:#e0b234}.goals .gt.lvb em{top:-1px}
+.goals .gh{font-weight:800;letter-spacing:.12em;color:#ffd166;font-size:11px;margin-bottom:3px}
+.goals .gr{display:flex;justify-content:space-between;gap:8px;margin-top:4px}.goals .gr span{flex:1;min-width:0}.goals .gr b{color:#7fd88c;font-weight:700;white-space:nowrap}
+.goals .gt{position:relative;height:9px;border-radius:5px;background:#2c2f36;margin-top:3px;overflow:hidden}.goals .gt i{position:absolute;left:0;top:0;bottom:0;background:#4fae62}.goals .gt em{position:absolute;right:4px;top:-2px;font:700 9px/13px var(--f-body);font-style:normal;color:#fff}
+body.touch .goals{transform:scale(.8);transform-origin:top left}
+.goals{top:226px;left:16px;width:200px;box-sizing:border-box;background:rgba(21,23,28,.88);border:1px solid var(--asphalt-hi);border-radius:8px;padding:6px 10px 7px;font:600 12px/1.3 var(--f-body);color:#e9e6dc;pointer-events:auto;cursor:pointer}
 .goals .gh{font-weight:800;letter-spacing:.12em;color:#ffd166;font-size:11px;margin-bottom:3px}
 .goals .gr{display:flex;justify-content:space-between;gap:8px;margin-top:4px}.goals .gr span{flex:1;min-width:0}.goals .gr b{color:#7fd88c;font-weight:700;white-space:nowrap}
 .goals .gt{position:relative;height:9px;border-radius:5px;background:#2c2f36;margin-top:3px;overflow:hidden}.goals .gt i{position:absolute;left:0;top:0;bottom:0;background:#4fae62}.goals .gt em{position:absolute;right:4px;top:-2px;font:700 9px/13px var(--f-body);font-style:normal;color:#fff}
@@ -8473,7 +8479,7 @@ const ACHL=[
   ['shogun','Steel Shogun','Defeat the Shogun at the robot crash site',2500,()=>achSt('shogun')>=1]];
 function achSave(){ try{ localStorage.setItem('tumbleton-ach',JSON.stringify({got:ACH.got,st:ACH.st})); }catch(e){} }
 try{ const q=JSON.parse(localStorage.getItem('tumbleton-ach')||'null'); if(q){ if(Array.isArray(q.got)) ACH.got=q.got.filter(id=>typeof id==='string').slice(0,64); if(q.st&&typeof q.st==='object') for(const k in q.st) if(isFinite(q.st[k])) ACH.st[k]=Math.max(0,Math.floor(q.st[k])); } }catch(e){}
-function achStat(k,n){ ACH.st[k]=(ACH.st[k]||0)+(n||1); ACH.dirty=true; }
+function achStat(k,n){ ACH.st[k]=(ACH.st[k]||0)+(n||1); ACH.dirty=true; try{ lvStat(k,n||1); }catch(e){} }
 function achTick(dt){ if(!state.started||story.on) return; ACH.t-=dt; ACH.bT-=dt;
   if(ACH.t<=0){ ACH.t=1; if(ACH.dirty){ ACH.dirty=false; achSave(); } for(const [id,n,d,r,ok] of ACHL){ if(ACH.got.includes(id)) continue; let pass=false; try{ pass=!!ok(); }catch(e){} if(pass){ ACH.got.push(id); state.money+=r; save(); achSave(); ACH.q.push([n,r]); } } }
   if(ACH.q.length&&ACH.bT<=0){ const [n,r]=ACH.q.shift(); ACH.bT=3.2; banner('🏆 '+n,'Achievement unlocked · +'+money(r)); Snd.fanfare(); } }
@@ -14079,7 +14085,7 @@ const inv={}; for(const b of BUILD) inv[b.id]=0;
 try{ const sv=JSON.parse(localStorage.getItem('tumbleton-save')||'null'); if(sv){ if(sv.owned) for(const k in WEAPONS) if(sv.owned[k]) state.owned[k]=true; if(typeof sv.money==='number'&&isFinite(sv.money)) state.money=sv.money; if(sv.inv) for(const k in inv) if(typeof sv.inv[k]==='number') inv[k]=Math.max(0,Math.floor(sv.inv[k])); if(sv.ammo) for(const k in AMMO){ const q=sv.ammo[k], A=AMMO[k]; if(q&&isFinite(q.mag)&&isFinite(q.res)) state.ammo[k]={mag:clamp(Math.floor(q.mag),0,A.mag),res:clamp(Math.floor(q.res),0,A.tot)}; } } }catch(e){}
 function save(){ try{ localStorage.setItem('tumbleton-save',JSON.stringify({money:state.money,inv,owned:state.owned,ammo:state.ammo})); }catch(e){} }
 function flash(m){ state.msg=m; state.msgT=2.4; }
-function earn(n){ state.money+=n; save(); const g=document.getElementById('gain'); if(g){ g.textContent='+$'+n; g.classList.remove('show','neg'); void g.offsetWidth; g.classList.add('show'); } }
+function earn(n){ try{ n=lvCash(n); }catch(e){} state.money+=n; save(); const g=document.getElementById('gain'); if(g){ g.textContent='+$'+n; g.classList.remove('show','neg'); void g.offsetWidth; g.classList.add('show'); } }
 const placedBlocks=[], blockGeo=new THREE.BoxGeometry(2,2,2);
 const ghost=new THREE.Mesh(new THREE.BoxGeometry(2,2,2),new THREE.MeshBasicMaterial({color:0xf4c430,transparent:true,opacity:.26,depthWrite:false}));
 const ghostEdges=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(2,2,2)),new THREE.LineBasicMaterial({color:0xf4c430}));
@@ -17547,9 +17553,10 @@ function glFill(){ let ch=false;
 function glTick(dt){ if(!state.started||story.on){ if(GL.el) GL.el.hidden=true; return; }
   GL.t-=dt; if(GL.t<=0){ GL.t=1; glFill();
     for(const a of GL.act.slice()){ const D=glDef(a); if(!D){ GL.act.splice(GL.act.indexOf(a),1); continue; } let ok=false; try{ ok=D.done(); }catch(e){} if(!ok) continue;
-      GL.act.splice(GL.act.indexOf(a),1); if(!a.id.startsWith('r_')) GL.done.push(a.id); GL.last=a.id; earn(D.r); GL.q.push([D.t,D.r]); glSave(); }
+      GL.act.splice(GL.act.indexOf(a),1); if(!a.id.startsWith('r_')) GL.done.push(a.id); GL.last=a.id; earn(D.r); glFill(); const nx=GL.act.length?glDef(GL.act[GL.act.length-1]):null; GL.q.push(['🎯 Goal complete: '+D.t,'+'+money(lvCash(D.r))+(nx?' · New goal: '+nx.t:'')]); glSave(); try{ lvAdd(Math.round(D.r/4)); }catch(e){} }
     if(!GL.seen&&GL.act.length){ GL.seen=true; glSave(); flash('🎯 New: goals on the left. Click them or press B to see the way'); } }
-  if(GL.q.length&&ACH.bT<=0&&!ACH.q.length){ const [t,r]=GL.q.shift(); ACH.bT=3.2; glFill(); const nx=GL.act.length?glDef(GL.act[GL.act.length-1]):null; banner('🎯 Goal complete: '+t,'+'+money(r)+(nx?' · New goal: '+nx.t:'')); Snd.fanfare&&Snd.fanfare(); }
+  try{ lvTick(dt); }catch(e){}
+  if(GL.q.length&&ACH.bT<=0&&!ACH.q.length){ const [a,b]=GL.q.shift(); ACH.bT=3.2; banner(a,b); Snd.fanfare&&Snd.fanfare(); }
   glHud(dt); }
 function glHud(dt){ if(!GL.el){ const d=document.createElement('div'); d.className='hud goals'; d.id='goals'; d.setAttribute('role','button'); d.tabIndex=-1; d.setAttribute('aria-label','Your goals'); d.addEventListener('click',()=>glMenu()); document.getElementById('wallet').after(d); GL.el=d; }
   const w=document.getElementById('wallet'); GL.el.hidden=w.hidden; if(w.hidden) return;
@@ -17558,17 +17565,48 @@ function glHud(dt){ if(!GL.el){ const d=document.createElement('div'); d.classNa
   GL.el.style.top=y+'px';
   const wp=state.wpDest&&perfT<(state.shopWpUntil||0)?state.wpDest:null;
   const rows=GL.act.map(a=>{ const D=glDef(a); if(!D) return null; let p=null; try{ p=D.prog&&D.prog(); }catch(e){} return [D.t,D.r,p,a.wp&&wp&&Math.hypot(wp.x-a.wp.x,wp.z-a.wp.z)<1]; }).filter(Boolean);
-  const sig=JSON.stringify(rows); if(sig===GL.sig) return; GL.sig=sig; GL.el.textContent='';
+  const [L,x]=lvOf(LV.xp), gn=LV.gainT>0?LV.gain:0; const sig=JSON.stringify([rows,L,x,gn]); if(sig===GL.sig) return; GL.sig=sig; GL.el.textContent='';
+  { const r=document.createElement('div'); r.className='lv'; const b=document.createElement('b'); b.textContent='⭐ LEVEL '+L; const g=document.createElement('span'); g.className='lvg'; g.textContent=gn?'+'+gn+' XP':''; r.append(b,g); GL.el.appendChild(r); const tr=document.createElement('div'); tr.className='gt lvb'; const f=document.createElement('i'); f.style.width=Math.round(100*x/lvNeed(L))+'%'; const c=document.createElement('em'); c.textContent=x+'/'+lvNeed(L)+' XP'; tr.append(f,c); GL.el.appendChild(tr); }
   const h=document.createElement('div'); h.className='gh'; h.textContent='🎯 GOALS'; GL.el.appendChild(h);
   for(const [t,r,p,m] of rows){ const row=document.createElement('div'); row.className='gr'; const n=document.createElement('span'); n.textContent=(m?'📍 ':'')+t; const b=document.createElement('b'); b.textContent=money(r); row.append(n,b); GL.el.appendChild(row);
     if(p){ const tr=document.createElement('div'); tr.className='gt'; const f=document.createElement('i'); f.style.width=Math.round(100*p[0]/p[1])+'%'; const c=document.createElement('em'); c.textContent=p[0]+'/'+p[1]; tr.append(f,c); GL.el.appendChild(tr); } } }
-function glMenu(){ if(!state.started||state.over||story.on) return; glFill(); const nested=!cfEl.hidden, prev=cfPrevPaused; const add=menuOpen('🎯 Your goals · '+GL.done.length+' of '+GOALS.length+' main goals done'); if(nested) cfPrevPaused=prev;
+function glMenu(){ if(!state.started||state.over||story.on) return; glFill(); const nested=!cfEl.hidden, prev=cfPrevPaused; const [L,x]=lvOf(LV.xp), nr=LV_REW.find(r=>r[0]>L); const add=menuOpen('⭐ Level '+L+' · 🎯 '+GL.done.length+' of '+GOALS.length+' main goals done'); if(nested) cfPrevPaused=prev;
+  add('⭐ Level '+L+' · '+x+'/'+lvNeed(L)+' XP to level '+(L+1),(nr?'Next reward at level '+nr[0]+': '+nr[1]+'. ':'')+'Every level pays cash. Tap for all level rewards',()=>lvMenu(),'');
   for(const a of GL.act){ const D=glDef(a); if(!D) continue; let p=null; try{ p=D.prog&&D.prog(); }catch(e){} let w=null; try{ w=D.where&&D.where(); }catch(e){}
     menuHead(D.t+' · '+money(D.r)+(p?' · '+p[0]+'/'+p[1]:''));
     add(w?'📍 Show me the way':'How to do it',D.how,()=>{ menuDone(); if(w){ w(); if(state.wpDest) a.wp={x:state.wpDest.x,z:state.wpDest.z}; GL.sig=''; } else flash(D.how); },'pick-go');
     add('Swap for another goal',a.id.startsWith('r_')?'Get a different one':'This one comes back later',()=>{ GL.act.splice(GL.act.indexOf(a),1); if(!a.id.startsWith('r_')) GL.skip.push(a.id); else GL.last=a.id; glSave(); GL.sig=''; glMenu(); },''); }
   add('🏆 Achievements',ACH.got.length+' of '+ACHL.length+' unlocked',()=>{ menuDone(); achMenu(); },'');
   add('Close','',()=>menuDone()); }
+
+/* ---------- ⭐ player level: XP from almost everything, cash every level, bigger rewards at milestones ---------- */
+var LV={xp:0,ach:-1,got:[],gain:0,gainT:0};
+try{ const d=JSON.parse(localStorage.getItem('tumbleton-level')||'null'); if(d){ LV.xp=Math.max(0,+d.xp||0); LV.ach=d.ach===undefined?-1:d.ach; LV.got=Array.isArray(d.got)?d.got:[]; } }catch(e){}
+function lvSave(){ try{ localStorage.setItem('tumbleton-level',JSON.stringify({xp:LV.xp,ach:LV.ach,got:LV.got})); }catch(e){} }
+const lvNeed=L=>50+50*L;
+function lvOf(xp){ let L=1; while(L<99&&xp>=lvNeed(L)){ xp-=lvNeed(L); L++; } return [L,Math.floor(xp)]; }
+const LV_XP={zk:5,del:60,taxi:30,hunt:80,quest:80,rescue:100,horde:150,drop:60,raid:120,boss:200,race:150,league:150,champ:500,pizza:80,fish:15,veg:10,shogun:600,ring:30,cannon:40,hoops:30,surf:40,arcade:30,ride_wheel:20,ride_coaster:20,ride_tower:20,gond:20,host:30,horse:50,bull:200,blood30:300};
+function lvGun(id){ if(!WEAPONS[id]) return; state.owned[id]=true; try{ ammoOf(id); }catch(e){} save(); }
+const LV_REW=[[3,'🔫 A free pistol',()=>lvGun('pistol')],[5,'💰 +5% cash from everything',null],[8,'🔫 A free SMG',()=>lvGun('smg')],[10,'💰 +10% cash from everything',null],[12,'🔫 A free M4 carbine',()=>lvGun('m4')],[15,'🎯 A free sniper rifle',()=>lvGun('sniper')],[20,'💰 +15% cash from everything',null],
+  [25,'🦾 A free power gauntlet',()=>{ state.owned.gauntlet=true; (UPG.on.fists=UPG.on.fists||{}).gauntlet=true; upgSave(); save(); }],[30,'🏎 The Lugatti unlocked at Vehicles R Us',()=>{ LUG.unlocked=true; lugSave(); }],[40,'💰 +25% cash from everything',null],[50,'👑 Legend of Tumbleton · $50,000',()=>{ state.money+=50000; save(); }]];
+function lvBonus(){ if(!LV) return 0; const L=lvOf(LV.xp)[0]; return L>=40?.25:L>=20?.15:L>=10?.1:L>=5?.05:0; }
+function lvCash(n){ return n>0?Math.round(n*(1+lvBonus())):n; }
+function lvStat(k,n){ const x=LV_XP[k]; if(x&&!story.on) lvAdd(x*n); }
+// add XP; level-ups pay $100 x the new level and hand out milestone rewards
+function lvAdd(n,quiet){ if(!(n>0)||!LV) return; const L0=lvOf(LV.xp)[0]; LV.xp+=n; LV.gain=(LV.gainT>0?LV.gain:0)+n; LV.gainT=1.6; const L1=lvOf(LV.xp)[0]; lvSave(); if(L1<=L0) return;
+  let cash=0; const got=[]; for(let L=L0+1;L<=L1;L++){ cash+=100*L; for(const R of LV_REW) if(R[0]===L&&!LV.got.includes(L)){ LV.got.push(L); got.push(R[1]); try{ R[2]&&R[2](); }catch(e){} } }
+  state.money+=cash; save(); lvSave(); const g=document.getElementById('gain'); if(g){ g.textContent='+$'+cash; g.classList.remove('show','neg'); void g.offsetWidth; g.classList.add('show'); }
+  if(!quiet) GL.q.push(['⭐ LEVEL '+L1+'!','+'+money(cash)+(got.length?' · '+got.join(' · '):'')]); return {L1,cash,got}; }
+function lvTick(dt){ LV.gainT-=dt;
+  if(LV.ach<0){ // first time: everything you've already done counts
+    let xp=Math.min(achSt('zk'),3000)*5; for(const id of ACH.got){ const A=ACHL.find(a=>a[0]===id); if(A) xp+=Math.round(A[3]/5); } LV.ach=ACH.got.length; lvSave();
+    if(xp>0){ const r=lvAdd(xp,true); const L=lvOf(LV.xp)[0]; if(L>1) GL.q.unshift(['⭐ You\'re level '+L+'!','Everything you\'ve already done counts'+(r?' · +'+money(r.cash)+(r.got.length?' · '+r.got.join(' · '):''):'')]); } return; }
+  if(ACH.got.length>LV.ach){ for(const id of ACH.got.slice(LV.ach)){ const A=ACHL.find(a=>a[0]===id); if(A) lvAdd(Math.round(A[3]/5)); } LV.ach=ACH.got.length; lvSave(); } }
+function lvMenu(){ const [L,x]=lvOf(LV.xp); const add=menuOpen('⭐ Level '+L+' · '+x+'/'+lvNeed(L)+' XP to the next level');
+  menuHead('Every level pays $100 × the level. Cash bonus now: +'+Math.round(lvBonus()*100)+'%');
+  for(const [n,t] of LV_REW) add((L>=n?'✓ ':'🔒 ')+'Level '+n+' · '+t,L>=n?'Unlocked':'',null,'',L<n);
+  menuHead('XP comes from zombies (5 each), goals, achievements, jobs, races, quests, rescues, bosses and more');
+  add('Back','',()=>glMenu(),''); add('Close','',()=>menuDone()); }
 /*GL-END*/
 /*PV-BEGIN*/
 /* ---------- online: player fighting (the host picks it when making a server) ---------- */
