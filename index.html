@@ -10,7 +10,7 @@
 <title>Tumbleton</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Lilita+One&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap">
 <style>
 /* Layout: full-bleed 3D toy-town canvas; HUD plates pinned to the corners like street signage */
 :root{
@@ -314,6 +314,49 @@ kbd{font:700 12px/1 var(--f-body);min-width:22px;padding:4px 6px 3px;border-radi
 .goals .gr{display:flex;justify-content:space-between;gap:8px;margin-top:4px}.goals .gr span{flex:1;min-width:0}.goals .gr b{color:#7fd88c;font-weight:700;white-space:nowrap}
 .goals .gt{position:relative;height:9px;border-radius:5px;background:#2c2f36;margin-top:3px;overflow:hidden}.goals .gt i{position:absolute;left:0;top:0;bottom:0;background:#4fae62}.goals .gt em{position:absolute;right:4px;top:-2px;font:700 9px/13px var(--f-body);font-style:normal;color:#fff}
 body.touch .goals{transform:scale(.8);transform-origin:top left}
+.lvroad{position:fixed;inset:0;z-index:80;background:rgba(3,8,26,.62);display:flex;align-items:center;justify-content:center;font-family:'Lilita One',var(--f-display);letter-spacing:.02em}.lvroad[hidden]{display:none}
+.lvroad .ol{text-shadow:2px 0 0 #0b0b14,-2px 0 0 #0b0b14,0 2px 0 #0b0b14,0 -2px 0 #0b0b14,2px 2px 0 #0b0b14,-2px 2px 0 #0b0b14,2px -2px 0 #0b0b14,-2px -2px 0 #0b0b14,0 4px 0 #0b0b14}
+.lvr-box{position:relative;width:min(960px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;box-sizing:border-box;border:4px solid #0b0b14;border-radius:24px;padding:14px 18px 12px;color:#fff;
+ background:repeating-linear-gradient(135deg,rgba(255,255,255,.06) 0 20px,transparent 20px 40px),radial-gradient(120% 95% at 50% 0%,#46a0ff 0%,#2163e0 45%,#10308f 100%);box-shadow:0 8px 0 #0b0b14,0 26px 60px rgba(0,0,0,.55);animation:lvrIn .3s cubic-bezier(.2,1.5,.4,1)}
+@keyframes lvrIn{from{transform:scale(.8) rotate(-2deg);opacity:0}to{transform:none;opacity:1}}
+.lvr-top{display:flex;align-items:center;gap:14px}.lvr-hd{flex:1;min-width:0}
+.lvr-starw{flex:none;filter:drop-shadow(3px 0 0 #0b0b14) drop-shadow(-3px 0 0 #0b0b14) drop-shadow(0 3px 0 #0b0b14) drop-shadow(0 -3px 0 #0b0b14) drop-shadow(0 4px 0 #0b0b14)}
+.lvr-star{width:76px;height:76px;display:grid;place-items:center;clip-path:polygon(50% 0%,62% 33%,98% 35%,70% 57%,80% 93%,50% 72%,20% 93%,30% 57%,2% 35%,38% 33%);background:linear-gradient(160deg,#fff27a,#ffc21a 55%,#ff9500);animation:lvrSpin 3s ease-in-out infinite}
+.lvr-star span{font-size:26px;margin-top:8px;color:#fff}
+@keyframes lvrSpin{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg) scale(1.05)}}
+.lvr-title{font-size:34px;line-height:1;color:#ffd21f;transform:rotate(-2deg);transform-origin:left}
+.lvr-sub{font-size:16px;color:#d8ebff;margin-top:6px}
+.lvr-x{flex:none;width:46px;height:46px;border-radius:14px;border:3px solid #0b0b14;background:linear-gradient(#ff6a6a,#e0222f);box-shadow:0 5px 0 #0b0b14,inset 0 3px 0 rgba(255,255,255,.35);color:#fff;font:22px 'Lilita One',var(--f-display);cursor:pointer;align-self:flex-start}
+.lvr-x:active{transform:translateY(4px);box-shadow:0 1px 0 #0b0b14}
+.lvr-xp{position:relative;height:30px;margin:14px 0 10px;border:3px solid #0b0b14;border-radius:16px;background:#0c215f;box-shadow:inset 0 4px 0 rgba(0,0,0,.35),0 4px 0 #0b0b14;overflow:hidden}
+.lvr-xp i{position:absolute;left:0;top:0;bottom:0;border-radius:12px;background:linear-gradient(#ffe75a,#ffb300 60%,#ff8f00)}
+.lvr-xp i::after{content:'';position:absolute;left:6px;right:6px;top:3px;height:7px;border-radius:5px;background:rgba(255,255,255,.45)}
+.lvr-xp em{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-size:17px;color:#fff}
+.lvr-next{display:inline-block;font-size:16px;color:#ffe36b;background:rgba(5,15,50,.45);border-radius:12px;padding:5px 12px}
+.lvr-scroll{overflow-x:auto;overflow-y:hidden;margin-top:6px;padding-bottom:8px;-webkit-overflow-scrolling:touch}
+.lvr-scroll::-webkit-scrollbar{height:12px}.lvr-scroll::-webkit-scrollbar-thumb{background:#ffd21f;border:3px solid #0b0b14;border-radius:8px}.lvr-scroll::-webkit-scrollbar-track{background:rgba(5,15,50,.45);border-radius:8px}
+.lvr-track{position:relative;height:246px}
+.lvr-line,.lvr-fill{position:absolute;top:118px;height:22px;box-sizing:border-box;border:3px solid #0b0b14;border-radius:12px}
+.lvr-line{background:#0c215f;box-shadow:inset 0 4px 0 rgba(0,0,0,.35),0 4px 0 #0b0b14}
+.lvr-fill{background:linear-gradient(#9dff6a,#39cf3f 55%,#1f9f2c);overflow:hidden}.lvr-fill::after{content:'';position:absolute;left:4px;right:4px;top:2px;height:5px;border-radius:4px;background:rgba(255,255,255,.5)}
+.lvr-tick{position:absolute;top:126px;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:rgba(255,255,255,.35);z-index:1}.lvr-tick.on{background:#eaffd8}
+.lvr-num{position:absolute;top:146px;transform:translateX(-50%);font-size:14px;color:#9fb8ff}.lvr-num.on{color:#c9ffb8}
+.lvr-rw{position:absolute;top:28px;transform:translateX(-50%);width:68px;height:92px;display:flex;flex-direction:column;align-items:center}
+.lvr-rw::after{content:'';width:6px;flex:1;background:#0b0b14}
+.lvr-c{width:64px;height:64px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:30px;box-sizing:border-box;border:4px solid #0b0b14;background:radial-gradient(circle at 35% 30%,#a99bff,#5d4be0 60%,#3a2aa8);box-shadow:0 5px 0 #0b0b14,inset 0 -5px 0 rgba(0,0,0,.25),inset 0 4px 0 rgba(255,255,255,.3)}
+.lvr-rw:not(.got):not(.next) .lvr-c{filter:saturate(.75) brightness(.92)}
+.lvr-rw.got .lvr-c{background:radial-gradient(circle at 35% 30%,#b9ff8f,#3fcf45 60%,#1f9a2a)}
+.lvr-rw.next .lvr-c{background:radial-gradient(circle at 35% 30%,#fff39a,#ffc21a 60%,#ff8f00);animation:lvrPulse 1s ease-in-out infinite}
+@keyframes lvrPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.lvr-ok,.lvr-lock{position:absolute;top:-6px;right:-4px;width:24px;height:24px;border-radius:50%;border:3px solid #0b0b14;box-sizing:border-box;display:grid;place-items:center;font:14px/1 'Lilita One',var(--f-display)}
+.lvr-ok{background:#3fcf45;color:#fff}.lvr-lock{background:#2b2f4a;font-size:11px}
+.lvr-name{position:absolute;top:168px;transform:translateX(-50%);width:112px;text-align:center;font-size:14px;line-height:1.15;color:#fff}.lvr-name b{display:block;font-weight:400;font-size:13px;color:#ffd21f;margin-bottom:2px}.lvr-name.got b{color:#9dff6a}
+.lvr-you{position:absolute;top:0;transform:translateX(-50%);z-index:3;background:linear-gradient(#fff27a,#ffb300);color:#0b0b14;font-size:15px;padding:3px 12px;border:3px solid #0b0b14;border-radius:12px;box-shadow:0 4px 0 #0b0b14;white-space:nowrap;animation:lvrBob 1.1s ease-in-out infinite}
+@keyframes lvrBob{0%,100%{margin-top:0}50%{margin-top:-5px}}
+.lvr-pin{position:absolute;top:30px;width:6px;height:92px;margin-left:-3px;background:#ffd21f;border:2px solid #0b0b14;box-sizing:border-box;border-radius:3px;z-index:2}
+.lvr-foot{font-size:14px;color:#d8ebff;margin-top:2px}
+.goals .lv,.goals .gt.lvb{cursor:pointer}
+@media (max-height:420px){.lvr-track{height:226px}.lvr-star{width:60px;height:60px}.lvr-title{font-size:26px}.lvr-xp{margin:8px 0 6px}}
 .wallet.chaosbtn .lbl{font-weight:800;letter-spacing:.04em;color:#ffd166}
 .chaosfx{position:absolute;inset:0;pointer-events:none;background:#fff;opacity:0;z-index:2}
 .chaosfx.storm{background:transparent;box-shadow:inset 0 0 0 100vmax rgba(14,20,38,.38);opacity:1;transition:none}
@@ -17565,14 +17608,14 @@ function glHud(dt){ if(!GL.el){ const d=document.createElement('div'); d.classNa
   const wp=state.wpDest&&perfT<(state.shopWpUntil||0)?state.wpDest:null;
   const rows=GL.act.map(a=>{ const D=glDef(a); if(!D) return null; let p=null; try{ p=D.prog&&D.prog(); }catch(e){} return [D.t,D.r,p,a.wp&&wp&&Math.hypot(wp.x-a.wp.x,wp.z-a.wp.z)<1]; }).filter(Boolean);
   const [L,x]=lvOf(LV.xp), gn=LV.gainT>0?LV.gain:0, dn=DL.list?DL.list.filter((c,i)=>DL.done.includes(i)).length:0; const sig=JSON.stringify([rows,L,x,gn,dn,!!DL.list]); if(sig===GL.sig) return; GL.sig=sig; GL.el.textContent='';
-  { const r=document.createElement('div'); r.className='lv'; const b=document.createElement('b'); b.textContent='⭐ LEVEL '+L; const g=document.createElement('span'); g.className='lvg'; g.textContent=gn?'+'+gn+' XP':''; r.append(b,g); GL.el.appendChild(r); const tr=document.createElement('div'); tr.className='gt lvb'; const f=document.createElement('i'); f.style.width=Math.round(100*x/lvNeed(L))+'%'; const c=document.createElement('em'); c.textContent=x+'/'+lvNeed(L)+' XP'; tr.append(f,c); GL.el.appendChild(tr); }
+  { const r=document.createElement('div'); r.className='lv'; const b=document.createElement('b'); b.textContent='⭐ LEVEL '+L; const g=document.createElement('span'); g.className='lvg'; g.textContent=gn?'+'+gn+' XP':''; r.append(b,g); r.title='See your level rewards'; r.addEventListener('click',e=>{ e.stopPropagation(); lvRoad(); }); GL.el.appendChild(r); const tr=document.createElement('div'); tr.className='gt lvb'; tr.addEventListener('click',e=>{ e.stopPropagation(); lvRoad(); }); const f=document.createElement('i'); f.style.width=Math.round(100*x/lvNeed(L))+'%'; const c=document.createElement('em'); c.textContent=x+'/'+lvNeed(L)+' XP'; tr.append(f,c); GL.el.appendChild(tr); }
   const h=document.createElement('div'); h.className='gh'; h.textContent='🎯 GOALS'; GL.el.appendChild(h);
   if(DL.list){ const r=document.createElement('div'); r.className='gr dl'; const a=document.createElement('span'); a.textContent='📅 Daily challenges'; const b=document.createElement('b'); b.textContent=dn+'/'+DL.list.length; b.style.color=dn>=DL.list.length?'#7fd88c':'#ffd166'; r.append(a,b); GL.el.appendChild(r); }
   for(const [t,r,p,m] of rows){ const row=document.createElement('div'); row.className='gr'; const n=document.createElement('span'); n.textContent=(m?'📍 ':'')+t; const b=document.createElement('b'); b.textContent=money(r); row.append(n,b); GL.el.appendChild(row);
     if(p){ const tr=document.createElement('div'); tr.className='gt'; const f=document.createElement('i'); f.style.width=Math.round(100*p[0]/p[1])+'%'; const c=document.createElement('em'); c.textContent=p[0]+'/'+p[1]; tr.append(f,c); GL.el.appendChild(tr); } } }
 function glMenu(){ if(!state.started||state.over||story.on) return; glFill(); const nested=!cfEl.hidden, prev=cfPrevPaused; const [L,x]=lvOf(LV.xp), nr=LV_REW.find(r=>r[0]>L); const add=menuOpen('⭐ Level '+L+' · 🎯 '+GL.done.length+' of '+GOALS.length+' main goals done'); if(nested) cfPrevPaused=prev;
   if(DL.list) add('📅 Daily challenges · '+DL.done.length+'/'+DL.list.length+' done'+(DL.streak>1?' · 🔥 '+DL.streak+' day streak':''),'New ones every day, plus a weekly challenge. Tap to see them',()=>dlMenu(),'');
-  add('⭐ Level '+L+' · '+x+'/'+lvNeed(L)+' XP to level '+(L+1),(nr?'Next reward at level '+nr[0]+': '+nr[1]+'. ':'')+'Every level pays cash. Tap for all level rewards',()=>lvMenu(),'');
+  add('⭐ Level '+L+' · '+x+'/'+lvNeed(L)+' XP to level '+(L+1),(nr?'Next reward at level '+nr[0]+': '+nr[1]+'. ':'')+'Every level pays cash. Tap to see the reward road',()=>{ menuDone(); lvRoad(); },'');
   for(const a of GL.act){ const D=glDef(a); if(!D) continue; let p=null; try{ p=D.prog&&D.prog(); }catch(e){} let w=null; try{ w=D.where&&D.where(); }catch(e){}
     menuHead(D.t+' · '+money(D.r)+(p?' · '+p[0]+'/'+p[1]:''));
     add(w?'📍 Show me the way':'How to do it',D.how,()=>{ menuDone(); if(w){ w(); if(state.wpDest) a.wp={x:state.wpDest.x,z:state.wpDest.z}; GL.sig=''; } else flash(D.how); },'pick-go');
@@ -17644,6 +17687,33 @@ function mpLvTag(id){ const av=MP.av.get(id); if(!av) return; scene.remove(av.ta
 function mpLvIn(id,l){ l=Math.max(1,Math.min(99,l|0)); if(!l) return; mpLvs().set(id,l); mpLvTag(id); }
 function lvNet(){ if(!MP.on){ LV.netK=''; return; } const L=lvOf(LV.xp)[0], k=MP.code+'#'+MP.id+'#'+L; if(LV.netK===k) return; if(!LV.netK||!LV.netK.startsWith(MP.code+'#')) mpLvs().clear(); LV.netK=k; mpLvs().set(MP.id,L);
   if(MP.host) mpBroadcast({t:'plv',id:MP.id,l:L}); else mpSendHost({t:'plv',l:L}); }
+
+/* ---------- ⭐ the level road: a line of levels, green up to where you are, a circle for every reward ---------- */
+const LVR={prev:false,el:null};
+function lvRoadClose(){ if(!LVR.el||LVR.el.hidden) return; LVR.el.hidden=true; state.paused=LVR.prev; }
+function lvRoad(){ if(!state.started) return; if(!cfEl.hidden) menuDone();
+  if(!LVR.el){ const o=document.createElement('div'); o.className='lvroad'; o.id='lvroad'; o.setAttribute('role','dialog'); o.setAttribute('aria-label','Level rewards'); o.hidden=true; document.body.appendChild(o); LVR.el=o;
+    o.addEventListener('click',e=>{ if(e.target===o) lvRoadClose(); });
+    addEventListener('keydown',e=>{ if(LVR.el&&!LVR.el.hidden&&(e.code==='Escape'||e.code==='KeyB')){ e.preventDefault(); e.stopImmediatePropagation(); lvRoadClose(); } },true); }
+  const o=LVR.el, [L,x]=lvOf(LV.xp), need=lvNeed(L), maxL=Math.max(50,L+5), STEP=64, PAD=56, X=l=>PAD+(l-1)*STEP, W=X(maxL)+PAD, prog=X(L)+STEP*x/need;
+  const nx=LV_REW.find(r=>r[0]>L), el=(t,c,txt)=>{ const e=document.createElement(t); if(c) e.className=c; if(txt!==undefined) e.textContent=txt; return e; };
+  o.textContent=''; const box=el('div','lvr-box'); o.appendChild(box);
+  const top=el('div','lvr-top'); const sw=el('div','lvr-starw'), st=el('div','lvr-star'); st.appendChild(el('span','ol',String(L))); sw.appendChild(st); const h=el('div','lvr-hd'); h.append(el('div','lvr-title ol','LEVEL ROAD'),el('div','lvr-sub ol','Level '+L+' · cash bonus +'+Math.round(lvBonus()*100)+'%'));
+  const cl=el('button','lvr-x ol','✕'); cl.type='button'; cl.setAttribute('aria-label','Close'); cl.addEventListener('click',lvRoadClose); top.append(sw,h,cl); box.appendChild(top);
+  const bar=el('div','lvr-xp'); const bf=el('i'); bf.style.width=Math.max(4,Math.round(100*x/need))+'%'; bar.append(bf,el('em','ol',x+' / '+need+' XP')); box.appendChild(bar);
+  box.appendChild(el('div','lvr-next ol',nx?'Next reward at level '+nx[0]+': '+nx[1]+(nx[0]-L>1?' ('+(nx[0]-L)+' levels away)':' (next level!)'):'You have every reward. Legend!'));
+  const sc=el('div','lvr-scroll'), tr=el('div','lvr-track'); tr.style.width=W+'px'; sc.appendChild(tr); box.appendChild(sc);
+  const line=el('div','lvr-line'); line.style.left=X(1)+'px'; line.style.width=(X(maxL)-X(1))+'px'; tr.appendChild(line);
+  const fill=el('div','lvr-fill'); fill.style.left=X(1)+'px'; fill.style.width=Math.max(0,prog-X(1))+'px'; tr.appendChild(fill);
+  for(let l=1;l<=maxL;l++){ const t=el('div','lvr-tick'+(l<=L?' on':'')); t.style.left=X(l)+'px'; tr.appendChild(t); { const n=el('div','lvr-num ol'+(l<=L?' on':''),String(l)); n.style.left=X(l)+'px'; tr.appendChild(n); } }
+  for(const [l,txt] of LV_REW){ const sp=txt.indexOf(' '), ic=txt.slice(0,sp), nm=txt.slice(sp+1), got=L>=l;
+    const r=el('div','lvr-rw'+(got?' got':l===(nx&&nx[0])?' next':'')); r.style.left=X(l)+'px';
+    const c=el('div','lvr-c',ic); r.appendChild(c); r.appendChild(got?el('div','lvr-ok','✓'):el('div','lvr-lock','🔒')); tr.appendChild(r);
+    const n=el('div','lvr-name'+(got?' got':'')); n.style.left=X(l)+'px'; n.append(el('b','ol','LEVEL '+l),el('span','ol',nm)); tr.appendChild(n); }
+  const you=el('div','lvr-you','YOU'); you.style.left=prog+'px'; tr.appendChild(you); const pin=el('div','lvr-pin'); pin.style.left=prog+'px'; tr.appendChild(pin);
+  box.appendChild(el('div','lvr-foot ol','Every level pays $100 × the level. XP comes from zombies, goals, daily challenges, achievements, jobs, races, quests, rescues and bosses'));
+  LVR.prev=state.paused; state.paused=true; for(const k in keys) keys[k]=false; state.mouseHeld=false; try{ document.exitPointerLock&&document.exitPointerLock(); }catch(e){}
+  o.hidden=false; sc.scrollLeft=Math.max(0,prog-sc.clientWidth*.4); }
 /*GL-END*/
 /*PV-BEGIN*/
 /* ---------- online: player fighting (the host picks it when making a server) ---------- */
