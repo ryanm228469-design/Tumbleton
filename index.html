@@ -7368,6 +7368,7 @@ function updatePerson(p,dt){
   if(p.mode==='drive'||p.mode==='lift') return;
   if(p.dead&&p.zombie&&p.mode!=='ragdoll') deadFall(p);
   if(p.pz&&!p.dead&&!p.zombie&&p.mode==='walk'&&pzTickP(p,dt)) return;
+  if(p.ap&&!p.dead&&!p.zombie&&p.mode==='walk'&&apTickP(p,dt)) return;
   if(p.cbRole&&p.cbRole!=='patrol'&&!p.zombie&&!p.dead&&p.mode==='walk'){ cbRoleTick(p,dt); return; }
   if(p.soldier&&!p.zombie&&!p.dead&&p.mode==='walk'){ soldierTick(p,dt); return; }
   if(p.local&&!p.zombie&&!p.dead&&p.mode==='walk'&&localTick(p,dt)) return;
@@ -11677,7 +11678,7 @@ function pzRespawn(){ if(PZ.mode!=='jail'&&PZ.mode!=='riot') return; const riot=
 function pzReset0(){ pzDepopulate(); PZ.fenceCut=false; if(PZ.backBox){ PZ.backBox.y0=0; PZ.backBox.h=2.4; PZ.cutBox.y0=0; PZ.cutBox.h=6.2; PZ.cutM.position.set(0,0,0); PZ.backDoor.rotation.y=0; PZ.backDoor.position.z=PZ.boil.z0+2.2; } PZ.doorWant=0; PZ.fight=null; PZ.per=null; }
 /* ---------- each frame ---------- */
 function pzHud(on){ if(!PZ.hud){ const d=document.createElement('div'); d.style.cssText='position:fixed;left:50%;top:48px;transform:translateX(-50%);background:rgba(17,17,17,.78);color:#fff;font:700 13px/1.35 system-ui,sans-serif;padding:6px 14px;border-radius:9px;border:2px solid #f07a1a;z-index:30;pointer-events:none;text-align:center;display:none'; document.body.appendChild(d); PZ.hud=d; } PZ.hud.style.display=on?'block':'none'; }
-function pzTick(dt){ if(mpClient()||!state.started) return; try{ jbTick(dt); }catch(e){} const P=player.pos, dc=Math.hypot(P.x-PZ.cx,P.z-PZ.cz), jailed=PZ.mode==='jail'||PZ.mode==='riot'||!!PZ.seq;
+function pzTick(dt){ try{ apTick(dt); }catch(e){ console.warn('ap',e); } if(mpClient()||!state.started) return; try{ jbTick(dt); }catch(e){} const P=player.pos, dc=Math.hypot(P.x-PZ.cx,P.z-PZ.cz), jailed=PZ.mode==='jail'||PZ.mode==='riot'||!!PZ.seq;
   if(!PZ.built&&dc<520) pzBuild(); if(!PZ.built) return;
   PZ.g.visible=dc<900||jailed;
   if((dc<240||jailed)&&!PZ.ppl.length) pzPopulate(); else if(dc>340&&!jailed&&PZ.ppl.length){ pzReset(); }
@@ -13505,7 +13506,7 @@ function applyGrip(c,grip,dt){ if(WX.wet>.02&&!c.boat) grip*=1-WX.wet*.32; const
 const dyn=[];
 function buildDyn(){ dyn.length=0; for(const o of props) dyn.push(o); for(const p of people) if(p.mode!=='drive'&&p.mode!=='held'&&p.mode!=='lift') dyn.push(p); }
 const isWalker=o=>o.isPerson&&(o.mode==='walk'||o.mode==='getup');
-const EBR=[[-LIM,LIM,-LIM,LIM],[-790,-LIM,-LIM,LIM],[-LIM-5,LIM+5,-770,-LIM],[-LIM-5,LIM+5,LIM,770],[LIM-1,AIR.x1,AIR.z0,AIR.z1],[LIM-1,790,-276,-146],[LIM-1,790,136,276],[-345,790,-300,-276],[764,790,-300,345],[-345,790,276,345],[-345,-LIM,-300,345]];
+const EBR=[[-LIM,LIM,-LIM,LIM],[-790,-LIM,-LIM,LIM],[-LIM-5,LIM+5,-770,-LIM],[-LIM-5,LIM+5,LIM,770],[LIM-1,AIR.x1,AIR.z0,AIR.z1],[LIM-1,790,-276,-146],[LIM-1,790,136,276],[-345,790,-300,-276],[764,790,-300,345],[-345,790,276,345],[-345,-LIM,-300,345],[540,790,-150,96],[LIM-1,790,90,140],[LIM-1,790,-152,-140]];   // the prison land (it used to appear only once the prison was built), the river east of the city, and the strip between the airport and the raceway
 function bounds(p,v){ if(p.x>GZ0.x-150) return; let bd=1e9,bx=p.x,bz=p.z; for(const r of EBR){ if(p.x>=r[0]&&p.x<=r[1]&&p.z>=r[2]&&p.z<=r[3]) return; const cx=clamp(p.x,r[0],r[1]), cz=clamp(p.z,r[2],r[3]), d=(cx-p.x)**2+(cz-p.z)**2; if(d<bd){ bd=d; bx=cx; bz=cz; } }
   if(bx!==p.x&&v.x*(p.x-bx)>0) v.x*=-.4; if(bz!==p.z&&v.z*(p.z-bz)>0) v.z*=-.4; p.x=bx; p.z=bz; }
 const _near=[], _sx=[]; let _sxR=0;
@@ -14537,7 +14538,7 @@ addEventListener('keydown',e=>{
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
   keys[e.code]=true; if(e.repeat) return;
   const c=e.code;
-  if(c==='KeyE'){ player.useAt=perfT; if(!pzUse()&&!spUse()&&!hideUse()&&!liveUse()&&!craneE()&&!jetE()&&!storyE()&&!storeE()&&!sewerE()) enterExit(); }
+  if(c==='KeyE'){ player.useAt=perfT; if(!apUse()&&!pzUse()&&!spUse()&&!hideUse()&&!liveUse()&&!craneE()&&!jetE()&&!storyE()&&!storeE()&&!sewerE()) enterExit(); }
   else if(c==='KeyF'){ if(activeHeli) heliRocket(); else if(activeCar&&padUse()){} else if(activeCar&&activeCar.lug){ lugRoof(activeCar); } else if((activeCar&&(activeCar.emerg||activeCar.tur||activeCar.arm))||MPG.id!==null){} else spawnSelected(); }
   else if(c==='KeyY') toggle('slow');
   else if(c==='KeyT'){ if(!spLockKey()) openRestart(); }
@@ -14763,7 +14764,7 @@ const GUIDE=[
  ['Police',`<ul><li>Hurting police officers, or running people over while someone's watching, gets you a <b>wanted level</b> (1 to 5 stars). More crimes mean more stars.</li><li>★ two police cars · ★★ vans join in · ★★★ the police helicopter, which fires a <b>missile</b> at you every 10 seconds (keep moving, or hide under cover) · ★★★★ officers shoot at you · ★★★★★ the army sends an armed ute.</li><li>Get away until the timer runs out. Hiding in <b>tunnels</b>, the <b>sewer</b> or your <b>garage</b> makes it run out much faster.</li><li>You can shoot the helicopter down with guns or your car's <b>roof gun</b> (F or click). That adds a star, and a new one arrives at the station later.</li><li>Busted? The fine is $1,000 per star.</li></ul>`],
  ['Kiwis & clothes',`<ul><li><b>50 kiwi statues</b> are hidden all over the map: in the city, on the farms, at the beach, up the mountain and out east. Walk or drive into one to collect it ($100). You hear a little chirp when one is close.</li><li>Bonuses at 10 and 25 kiwis. Find all 50 for <b>$10,000</b>, a <b>golden crown</b> and a <b>Golden Kiwi Kestrel S</b> hypercar.</li><li>Stuck? B Find Places can mark the nearest kiwi for $250.</li><li><b>Kia Ora Threads</b>, next to the furniture store, sells hats, sunglasses, bandanas, masks, tops and pants. What you buy is yours to swap any time.</li><li>Some hats are only sold at the markets in towns you've freed from the zombies.</li></ul>`],
  ['Freed towns',`<ul><li>While a district's nest is still alive, its town square is <b>barricaded</b> with wrecked cars and sandbags, and the shops in Rangiwai are boarded up.</li><li>Blow up the nest and the town comes back: the barricades come down and a <b>market</b> opens with fairy lights and bunting.</li><li>Market stalls sell <b>pies</b> (full health), <b>ammo restocks</b>, a <b>kiwi map</b>, and a <b>hat you can't get anywhere else</b>: a party hat, Viking helmet, straw hat, army helmet, miner's lamp helmet, pirate hat or road cone hat.</li></ul>`],
- ['Credits',`<p>Vehicle models by these creators, used under their Creative Commons licences. For the game they were resized, simplified, re-textured at lower resolution and split into parts (wheels, turrets, arms) so they can move. The Lugatti uses the Phoenix GT sport car model.</p><ul><li><b>2005 Sedan PSX Style</b> by Han66st (Sketchfab) · CC BY 4.0</li><li><b>Holden Ute (VZ) 2004</b> by Nieve5677 (Sketchfab) · CC BY 4.0</li><li><b>(FREE) Żuk 3D model</b> by Karol Miklas (Sketchfab) · CC BY 4.0</li><li><b>Japanese bus "Nagoya City Bus" (Aichi)</b> by VRC-IW (Sketchfab) · CC BY-NC 4.0</li><li><b>(Free) 1992 Chevrolet P30 Step Van (Tuned)</b> by TheTunerShack (Sketchfab) · CC BY-NC-SA 4.0</li><li><b>[Monster Truck Game] Bootleg Bigfoot</b> by Jorma Rysky (Joona Venäläinen) (Sketchfab) · CC BY 4.0</li><li><b>Fire Truck (Burnout Legends)</b> by maregajavier (Sketchfab) · CC BY 4.0</li><li><b>Shvan '92 Ambulance - Low Poly model</b> by Daniel Zhabotinsky (Sketchfab) · CC BY 4.0</li><li><b>tow truck (burnout 1)</b> by amogusstrikesback2 (Sketchfab) · CC BY 4.0</li><li><b>simple tank</b> by Haider Al_Asady (Sketchfab) · CC BY 4.0</li><li><b>UAZ Military car with gun</b> by FLIGHTCLUB (flightclubua) (Sketchfab) · CC BY 4.0</li><li><b>Bulldozer</b> by RobbyHollister (Sketchfab) · CC BY 4.0</li><li><b>Hyundai HL975A Wheel loader</b> by Lassi Kaukonen (Sketchfab) · CC BY 4.0</li><li><b>Honda NR750 1994</b> by Comrade1280 (Sketchfab) · CC BY 4.0</li><li><b>(FREE) Honda CRF 450</b> by Jacobdesigns (Sketchfab) · CC BY 4.0</li><li><b>Cyberpunk Scooter</b> by Berk Gedik (Sketchfab) · CC BY 4.0</li><li><b>Go Kart</b> by GRIP420 (Sketchfab) · CC BY-NC-ND 4.0</li><li><b>Sports Lite</b> by AbdulRahim (Sketchfab) · CC BY-NC 4.0 · in the game as the Vento Lite</li><li><b>Realistic sports car</b> by Vertex_Bro (Blend_GUY) (Sketchfab) · CC BY 4.0 · in the game as the Kestrel S</li><li><b>2024 Porsche 992 GT3 R</b> by Dave Love (Tyler_Dave) (Sketchfab) · CC BY 4.0 · in the game as the Porza GT3 R</li><li><b>2021 Lamborghini Countach LPI 800-4</b> by Lexyc16 (Sketchfab) · CC BY-NC 4.0 · in the game as the Lambini Contessa</li><li><b>2019 Bugatti Divo</b> by OUTPISTON (Sketchfab) · CC BY-NC-SA 4.0 · in the game as the Lugatti Divo</li></ul><ul><li><b>Bazooka M20</b> by Melvin Stubbe (Sketchfab) · CC BY 4.0</li><li><b>Sci-fi Nail Gun Raygun</b> by antoineallardchoquette (Sketchfab) · CC BY 4.0</li><li><b>Leaf Blower</b> by jterry7484 (Sketchfab) · CC BY 4.0</li><li><b>Helicopter</b> by sayedgamal655 (Sketchfab) · CC BY 4.0</li><li><b>Northrop Grumman B-2 Spirit - FREE</b> by bohmerang (Sketchfab) · CC BY-NC-SA 4.0 · the stealth bomber</li></ul><ul><li><b>Raid Boss Shogun</b> by zeroswat (Sketchfab) · CC BY 4.0 · the Shogun at the robot crash site, split into moving parts, rigged and animated for the game</li></ul><ul><li><b>Tactical Vest Pack</b> (chest rig, webbing harness and assault vest) · the Level Road armour, simplified and fitted to the characters</li></ul><p>The Shogun moves with the Universal Animation Library and Universal Animation Library 2 by Quaternius (CC0).</p><p>The baseball bat, hand saw, hammer and hatchet are Quixel Megascans scans (Axe, Baseball Bat, Old Hammer, Rusty Hand Saw) from Fab, used under the Fab Standard License.</p><p>The hypercars have made-up names in the game, and their badges were changed to match. They are not made or endorsed by the real car companies.</p>`],
+ ['Credits',`<p>Vehicle models by these creators, used under their Creative Commons licences. For the game they were resized, simplified, re-textured at lower resolution and split into parts (wheels, turrets, arms) so they can move. The Lugatti uses the Phoenix GT sport car model.</p><ul><li><b>2005 Sedan PSX Style</b> by Han66st (Sketchfab) · CC BY 4.0</li><li><b>Holden Ute (VZ) 2004</b> by Nieve5677 (Sketchfab) · CC BY 4.0</li><li><b>(FREE) Żuk 3D model</b> by Karol Miklas (Sketchfab) · CC BY 4.0</li><li><b>Japanese bus "Nagoya City Bus" (Aichi)</b> by VRC-IW (Sketchfab) · CC BY-NC 4.0</li><li><b>(Free) 1992 Chevrolet P30 Step Van (Tuned)</b> by TheTunerShack (Sketchfab) · CC BY-NC-SA 4.0</li><li><b>[Monster Truck Game] Bootleg Bigfoot</b> by Jorma Rysky (Joona Venäläinen) (Sketchfab) · CC BY 4.0</li><li><b>Fire Truck (Burnout Legends)</b> by maregajavier (Sketchfab) · CC BY 4.0</li><li><b>Shvan '92 Ambulance - Low Poly model</b> by Daniel Zhabotinsky (Sketchfab) · CC BY 4.0</li><li><b>tow truck (burnout 1)</b> by amogusstrikesback2 (Sketchfab) · CC BY 4.0</li><li><b>simple tank</b> by Haider Al_Asady (Sketchfab) · CC BY 4.0</li><li><b>UAZ Military car with gun</b> by FLIGHTCLUB (flightclubua) (Sketchfab) · CC BY 4.0</li><li><b>Bulldozer</b> by RobbyHollister (Sketchfab) · CC BY 4.0</li><li><b>Hyundai HL975A Wheel loader</b> by Lassi Kaukonen (Sketchfab) · CC BY 4.0</li><li><b>Honda NR750 1994</b> by Comrade1280 (Sketchfab) · CC BY 4.0</li><li><b>(FREE) Honda CRF 450</b> by Jacobdesigns (Sketchfab) · CC BY 4.0</li><li><b>Cyberpunk Scooter</b> by Berk Gedik (Sketchfab) · CC BY 4.0</li><li><b>Go Kart</b> by GRIP420 (Sketchfab) · CC BY-NC-ND 4.0</li><li><b>Sports Lite</b> by AbdulRahim (Sketchfab) · CC BY-NC 4.0 · in the game as the Vento Lite</li><li><b>Realistic sports car</b> by Vertex_Bro (Blend_GUY) (Sketchfab) · CC BY 4.0 · in the game as the Kestrel S</li><li><b>2024 Porsche 992 GT3 R</b> by Dave Love (Tyler_Dave) (Sketchfab) · CC BY 4.0 · in the game as the Porza GT3 R</li><li><b>2021 Lamborghini Countach LPI 800-4</b> by Lexyc16 (Sketchfab) · CC BY-NC 4.0 · in the game as the Lambini Contessa</li><li><b>2019 Bugatti Divo</b> by OUTPISTON (Sketchfab) · CC BY-NC-SA 4.0 · in the game as the Lugatti Divo</li></ul><ul><li><b>Bazooka M20</b> by Melvin Stubbe (Sketchfab) · CC BY 4.0</li><li><b>Sci-fi Nail Gun Raygun</b> by antoineallardchoquette (Sketchfab) · CC BY 4.0</li><li><b>Leaf Blower</b> by jterry7484 (Sketchfab) · CC BY 4.0</li><li><b>Helicopter</b> by sayedgamal655 (Sketchfab) · CC BY 4.0</li><li><b>Northrop Grumman B-2 Spirit - FREE</b> by bohmerang (Sketchfab) · CC BY-NC-SA 4.0 · the stealth bomber</li></ul><ul><li><b>Raid Boss Shogun</b> by zeroswat (Sketchfab) · CC BY 4.0 · the Shogun at the robot crash site, split into moving parts, rigged and animated for the game</li></ul><ul><li><b>Tactical Vest Pack</b> (chest rig, webbing harness and assault vest) · the Level Road armour, simplified and fitted to the characters</li><li><b>Airport Pack</b> (terminal, control tower, jet bridge, planes, ground vehicles and terminal furniture) · Tumbleton Airport, simplified with baked colours</li></ul><p>The Shogun moves with the Universal Animation Library and Universal Animation Library 2 by Quaternius (CC0).</p><p>The baseball bat, hand saw, hammer and hatchet are Quixel Megascans scans (Axe, Baseball Bat, Old Hammer, Rusty Hand Saw) from Fab, used under the Fab Standard License.</p><p>The hypercars have made-up names in the game, and their badges were changed to match. They are not made or endorsed by the real car companies.</p>`],
  ['Online',`<p>Press <b>J</b> to play online with friends: join a public server, join a private one with its code, or make your own. <b>Enter</b> chats.</p>`]];
 function guideOpen(tab){ const el=$('guide'); if(!el.hidden&&tab===undefined) return; if(el.hidden){ GUIDE.prev=state.paused; state.paused=true; for(const k in keys) keys[k]=false; try{ document.exitPointerLock&&document.exitPointerLock(); }catch(e){} }
   el.hidden=false; const T=$('guidetabs'), B=$('guidebody'); T.textContent=''; const cur=tab||0; GUIDE.forEach(([n],i)=>{ const b=document.createElement('button'); b.type='button'; b.textContent=n; b.setAttribute('aria-pressed',String(i===cur)); b.addEventListener('click',()=>guideOpen(i)); T.appendChild(b); });
@@ -14794,7 +14795,7 @@ function updateHUD(){
   if(zs!==lastZ||state.defeated!==lastD){ lastZ=zs; lastD=state.defeated; zcEl.textContent=zs; zdEl.textContent=state.defeated; zplateEl.hidden=!(zs||state.defeated); }
   let pr='';
   if(state.msgT>0&&state.started&&!state.over) pr=state.msg; else
-  if(state.started){ const stp=pzPrompt()||spPrompt()||hidePrompt()||livePrompt()||jetPrompt()||cranePrompt()||storyPrompt()||storePrompt()||motorPrompt()||trainPrompt()||ferryPrompt()||gondPrompt()||ridePrompt()||jobPrompt()||sentryPrompt()||nestPrompt()||questPrompt()||hatchPrompt()||furnPrompt()||fstorePrompt()||clothesPrompt()||fishPrompt()||surfPrompt()||bbPrompt()||arcPrompt()||marketPrompt()||canPrompt()||pizPrompt()||huntPrompt()||xpPrompt()||twgPrompt()||postPrompt()||fuelPrompt()||machPrompt()||bootPrompt()||tlPrompt()||cbPrompt()||gardPrompt()||dogPrompt()||sewerPrompt(); if(stp) pr=stp; else if(activeHeli) pr='<kbd>R</kbd> Get out · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>Click</kbd> guns · <kbd>Right-click</kbd> rockets';  else if(player.chute) pr='<kbd>WASD</kbd> steer · <kbd>Space</kbd> cut away';
+  if(state.started){ const stp=apPrompt()||pzPrompt()||spPrompt()||hidePrompt()||livePrompt()||jetPrompt()||cranePrompt()||storyPrompt()||storePrompt()||motorPrompt()||trainPrompt()||ferryPrompt()||gondPrompt()||ridePrompt()||jobPrompt()||sentryPrompt()||nestPrompt()||questPrompt()||hatchPrompt()||furnPrompt()||fstorePrompt()||clothesPrompt()||fishPrompt()||surfPrompt()||bbPrompt()||arcPrompt()||marketPrompt()||canPrompt()||pizPrompt()||huntPrompt()||xpPrompt()||twgPrompt()||postPrompt()||fuelPrompt()||machPrompt()||bootPrompt()||tlPrompt()||cbPrompt()||gardPrompt()||dogPrompt()||sewerPrompt(); if(stp) pr=stp; else if(activeHeli) pr='<kbd>R</kbd> Get out · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>Click</kbd> guns · <kbd>Right-click</kbd> rockets';  else if(player.chute) pr='<kbd>WASD</kbd> steer · <kbd>Space</kbd> cut away';
     else if(player.mode==='walk'&&!player.ground&&player.vel.y<-2&&player.pos.y-HIP-groundHeight(player.pos.x,player.pos.z,player.pos.y-HIP)>3.5) pr='<kbd>Space</kbd> Open parachute';
     else if(activeCar) pr=activeCar.boat?'<kbd>W</kbd><kbd>S</kbd> throttle · <kbd>A</kbd><kbd>D</kbd> steer · <kbd>R</kbd> Get out':'<kbd>R</kbd> Get out'+keepHint(activeCar)+lugHint(activeCar); else if(state.downT>0) pr='Knocked out. Heading back to the plaza…'; else if(state.over) pr=''; else if(player.mode==='held') pr=player.heldBy&&!player.heldBy.zombie?'They grabbed you! Brace for the throw…':'A grabber has you! Brace for the throw…'; else if(player.mode==='ragdoll'||player.mode==='getup') pr='Ouch. Getting back up…'; else if(player.immune>0&&people.some(q=>q.zombie)) pr='Back on your feet. Run!'; else if(player.mode==='walk'&&liftNear()){ const n=liftNear(); pr=n.L.v!==0?(n.inside?'Going '+(n.L.v>0?'up':'down')+'…':'Lift is moving…'):Math.abs(n.L.y-n.lvl)>.05?'<kbd>R</kbd> Call the lift':n.inside?'<kbd>R</kbd> Ride the lift '+(n.lvl===0?'up':'down'):'Step into the lift'; } else if(player.mode==='walk'&&nearestHeli()) pr='<kbd>R</kbd> Fly the helicopter'; else if(nearestCar()) pr=nearestCar().boat?'<kbd>R</kbd> Drive this boat':'<kbd>R</kbd> Drive this car'; }
   if(pr!==lastPrompt){ lastPrompt=pr; promptEl.innerHTML=pr; promptEl.hidden=!pr; }
@@ -16757,13 +16758,12 @@ function airportBuild(){ const F=g=>POLY?facet(g):g, B=AIR.boxes;
   for(const z of [17.4,46.6]) addS(PL(276,.4,440,.04,z),paintM);
   addS(PL(.4,30,400,.04,10),yelM); addS(PL(188,.3,388,.035,-5.5),yelM);
   const liteM=lam('#ffffff',{emissive:'#fff2c8',emissiveIntensity:1.2}); for(let x=302;x<=578;x+=10) for(const z of [16.2,47.8]) addS(BX(.3,.25,.3,x,.12,z),liteM);
-  // terminal with a glass front and a sign
-  solid(298,338,-90,-50,0,11,termM); addS(boxUV(298.05,337.95,1,10,-50.2,-49.9,0),matGlass[0]); addS(F(BX(42,.6,42,318,11.3,-70)),matRoofDark);
-  { const m=lam('#ffffff',{map:textTex(['TUMBLETON AIRPORT','DEPARTURES · ARRIVALS'],'#1d3a8a','#ffffff'),roughness:.7}); addS(new THREE.PlaneGeometry(18,3.4).translate(318,12.6,-49.6),m); }
-  addS(F(BX(40,.4,6,318,4.2,-46.5)),termM); for(const x of [300,312,324,336]) addS(F(BX(.4,4,.4,x,2,-43.8)),termM);
-  // control tower with a radar on top
-  solid(346,351,-80,-75,0,26,towM); addS(F(new THREE.CylinderGeometry(4.2,3.6,4,8).translate(348.5,28,-77.5)),matGlass[1]); B.push({x0:344.6,x1:352.4,z0:-81.4,z1:-73.6,y0:26,h:30});
-  addS(F(new THREE.CylinderGeometry(4.6,4.6,.6,8).translate(348.5,30.3,-77.5)),towM); addS(F(new THREE.CylinderGeometry(.15,.15,2,6).translate(348.5,31.6,-77.5)),hangR);
+  // terminal, control tower, jet bridge and planes come from the airport pack (models/airport/airport.json, loaded later); colliders and staff now
+  apColliders(B);
+  // landside road, drop-off and car park
+  addS(PL(8,76,284,.02,-74),matRoad); addS(PL(66,8,313,.021,-108),matRoad); addS(PL(52,20,315,.019,-124.5),matRoad); addS(PL(72,12.4,311,.023,-54),apronM); addS(PL(32,4.6,311,.03,-101.7),concM);
+  for(let x=291;x<=339;x+=3.2) for(const z of [-119.6,-129.4]) addS(PL(.14,5,x,.03,z),paintM);
+  { const m=lam('#ffffff',{map:textTex(['P  ·  AIRPORT PARKING'],'#1d3a8a','#ffffff',512,64),roughness:.6}); addS(new THREE.PlaneGeometry(4,.5).translate(289,2.6,-114.2),m); addS(BX(.12,2.4,.12,289,1.2,-114.3),hangR); }
   // hangars (open towards the apron)
   for(const hx of [368,402,436]){ const x0=hx-13, x1=hx+13, z0=-76, z1=-46; solid(x0,x0+.6,z0,z1,0,10,hangM); solid(x1-.6,x1,z0,z1,0,10,hangM); solid(x0,x1,z0,z0+.6,0,10,hangM);
     const roof=new THREE.CylinderGeometry(13.2,13.2,30,12,1,true,-PI/2,PI); roof.rotateX(PI/2); roof.rotateZ(PI); roof.scale(1,.55,1); roof.translate(hx,10,(z0+z1)/2); addS(F(roof),hangR); B.push({x0,x1,z0,z1,y0:10,h:17});
@@ -16773,7 +16773,7 @@ function airportBuild(){ const F=g=>POLY?facet(g):g, B=AIR.boxes;
   for(const [x,z] of [[488,-70],[500,-70]]){ addS(F(new THREE.CylinderGeometry(4,4,6,12).translate(x,3,z)),tankM); addS(F(new THREE.CylinderGeometry(4.05,4.05,.5,12).translate(x,4.5,z)),redM); B.push({x0:x-3.6,x1:x+3.6,z0:z-3.6,z1:z+3.6,y0:0,h:6}); }
   addS(F(new THREE.CylinderGeometry(.1,.1,6,6).translate(330,3,8)),hangR); addS(F(new THREE.ConeGeometry(.6,2.6,8).rotateZ(PI/2).translate(331.4,5.8,8)),lam('#ff7a1a',{roughness:.6}));
   { const m=lam('#ffffff',{map:textTex(['AIRPORT →'],'#1f7a4d','#ffffff',256,64),roughness:.6}); addS(new THREE.PlaneGeometry(3,.8).rotateY(-PI/2).translate(264.5,3.2,-37.5),m); addS(BX(.12,3,.12,264.6,1.5,-37.5),hangR); }
-  workSpots.push({x:368,z:-44,y:0,yaw:PI,kind:'inspect',outfit:'hivis',tool:'clip'},{x:404,z:-42,y:0,yaw:PI*.8,kind:'inspect',outfit:'hivis',tool:'clip'},{x:318,z:-46,y:0,yaw:0,kind:'shop',greet:'airport'});
+  workSpots.push({x:368,z:-44,y:0,yaw:PI,kind:'inspect',outfit:'hivis',tool:'clip'},{x:404,z:-42,y:0,yaw:PI*.8,kind:'inspect',outfit:'hivis',tool:'clip'});
 }
 GREET.airport=['Welcome to Tumbleton Airport!','The jets are in the hangars, help yourself.','Mind the runway!','Bombs re-arm when you land.'];
 function airlinerMesh(){ const F=g=>POLY?facet(g):g, g=new THREE.Group(), W='#f4f3ef', L='#1d6fb8';
@@ -16810,10 +16810,212 @@ function jetMesh(col){ const g=new THREE.Group(), D='#1c1e22', S2=new THREE.Shap
 (function airportSetup(){
   for(const [hx,col] of [[368,'#4a4e55'],[402,'#3e4249'],[436,'#53565c']]){ const m=jetMesh(col); scene.add(m.g); const J={col,g:m.g,glow:m.glow,bm:m.bombs,pos:m.g.position,vel:new V3(),yaw:0,pitch:0,roll:0,spd:0,thr:0,ground:true,home:{x:hx,z:-62},bombs:JET_BOMBS,bombCD:0,dead:0,arm:0};
     J.pos.set(hx,1.25,-62); jets.push(J); }
-  { const a=airlinerMesh(); a.position.set(318,3.6,-28); a.rotation.y=PI/2; scene.add(a); AIR.boxes.push({x0:303,x1:333,z0:-30,z1:-26,y0:0,h:6}); }
   for(let k=0;k<2;k++){ const a=airlinerMesh(); scene.add(a); AIRL.push({g:a,a:k*PI,R:420+k*90,h:150+k*30,v:55}); }
-  airRadar=new THREE.Mesh(mergeGeos([{g:BX(3.2,.9,.2,0,.4,0),c:'#e8e8e8'},{g:BX(.2,.6,.6,0,0,-.2),c:'#5b6068'}],true),VC); airRadar.position.set(348.5,32.4,-77.5); scene.add(airRadar);
+  airRadar=new THREE.Mesh(mergeGeos([{g:BX(3.2,.9,.2,0,.4,0),c:'#e8e8e8'},{g:BX(.2,.6,.6,0,0,-.2),c:'#5b6068'}],true),VC); airRadar.position.set(365,40.6,-112); scene.add(airRadar);
 })();
+/*AP-BEGIN*/
+/* ---------- Tumbleton Airport: the walk-in terminal, control tower, jet bridge, parked planes and ground vehicles (airport pack) ----------
+   Terminal frame: X/Z are metres from the terminal origin at world (311,-79). Ground floor y .03, departures level y 5.26. */
+var AP;   // set up by apInit() when the map is built (before this line runs)
+function apInit(){ if(AP) return AP; AP={T:{x:311,z:-79},G:.03,U:5.26,D:null,raw:{},ready:false,ppl:[],bags:[],ticket:null,flying:false,spawnT:2,beepT:0,boxes:[],mat:null,
+  ESC:[{x0:-28.74,x1:-23.63,dir:1,lanes:[-27.48,-24.9]},{x0:23.92,x1:29.03,dir:-1,lanes:[25.19,27.76]}], EZ0:-3.6, EZ1:4.6,
+  belt:{xc:15.5,zb:-11.4,zt:-4.4,R:1.745}, kiosk:{x:-734.6,z:-125}}; return AP; }
+function apRampY(Z){ const A=AP; return A.G+clamp((Z-A.EZ0)/(A.EZ1-A.EZ0),0,1)*(A.U-A.G); }
+function apEscAt(X,Z){ const A=AP; if(Z<A.EZ0||Z>A.EZ1) return null; for(const e of A.ESC) if(X>e.x0&&X<e.x1) return e; return null; }
+function apCols(){ return [[-6.75,2.55],[-11.1,-1.4],[-20.4,-1.4],[-29.45,-1.4],[7.05,2.55],[11.4,-1.4],[20.65,-1.4],[29.75,-1.4],[.15,2.55],[-5.4,-8.35],[-12.85,-8.4],[-22.1,-8.4],[-32.6,-8.4],[-32.6,11.55],[5.7,-8.35],[.15,10.55]]; }
+// pieces: [key, X, Y, Z, rotY, scale, collider [w,d,y0,h] (before rotation) or 0, world coords?]
+function apItems(){ const A=apInit(), g=A.G, u=A.U, L=[], P=(k,x,y,z,r,s,c,w)=>L.push({k,x,y,z,r:r||0,s:s||1,c:c||0,w:!!w});
+  P('term',0,-.4,0,0,1);
+  // ground floor: check-in, security, baggage claim, café
+  for(const x of [-17.5,-9.1]) P('checkin',x,g,-8.4,0,1,[6.2,4.8,0,1.15]);
+  P('security',-26.2,g,-7.5,0,1);
+  { const B=A.belt; P('belt2',B.xc+B.R,g,B.zb+1.75); P('belt2',B.xc+B.R,g,B.zb+5.25); P('belt2',B.xc-B.R,g,B.zb+1.75); P('belt2',B.xc-B.R,g,B.zb+5.25);
+    P('belt4',B.xc+1.31,g,B.zt+1.32,0); P('belt4',B.xc-1.32,g,B.zt+1.31,-PI/2); P('belt4',B.xc+1.32,g,B.zb-1.31,PI/2); P('belt4',B.xc-1.31,g,B.zb-1.32,PI);
+    P('belt3',B.xc-2.62-2.78,g,(B.zb+B.zt)/2,PI/2); P('belt1',B.xc-2.62-5.55-.31,g,(B.zb+B.zt)/2,PI/2); }
+  P('cafe',-12,g,12,0,1,[11.6,6.9,0,1.15]);
+  for(const z of [8,11]) for(const x of [4,6,8,10]) P('chairs',x,g,z,PI);
+  for(const [x,z] of [[-3,-12.5],[9.5,-12.5],[-20,6],[22,6],[-33.8,-3]]) P('trash',x,g,z,0,1,[1,1,0,1]);
+  for(const [x,z] of [[-33.8,-13.8],[33.8,-13.8],[-33.8,17.5],[33.8,17.5],[-1.5,-13.8],[2.5,-13.8]]) P('plant',x,g,z,0,1,[1.2,1.2,0,1]);
+  for(const x of [-30.6,-29.6]) P('atm',x,g,-14.9,PI,1,[.8,.6,0,1.8]);
+  for(const x of [-26.8,-26]) P('phone',x,g,-14.95,PI);
+  for(const [x,z,r] of [[-3,-6,0],[9.5,-6,0],[-33,6,PI/2]]) P('advert',x,g,z,r,1,[1.3,.6,0,1.9]);
+  for(const [x,z] of [[-15,-1.75],[-2,1.75],[18,-1.75]]) P('departures',x,2.83,z,0,1.3);
+  for(const x of [20.6,21.5,22.4,8,8.9]) P('trolley',x,g,x>10?-14.5:-14.6,PI/2);
+  for(const [x,y,z,r] of [[-34.7,g,.5,PI/2],[34.9,g,.5,-PI/2],[-34.7,u,9,PI/2],[34.9,u,9,-PI/2]]) P('extinguisher',x,y,z,r);
+  for(const [x,z,r] of [[-34.5,-14.6,PI/4],[34.5,-14.6,-PI/4],[-34.5,18.2,PI*.75],[34.5,18.2,-PI*.75]]) P('cctv',x,4,z,r);
+  for(const [x,z,r,k] of [[-14.6,-12.6,.3,'suitcase'],[-15.2,-12.8,0,'bag'],[19.8,-13.4,1.2,'suitcase'],[3.2,9.6,.5,'bag'],[-22.5,15,2,'suitcase']]) P(k,x,z===15?u:g,z,r,.7);
+  // departures level: gate desks, seating, boards, plants, duty free is built by hand
+  P('gate',-13,u,16.8,PI,1,[3.7,1.9,0,1.15]); P('gate',8,u,16.8,PI,1,[3.7,1.9,0,1.15]);
+  for(const z of [8.5,12]) for(const x0 of [-31,-22,5,13]) for(let k=0;k<3;k++) P('chairs',x0+1+k*2,u,z,z<10?PI:0);
+  for(const z of [8.5,12]) for(const x0 of [-31,-22,5,13]) A.boxes.push(['chairs',x0+3,z,6,1.3,u,u+.85]);
+  for(const [x,z] of [[-34,17.6],[-6,17.6],[13.5,17.6]]) P('plant',x,u,z,0,1,[1.2,1.2,0,1]);
+  for(const [x,z] of [[-20.5,17.6],[2,17.6]]) P('trash',x,u,z,0,1,[1,1,0,1]);
+  for(const x of [-20,17]) P('departures',x,u+.9,5.5,PI,1.2);
+  P('advert',-31,u,15,PI/2,1,[1.3,.6,0,1.9]);
+  // outside: control tower, jet bridge and the gate jet, the remote stand with a prop plane, ground vehicles
+  P('tower',365,0,-112,0,.4,0,1); P('bridge',302,0,-45,0,1,0,1); P('jet',309,0,-17,0,.7,0,1);
+  P('prop',462,0,-24,0,.65,0,1); P('stairs',457.5,0,-33,PI/2,.5,0,1);
+  P('tug',480,0,-7,-PI/2,.45,[2.2,3.4,0,2],1); P('cart',474.5,0,-7,-PI/2,.45,[2,3.2,0,2.1],1); P('cart2',469.5,0,-7,-PI/2,.45,[2,3.2,0,.6],1);
+  for(const [x,z] of [[470.2,-7.6],[468.8,-7.6],[477,-15],[477,-17.2],[478.8,-15]]) P('container',x,z===-7.6?.55:0,z,0,.45,z===-7.6?0:[1.7,2,0,1.7],1);
+  P('bus',345,0,-30,0,.7,[3.6,12.3,0,3],1); P('firetruck',575,0,-24,0,.85,[3.2,6.9,0,3.4],1);
+  for(const x of [306,307]) P('trolley',x,0,-100.8,PI/2,1,0,1);
+  P('atm',A.kiosk.x,0,A.kiosk.z,-PI/2,1,[.8,.6,0,1.8],1);
+  return L; }
+
+/* ---------- colliders (built with the map, before the model has loaded) ---------- */
+function apColliders(B){ const A=apInit(), T=A.T, b=(x0,x1,z0,z1,y0,h)=>{ const o={x0:T.x+x0,x1:T.x+x1,z0:T.z+z0,z1:T.z+z1,y0,h}; B.push(o); A.boxes.push(o); }, H=24, u=A.U;
+  b(-35.6,-34.9,-15.9,19.4,0,H); b(35.2,35.9,-15.9,19.4,0,H); b(-35.6,35.9,18.6,19.4,0,H);                 // outer walls
+  b(-35.6,-6.2,-15.9,-15.1,0,H); b(6.8,35.9,-15.9,-15.1,0,H); b(-6.2,6.8,-15.9,-15.1,4.8,H);               // landside glass with the entrance
+  b(-7,-6.2,-20.4,-15.1,0,5); b(6.8,7.6,-20.4,-15.1,0,5);                                                    // entrance porch sides
+  b(-35.6,35.9,-15.9,19.4,22,27.5);                                                                          // roof
+  for(const [x,z] of apCols()) b(x-.4,x+.4,z-.4,z+.4,0,z<-5?H-2:4.5);
+  for(const [x0,x1,z0,z1] of [[-35,-4.6,4.6,18.6],[3.1,35.2,4.6,18.6],[-4.6,3.1,4.6,6.5],[-4.6,3.1,13.7,18.6],[-23.63,-8,-2,4.6],[-8,12,2,4.6],[12,23.92,-2,4.6],[-34.9,-28.74,-15.1,4.6],[29.03,35.2,-15.1,4.6]]) b(x0,x1,z0,z1,4.5,u);   // departures floor
+  const r=(x0,x1,z0,z1)=>b(x0,x1,z0,z1,u-.05,u+1.05);                                                          // glass balustrades
+  r(-23.63,-8,-2.1,-1.9); r(-8.1,-7.9,-2,2); r(-8,12,1.9,2.1); r(11.9,12.1,-2,2); r(12,23.92,-2.1,-1.9); r(-23.75,-23.55,-2,4); r(23.82,24.02,-2,4); r(-28.9,-28.7,-15.1,4); r(29.03,29.23,-15.1,4); r(-4.6,3.1,6.4,6.6); r(-4.6,3.1,13.6,13.8); r(-4.7,-4.5,6.5,13.7); r(3,3.2,6.5,13.7);   // round void in the middle
+  for(const e of A.ESC){ ramps.push({x:T.x+(e.x0+e.x1)/2,z:T.z+(A.EZ0+A.EZ1)/2,y:0,L:A.EZ1-A.EZ0,W:e.x1-e.x0,H:u,c:0,s:-1});
+    for(const z of [-1,1,3]) b(e.x0,e.x1,z,A.EZ1,0,apRampY(z)-.35); }                                     // the solid underside of the escalators
+  b(-28.8,-27.3,-10,-5,0,1.25); b(-27.3,-25,-9.4,-5.6,0,1.1);                                               // security: x-ray belt (walk through the arch)
+  { const Bt=A.belt; b(Bt.xc-2.62,Bt.xc+2.62,Bt.zb-2.62,Bt.zt+2.62,0,.92); b(Bt.xc-2.62-5.9,Bt.xc-2.62,(Bt.zb+Bt.zt)/2-1.33,(Bt.zb+Bt.zt)/2+1.33,0,3); }
+  for(const it of apItems()){ if(!it.c) continue; const [w,d,y0,h]=it.c, c=Math.abs(Math.cos(it.r)), s=Math.abs(Math.sin(it.r)), hw=(w*c+d*s)/2, hd=(w*s+d*c)/2, x=it.w?it.x-T.x:it.x, z=it.w?it.z-T.z:it.z; b(x-hw,x+hw,z-hd,z+hd,it.y+y0,it.y+h); }
+  for(const q of A.boxes.splice(0)) if(Array.isArray(q)){ const [k,x,z,w,d,y0,h]=q; b(x-w/2,x+w/2,z-d/2,z+d/2,y0,h); } else A.boxes.push(q);
+  // outside: tower shaft + cab, jet bridge, the gate jet and the prop plane, duty free shelves
+  const W=(x0,x1,z0,z1,y0,h)=>b(x0-T.x,x1-T.x,z0-T.z,z1-T.z,y0,h);
+  W(362.6,367.4,-114.4,-109.6,0,34); W(360.2,369.8,-116.8,-107.2,33.6,40.3);
+  W(299.4,304.6,-60,-29.9,3.6,8.6); W(300.6,303.4,-34,-31,0,3.6);
+  W(306.3,311.7,-35,1,0,6.5); W(289,329,-23,-14.6,2.6,4.6); W(300,304,-23,-17,.4,2.6); W(314,318,-23,-17,.4,2.6); W(305.5,312.5,-3,1,6.5,12);
+  W(460,464,-37.1,-11,0,5); W(445.6,478.4,-30.1,-21,3.2,4.4);
+  b(22,32,17.8,18.6,u,u+2.3); b(24,30,14.6,15.6,u,u+1.4); b(22.2,23.4,12.8,15.2,u,u+1.1);
+  // staff
+  const S=(x,y,z,yaw,greet,outfit)=>workSpots.push({x:T.x+x,z:T.z+z,y,yaw,kind:'shop',greet,outfit});
+  S(-17.5,A.G,-6.4,PI,'apcheck','bank'); S(-9.1,A.G,-6.4,PI,'apcheck','bank'); S(-22.7,A.G,-9.2,-PI/2,'apsec','police'); S(-12,A.G,12,PI,'apcafe','apron'); S(-13,u,17.9,PI,'apgate','bank'); S(22.8,u,15.6,PI,'apduty','threads');
+  workSpots.push({x:300,z:-38,y:0,yaw:PI*.6,kind:'inspect',outfit:'hivis',tool:'clip'},{x:455,z:-28,y:0,yaw:PI/2,kind:'inspect',outfit:'hivis',tool:'clip'}); }
+
+/* ---------- the model ---------- */
+function apRaw(k){ const A=AP; if(A.raw[k]!==undefined) return A.raw[k]; const D=A.D&&A.D[k]; if(!D) return A.raw[k]=null;
+  const un=b=>{ const s=atob(b), u=new Uint8Array(s.length); for(let i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u; }; const q=new Uint16Array(un(D.p).buffer), C=un(D.c), P=new Float32Array(q.length);
+  for(let i=0;i<q.length;i++){ const a=i%3; P[i]=D.mn[a]+q[i]/65535*(D.mx[a]-D.mn[a]); } return A.raw[k]={P,C,n:D.n,g:D.g||0}; }
+const AP_LIN=[]; for(let i=0;i<256;i++) AP_LIN.push(Math.pow(i/255,1.35));
+function apPut(acc,k,x,y,z,ry,s){ const R0=apRaw(k); if(!R0) return; const c=Math.cos(ry), sn=Math.sin(ry), {P,C,n,g}=R0;
+  for(let t=0;t<n;t++){ const glass=t>=n-g, PP=glass?acc.gP:acc.P, CC=glass?acc.gC:acc.C, r=AP_LIN[C[t*3]], gg=AP_LIN[C[t*3+1]], bb=AP_LIN[C[t*3+2]];
+    for(let v=0;v<3;v++){ const i=t*9+v*3, px=P[i]*s, py=P[i+1]*s, pz=P[i+2]*s; PP.push(x+px*c+pz*sn,y+py,z-px*sn+pz*c); CC.push(r,gg,bb); } } }
+function apGeo(P,C){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(P),3)); g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(C),3)); g.computeVertexNormals(); g.computeBoundingSphere(); return g; }
+function apPieceGeo(k,s){ const acc={P:[],C:[],gP:[],gC:[]}; apPut(acc,k,0,0,0,0,s); return apGeo(acc.P.concat(acc.gP),acc.C.concat(acc.gC)); }
+function apLoad(){ const A=apInit(); if(A.loading) return; A.loading=true;
+  fetch('models/airport/airport.json').then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); }).then(D=>{ A.D=D; apVisuals(); }).catch(e=>{ console.warn('airport model',e); apFallback(); }); }
+function apFallback(){ const m=lam('#e6e2d8',{roughness:.8}); for(const b of AP.boxes) if(b.h-b.y0>1) scene.add(new THREE.Mesh(BX(b.x1-b.x0,b.h-b.y0,b.z1-b.z0,(b.x0+b.x1)/2,(b.y0+b.h)/2,(b.z0+b.z1)/2),m)); }
+function apVisuals(){ const A=AP, T=A.T, acc={P:[],C:[],gP:[],gC:[]};
+  for(const it of apItems()) apPut(acc,it.k,it.w?it.x:T.x+it.x,it.y,it.w?it.z:T.z+it.z,it.r,it.s);
+  A.mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.72,metalness:.08,envMapIntensity:.4}); ALLMATS.push(A.mat);
+  const gm=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.08,metalness:.3,transparent:true,opacity:.32,depthWrite:false,side:THREE.DoubleSide}); ALLMATS.push(gm);
+  const m=new THREE.Mesh(apGeo(acc.P,acc.C),A.mat); m.castShadow=true; m.receiveShadow=true; scene.add(m);
+  if(acc.gP.length){ const gl=new THREE.Mesh(apGeo(acc.gP,acc.gC),gm); gl.renderOrder=2; scene.add(gl); }
+  apDecor(); A.geo={suit:apPieceGeo('suitcase',.62),bag:apPieceGeo('bag',.62)};
+  const Bt=A.belt; for(let i=0;i<9;i++){ const bm=new THREE.Mesh(i%3===1?A.geo.bag:A.geo.suit,A.mat); bm.castShadow=true; scene.add(bm); A.bags.push({m:bm,s:i*2.75+Math.random()*.8}); }
+  A.ready=true; }
+// hand-built bits: duty free shelves, signs
+function apDecor(){ const A=AP, T=A.T, u=A.U, parts=[], Bx=(w,h,d,x,y,z,c)=>parts.push({g:BX(w,h,d,T.x+x,y,T.z+z),c}), cols=['#d62828','#f2c12e','#3a86ff','#2a9d8f','#8338ec','#ff7a1a','#f1faee','#6b4226'];
+  Bx(10,2.3,.8,27,u+1.15,18.2,'#e9e4da'); for(let row=0;row<3;row++){ Bx(9.6,.06,.7,27,u+.55+row*.7,17.9,'#b9b2a4'); for(let k=0;k<22;k++) Bx(.26,.42,.26,22.5+k*.42,u+.8+row*.7,17.85,cols[(k*3+row)%cols.length]); }
+  Bx(6,1.4,1,27,u+.7,15.1,'#e9e4da'); for(const zz of [14.75,15.45]) for(let k=0;k<13;k++) Bx(.3,.3,.3,24.3+k*.45,u+1.55,zz,cols[(k+(zz>15?3:0))%cols.length]);
+  Bx(1.2,1.1,2.4,22.8,u+.55,14,'#3b3f45'); Bx(1.3,.06,2.5,22.8,u+1.12,14,'#d8cfc0');
+  const dm=new THREE.Mesh(mergeGeos(parts,true),VC); dm.castShadow=true; scene.add(dm);
+  const sign=(txt,w,h,x,y,z,ry,bg,fg)=>{ const m=lam('#ffffff',{map:textTex(txt,bg||'#1d3a8a',fg||'#ffffff',512,Math.round(512*h/w)),roughness:.7}); const s=new THREE.Mesh(new THREE.PlaneGeometry(w,h),m); s.position.set(T.x+x,y,T.z+z); s.rotation.y=ry||0; scene.add(s); };
+  sign(['TUMBLETON AIRPORT'],24,3,0,16.5,-15.95,PI); sign(['✈  DEPARTURES  ·  CHECK-IN'],8,1,-13.3,4.05,-11.2,PI);
+  sign(['SECURITY  →  GATES'],5,.8,-26.2,4.2,-11.6,PI,'#f2c12e','#1d1d1d'); sign(['ARRIVALS  ·  BAGGAGE CLAIM'],7,1,15.5,4.2,-14.7,PI);
+  sign(['☕ CAFÉ'],3,.8,-12,3.9,8.2,PI,'#3b2f2a','#ffe8c2'); sign(['GATE 1 ✈'],4,1,-11,8.4,18.55,PI); sign(['GATE 2 · CLOSED'],4.6,1,8,8.4,18.55,PI,'#5b6068');
+  sign(['DUTY FREE'],6,1.2,27,8.6,18.55,PI,'#7a1f3d','#ffd36a'); sign(['FLIGHTS ✈ TUMBLETON'],3,.7,A.kiosk.x-T.x+.05,2.6,A.kiosk.z-T.z,PI/2,'#1d3a8a');
+  sign(['↑ DEPARTURES'],3.4,.7,-26.2,3.2,-3.3,PI,'#1d3a8a'); sign(['↓ ARRIVALS'],3.4,.7,26.5,8.4,5.2,PI,'#1d3a8a'); }
+
+/* ---------- the baggage belt ---------- */
+function apBeltPos(s,o){ const B=AP.belt, T=AP.T, Ls=B.zt-B.zb, Lc=PI*B.R, tot=2*Ls+2*Lc; s=((s%tot)+tot)%tot; let x,z,yaw;
+  if(s<Ls){ x=B.xc+B.R; z=B.zb+s; yaw=0; } else if(s<Ls+Lc){ const a=(s-Ls)/B.R; x=B.xc+B.R*Math.cos(a); z=B.zt+B.R*Math.sin(a); yaw=a; }
+  else if(s<2*Ls+Lc){ x=B.xc-B.R; z=B.zt-(s-Ls-Lc); yaw=PI; } else { const a=PI+(s-2*Ls-Lc)/B.R; x=B.xc+B.R*Math.cos(a); z=B.zb+B.R*Math.sin(a); yaw=a; }
+  o.x=T.x+x; o.z=T.z+z; o.yaw=yaw; return o; }
+const _apo={x:0,z:0,yaw:0};
+function apBelt(dt){ for(const b of AP.bags){ b.s+=dt*.55; apBeltPos(b.s,_apo); b.m.position.set(_apo.x,AP.G+.92,_apo.z); b.m.rotation.y=_apo.yaw+PI/2; } }
+
+/* ---------- busy people ---------- */
+function apLegs(p,spd,dt){ p.wph=(p.wph||0)+dt*(spd>0?spd*2.6:0); const a=spd>0?Math.sin(p.wph)*.55*Math.min(1,spd/1.6):0; p.legL.rotation.x+=(a-p.legL.rotation.x)*Math.min(1,dt*12); p.legR.rotation.x+=(-a-p.legR.rotation.x)*Math.min(1,dt*12);
+  p.armL.rotation.x+=(-a*.6-p.armL.rotation.x)*Math.min(1,dt*10); p.armR.rotation.x+=((p.ap&&p.ap.bag?0:a*.6)-p.armR.rotation.x)*Math.min(1,dt*10); }
+function apRoute(kind){ const A=AP, ent=()=>({x:R(-4,4),z:-27}), door=()=>({x:R(-1.2,1.2),z:-18});
+  if(kind==='dep'){ const ck=Math.random()<.5?-17.5:-9.1, lane=pick(A.ESC[0].lanes), sx=pick([R(-30,-6),R(5,21)]), ai=[-23.5,-12,12,20.5].reduce((a,b)=>Math.abs(b-sx)<Math.abs(a-sx)?b:a);
+    return [ent(),door(),{x:ck+R(-1.6,1.6),z:-12.3,w:[3,7],f:0},{x:-24.1,z:-11.6},{x:-24.1,z:-4.9,ev:'scan'},{x:lane,z:-4.2},{x:lane,z:5.5,L:1},{x:sx,z:5.6,L:1,w:[4,12],f:Math.random()<.5?0:PI},{x:ai,z:5.6,L:1},{x:ai,z:14.5,L:1},{x:-13+R(-1.2,1.2),z:14.9,L:1,w:[1,4],f:0},{x:-9,z:18.3,L:1,ev:'gone'}]; }
+  if(kind==='arr'){ const lane=pick(A.ESC[1].lanes), bz=R(-12.5,-3.5);
+    return [{x:-9,z:18.3,L:1},{x:-9,z:14.5,L:1},{x:-9,z:5.6,L:1},{x:lane,z:5.6,L:1},{x:lane,z:5.4,L:1},{x:lane,z:-4.4},{x:21.6,z:-4.6},{x:19.4,z:bz,w:[5,14],f:-PI/2,ev:'bag'},{x:19.4,z:-14.6},{x:5,z:-14.6},door(),{x:R(-4,4),z:-27,ev:'gone'}]; }
+  return [ent(),door(),{x:2,z:-4},{x:-3,z:5.8},{x:-12+R(-4,4),z:7.6,w:[8,20],f:0,ev:'sip'},{x:-3,z:5.8},{x:2,z:-4},door(),{x:R(-4,4),z:-27,ev:'gone'}]; }
+function apGiveBag(p){ if(p.ap.bag||!AP.geo) return; const m=new THREE.Mesh(Math.random()<.7?AP.geo.suit:AP.geo.bag,AP.mat); m.position.set(.42,-HIP,-.18); m.scale.setScalar(.85); m.rotation.y=PI/2; p.g.add(m); p.ap.bag=m; }
+function apSpawn(kind,mid){ const A=AP, path=apRoute(kind); let i=0; if(mid){ i=Math.floor(Math.random()*(path.length-2)); }
+  const n=path[i], p=new Person(A.T.x+n.x,A.T.z+n.z,{y:n.L?A.U:A.G}); p.ap={kind,path,i:i+1,wait:mid&&n.w?R(0,n.w[1]):0,face:n.f,spd:R(1.15,1.55),L:n.L||0}; for(let k=i;k>=0;k--) if(path[k].L!==undefined){ p.ap.L=path[k].L; break; }
+  p.noFine=true; p.chp=6; if(kind==='dep'||(kind==='arr'&&i>7)||Math.random()<.2) apGiveBag(p); A.ppl.push(p); return p; }
+function apEv(p,ev){ if(ev==='gone'){ apDrop(p); return; } if(ev==='bag') apGiveBag(p); if(ev==='scan'&&Math.random()<.12){ const g=apStaff('apsec'); if(g) say(g,pick(['Beep! Pop your keys in the tray please','All good, on you go','Laptops out, please']),false); } if(ev==='sip'&&Math.random()<.3) say(p,pick(['Flat white, thanks!','One mince and cheese pie please','Is the wifi free here?']),false); }
+function apDrop(p){ const i=AP.ppl.indexOf(p); if(i>=0) AP.ppl.splice(i,1); if(people.includes(p)) removePerson(p); }
+function apTickP(p,dt){ const a=p.ap; if(!a) return false; p.vel.set(0,0,0); p.ground=true; const A=AP;
+  if(a.wait>0){ a.wait-=dt; apLegs(p,0,dt); if(a.face!=null) p.yaw=lerpA(p.yaw,a.face,Math.min(1,dt*5)); }
+  else { const q=a.path[a.i]; if(!q){ apDrop(p); return true; } const tx=A.T.x+q.x, tz=A.T.z+q.z, dx=tx-p.pos.x, dz=tz-p.pos.z, d=Math.hypot(dx,dz);
+    if(d<.15){ a.i++; if(q.L!==undefined) a.L=q.L; if(q.w){ a.wait=R(q.w[0],q.w[1]); a.face=q.f; } if(q.ev) apEv(p,q.ev); if(!people.includes(p)) return true; }
+    else { const st=Math.min(d,a.spd*dt); p.pos.x+=dx/d*st; p.pos.z+=dz/d*st; p.yaw=lerpA(p.yaw,Math.atan2(dx,dz),Math.min(1,dt*8)); apLegs(p,a.spd,dt); } }
+  const X=p.pos.x-A.T.x, Z=p.pos.z-A.T.z, e=apEscAt(X,Z);
+  p.pos.y=(e?apRampY(Z):(a.L?A.U:A.G))+HIP; p.g.quaternion.setFromAxisAngle(UP,p.yaw); return true; }
+function apStaff(greet){ return people.find(q=>q.work&&q.work.greet===greet&&!q.dead); }
+function apCrowd(d){ const A=AP; A.ppl=A.ppl.filter(p=>people.includes(p)&&!p.dead&&!p.zombie&&p.ap);
+  if(d>170){ for(const p of A.ppl.slice()) apDrop(p); A.warm=false; return; }
+  if(d>130||!A.ready) return; const want={dep:9,arr:6,cafe:3};
+  for(const k in want){ let n=A.ppl.filter(p=>p.ap.kind===k).length; while(n<want[k]){ apSpawn(k,!A.warm); n++; if(A.warm) break; } } A.warm=true; }
+
+/* ---------- tickets, flights, café and duty free ---------- */
+const AP_DEST={
+  rang:{name:'Rangiwai Airstrip',price:60,sub:'Domestic flight out west. Board at Gate 1, upstairs',go(){ const K=AP.kiosk, q=freeSpot(K.x+2.5,K.z,6); apLand(q.x,q.y,q.z); banner('RANGIWAI AIRSTRIP','Welcome! Fly back from the flights kiosk by the hut'); }},
+  skyc:{name:'Skydive over Tumbleton',price:120,sub:'Jump from 900 m over the city. Parachute included',go(){ apSky(R(-40,40),900,R(-40,40),'SKYDIVE!'); }},
+  skyi:{name:'Skydive over Mōtu Island',price:150,sub:'Jump over the island and its lighthouse',go(){ apSky(ISLE.x,700,ISLE.z,'MŌTU ISLAND'); }},
+  home:{name:'Tumbleton Airport',price:60,sub:'',go(){ const A=AP; apLand(A.T.x-9,A.U,A.T.z+14.5); banner('WELCOME TO TUMBLETON','Arrivals and baggage claim are downstairs'); }}};
+function apLand(x,y,z){ player.pos.set(x,y+HIP,z); player.vel.set(0,0,0); player.ground=true; camTarget.copy(player.pos); camPitch=.3; }
+function apSky(x,y,z,t){ player.pos.set(x,y,z); player.vel.set(0,0,0); player.ground=false; camTarget.copy(player.pos); camPitch=.5; banner(t,'Press Space to open your parachute'); flash('Press Space to open your parachute'); }
+function apFlyEl(){ let el=document.getElementById('apfly'); if(el) return el; el=document.createElement('div'); el.id='apfly';
+  el.style.cssText='position:fixed;inset:0;background:radial-gradient(ellipse at center,#16305e 0%,#050a16 75%);opacity:0;pointer-events:none;transition:opacity .9s;z-index:70;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font:800 clamp(22px,4vw,44px) system-ui,sans-serif;text-align:center;gap:10px;letter-spacing:.02em';
+  el.innerHTML='<div style="font-size:1.6em">✈</div><b></b><span style="font:500 clamp(13px,1.8vw,18px) system-ui,sans-serif;opacity:.8">Fasten your seatbelt…</span>'; document.body.appendChild(el); return el; }
+function apFly(k){ const A=AP, D=AP_DEST[k]; if(!D||A.flying) return; A.flying=true; A.ticket=null; const el=apFlyEl(); el.querySelector('b').textContent='Flight to '+D.name; el.style.opacity='1'; el.style.pointerEvents='auto'; Snd.whoosh&&Snd.whoosh();
+  setTimeout(()=>{ try{ D.go(); }catch(e){ console.warn('fly',e); } setTimeout(()=>{ el.style.opacity='0'; el.style.pointerEvents='none'; A.flying=false; },1500); },1100); }
+function apBuy(price,fn){ if(state.money<price){ menuDone('Not enough cash'); return; } state.money-=price; save(); Snd.cash&&Snd.cash(); fn(); }
+function apTicketMenu(){ const A=AP, add=menuOpen('Tumbleton Airport · Check-in · you have '+money(state.money));
+  if(A.ticket) add('Your ticket: '+AP_DEST[A.ticket].name,'Go through security and up the escalator to Gate 1',null,'',true);
+  for(const k of ['rang','skyc','skyi']){ const D=AP_DEST[k]; add((k==='rang'?'✈ ':'🪂 ')+D.name+' · '+money(D.price),D.sub,()=>apBuy(D.price,()=>{ A.ticket=k; state.wpDest={x:A.T.x-13,z:A.T.z+14.5}; state.shopWpUntil=perfT+90; menuDone('Ticket bought! Go through security and up the escalator to Gate 1'); })); }
+  add('Close','',()=>menuDone()); }
+function apCafeMenu(){ const add=menuOpen('Airport Café · you have '+money(state.money)), it=(t,s,p,f)=>add(t+' · '+money(p),s,()=>apBuy(p,()=>{ f(); Snd.pop&&Snd.pop(); menuDone('Enjoy!'); }));
+  it('☕ Flat white','+25 health',4,()=>{ state.hp=Math.min(100,state.hp+25); eat(10); }); it('🥧 Mince & cheese pie','+40 health and a fuller belly',8,()=>{ state.hp=Math.min(100,state.hp+40); eat(45); });
+  it('🧁 Blueberry muffin','A snack for the flight',5,()=>{ state.hp=Math.min(100,state.hp+15); eat(30); }); it('🧋 Iced coffee','+20 health',5,()=>{ state.hp=Math.min(100,state.hp+20); eat(10); });
+  add('Close','',()=>menuDone()); }
+function apDutyMenu(){ const add=menuOpen('Duty Free · you have '+money(state.money)), it=(t,s,p,f,m)=>add(t+' · '+money(p),s,()=>apBuy(p,()=>{ f(); Snd.chime&&Snd.chime(); menuDone(m); }));
+  it('🍫 Giant chocolate bar','A full belly',12,()=>{ eat(100); },'Mmm, chocolate.'); it('🥤 Energy drink','+30 health',6,()=>{ state.hp=Math.min(100,state.hp+30); eat(10); },'Buzzing!');
+  it('🧴 Fancy perfume','You smell expensive',60,()=>{},'You smell like a million dollars.'); it('🗻 Snow globe','A souvenir from Tumbleton Airport',15,()=>{},'Shake it! ❄️');
+  add('Close','',()=>menuDone()); }
+function apSpot(){ if(player.mode!=='walk'||state.over||activeCar||activeJet) return null; const A=apInit(), P=player.pos, X=P.x-A.T.x, Z=P.z-A.T.z, y=P.y-HIP;
+  if(Math.hypot(P.x-A.kiosk.x,P.z-A.kiosk.z)<2.6) return 'kiosk';
+  if(Math.abs(X)>40||Math.abs(Z)>25) return null; const up=y>A.U-.6&&y<A.U+.8, gr=y<A.G+.8;
+  if(gr&&Z>-13.6&&Z<-10.4&&(Math.abs(X+17.5)<3.2||Math.abs(X+9.1)<3.2)) return 'check';
+  if(gr&&X>-18.6&&X<-5.4&&Z>7&&Z<9) return 'cafe';
+  if(up&&Math.abs(X+13)<2.6&&Z>13.6&&Z<16.2) return 'gate';
+  if(up&&X>21&&X<24.5&&Z>12.2&&Z<15.8) return 'duty'; return null; }
+function apPrompt(){ if(!AP) return ''; const s=apSpot(), A=AP; if(!s) return '';
+  if(s==='check') return '<kbd>R</kbd> Buy a plane ticket'+(A.ticket?' (you have one)':''); if(s==='cafe') return '<kbd>R</kbd> Order at the café'; if(s==='duty') return '<kbd>R</kbd> Shop at Duty Free';
+  if(s==='gate') return A.ticket?'<kbd>R</kbd> Board: '+AP_DEST[A.ticket].name:'Gate 1 · you need a ticket from check-in downstairs';
+  if(s==='kiosk') return '<kbd>R</kbd> Fly back to Tumbleton Airport · '+money(AP_DEST.home.price); return ''; }
+function apUse(){ if(!AP) return false; const s=apSpot(), A=AP; if(!s) return false;
+  if(s==='check'){ apTicketMenu(); return true; } if(s==='cafe'){ apCafeMenu(); return true; } if(s==='duty'){ apDutyMenu(); return true; }
+  if(s==='gate'){ if(A.flying) return true; if(!A.ticket){ flash('Buy a ticket at check-in downstairs first'); const g=apStaff('apgate'); if(g) say(g,'Ticket please! Check-in is downstairs',false); return true; } apFly(A.ticket); return true; }
+  if(s==='kiosk'){ if(A.flying) return true; if(state.money<AP_DEST.home.price){ flash('Not enough cash'); return true; } state.money-=AP_DEST.home.price; save(); Snd.cash&&Snd.cash(); apFly('home'); return true; } return false; }
+
+/* ---------- every frame ---------- */
+function apTick(dt){ if(!AP) return; const A=AP, P=player.pos, X=P.x-A.T.x, Z=P.z-A.T.z, d=Math.hypot(X,Z);
+  if(!A.loading&&(state.started||perfT>4)) apLoad();
+  if(A.ready&&d<110) apBelt(dt);
+  if(player.mode==='walk'&&d<45){ const e=apEscAt(X,Z); if(e&&Math.abs(P.y-HIP-apRampY(Z))<.45){ P.z+=e.dir*.8*dt; }
+    if(P.y-HIP<A.G+.6&&X>-25.2&&X<-23&&Z>-8.2&&Z<-6.8&&perfT>A.beepT){ A.beepT=perfT+5; Snd.beep&&Snd.beep(); const g=apStaff('apsec'); if(g) say(g,pick(['BEEP! Anything in your pockets?','Is that a… rocket launcher? Fine, on you go.','Beep beep! Arms out please. …OK, you\'re good.']),false); } }
+  if(mpClient()) return; A.spawnT-=dt; if(A.spawnT<=0){ A.spawnT=1; apCrowd(d); } }
+GREET.apcheck=['Where are we flying today?','Tickets are right here!','Any bags to check in?'];
+GREET.apsec=['Step through the arch please','Laptops and liquids out!','Keep moving, thanks'];
+GREET.apcafe=['Kia ora! Coffee?','Fresh pies today!','What can I get you?'];
+GREET.apgate=['Gate 1 is now boarding!','Boarding passes ready please','Welcome aboard!'];
+GREET.apduty=['Duty free bargains!','Chocolate, perfume, snow globes!','Have a look around'];
+/*AP-END*/
 function jetNear(){ if(activeJet||activeCar||activeHeli||activeCrane||player.mode!=='walk'||state.over) return null; for(const J of jets) if(J.dead<=0&&J.ground&&Math.hypot(player.pos.x-J.pos.x,player.pos.z-J.pos.z)<4.6&&Math.abs(player.pos.y-J.pos.y)<3) return J; return null; }
 function jetPrompt(){ if(activeJet&&activeJet.small) return activeJet.ground?'<kbd>W</kbd> throttle up · <kbd>A</kbd>/<kbd>D</kbd> taxi · look up past 70 km/h to take off · <kbd>R</kbd> get out':'Mouse steers · <kbd>W</kbd>/<kbd>S</kbd> throttle · land gently · <kbd>R</kbd> bail out';
   if(activeJet) return activeJet.ground?'<kbd>W</kbd> throttle up · <kbd>A</kbd>/<kbd>D</kbd> taxi · look up past 120 km/h to take off · <kbd>R</kbd> get out':'💣 '+activeJet.bombs+'/'+JET_BOMBS+' · Mouse steers · <kbd>W</kbd>/<kbd>S</kbd> throttle · <kbd>Space</kbd>/<kbd>Click</kbd> bomb (red ring = where it lands) · <kbd>R</kbd> bail out';
